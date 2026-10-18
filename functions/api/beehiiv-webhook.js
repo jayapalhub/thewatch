@@ -2,7 +2,7 @@ import { json } from "../_lib/html.js";
 
 // Beehiiv webhook: keeps D1 status in sync when someone unsubscribes in the email.
 // Configure in Beehiiv -> Settings -> Integrations -> Webhooks with the events
-// subscription.unsubscribed (and subscription.created if you want imports mirrored).
+// subscription.created, subscription.confirmed and subscription.deleted (Beehiiv's name for an unsubscribe).
 // Set BEEHIIV_WEBHOOK_SECRET and append ?secret=<same> to the webhook URL.
 export async function onRequestPost({ request, env }) {
   const url = new URL(request.url);
@@ -12,7 +12,7 @@ export async function onRequestPost({ request, env }) {
   const email = body && body.data && body.data.email;
   if (!email) return json({ ok: true, ignored: true });
   const now = new Date().toISOString();
-  if (/unsubscribed/i.test(type || "")) {
+  if (/unsubscribed|subscription\.deleted/i.test(type || "")) {
     await env.DB.prepare("UPDATE subscribers SET status='unsubscribed', updated_at=? WHERE email=?").bind(now, email.toLowerCase()).run();
   } else if (/created|confirmed/i.test(type || "")) {
     await env.DB.prepare("INSERT INTO subscribers (email, status, source, consented_at, beehiiv_subscriber_id) VALUES (?,?,?,?,?) ON CONFLICT(email) DO UPDATE SET status='active', beehiiv_subscriber_id=COALESCE(excluded.beehiiv_subscriber_id, subscribers.beehiiv_subscriber_id), updated_at=excluded.consented_at")
