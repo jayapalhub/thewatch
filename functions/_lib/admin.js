@@ -1,5 +1,5 @@
 import { html, raw } from "./html.js";
-import { TOPICS, FORMATS, COST_TYPES, AUDIENCE, EVENT_STATUSES, ORG_TYPES } from "./constants.js";
+import { TOPICS, FORMATS, COST_TYPES, AUDIENCE, EVENT_STATUSES, ORG_TYPES, ASSET_VERSION } from "./constants.js";
 import { mark } from "./layout.js";
 
 export function adminShell({ title, body, path = "/admin", user }) {
@@ -7,13 +7,13 @@ export function adminShell({ title, body, path = "/admin", user }) {
   return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
 <title>${title} | Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/admin.css"></head>
+<link rel="stylesheet" href="/assets/css/admin.css?v=${ASSET_VERSION}"></head>
 <body><div class="a-layout">
 <aside class="a-side"><a class="a-brand" href="/admin">${mark(28)}<span>The Watch admin</span></a>
 <nav>${nav.map(([h, l]) => html`<a href="${h}" ${path === h || (h !== "/admin" && path.startsWith(h)) ? raw('aria-current="page"') : ""}>${l}</a>`)}</nav>
 <div class="a-side-foot"><a href="/sandiego" target="_blank">View site</a><span>${user?.email || ""}</span></div></aside>
 <main class="a-main"><h1>${title}</h1>${body}</main></div>
-<script src="/assets/js/admin.js" defer></script></body></html>`;
+<script src="/assets/js/admin.js?v=${ASSET_VERSION}" defer></script></body></html>`;
 }
 
 export function flash(msg, kind = "ok") { return msg ? html`<p class="a-flash a-flash-${kind}">${msg}</p>` : ""; }

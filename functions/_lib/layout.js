@@ -1,5 +1,5 @@
 import { html, raw } from "./html.js";
-import { CONSENT_TEXT, MAIL_ADDRESS } from "./constants.js";
+import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION } from "./constants.js";
 
 export const SHIELD_PATH = "M12699.99 19504.82l-4476.78 -2847.86c-440.67,-280.35 -871.71,-817.92 -871.71,-1701.16l0 -6890.42 5348.49 -2170.18 5348.48 2170.18 0 6890.42c0,883.24 -431.04,1420.81 -871.71,1701.16l-4476.77 2847.86zm0 -2838.35l2953.65 -1878.91 0 -1261.73 -1771.64 -1083.78 1771.64 -1083.74 0 -1680.18 -2953.65 -1198.49 -2953.66 1198.49 0 5109.43 2953.66 1878.91z";
 
@@ -47,7 +47,7 @@ export function shell({ title, description, body, city = null, path = "/", wide 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/site.css">
+<link rel="stylesheet" href="/assets/css/site.css?v=${ASSET_VERSION}">
 <link rel="alternate" type="text/calendar" title="The Watch San Diego calendar feed" href="/sandiego/feed.ics">
 ${raw(head)}
 </head>
@@ -101,7 +101,7 @@ ${body}
     </div>
   </div>
 </footer>
-<script src="/assets/js/site.js" defer></script>
+<script src="/assets/js/site.js?v=${ASSET_VERSION}" defer></script>
 </body>
 </html>`;
 }
