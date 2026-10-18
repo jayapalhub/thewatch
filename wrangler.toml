@@ -9,7 +9,7 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "thewatch"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "1239087e-c235-43d1-b760-bb5723e358b9"
 migrations_dir = "migrations"
 
 # Non-secret settings. Secrets (BEEHIIV_API_KEY, RESEND_API_KEY, ADMIN_TOKEN,
