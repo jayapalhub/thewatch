@@ -8,12 +8,12 @@ export async function onRequestGet({ env }) {
   const today = todayKey();
   const weekEnd = addDays(today, 7);
   const [thisWeek, picks, orgCount, eventCount] = await Promise.all([
-    upcomingEvents(db, { to: weekEnd + "T00:00", limit: 6 }),
+    upcomingEvents(db, { to: weekEnd + "T00:00", limit: 5 }),
     upcomingEvents(db, { featured: true, limit: 3 }),
     db.prepare("SELECT COUNT(*) AS n FROM organizations").first(),
     db.prepare("SELECT COUNT(*) AS n FROM events WHERE status='published' AND start_at >= ?").bind(today).first(),
   ]);
-  const preview = thisWeek.length ? thisWeek : await upcomingEvents(db, { limit: 6 });
+  const preview = thisWeek.length ? thisWeek : await upcomingEvents(db, { limit: 5 });
 
   const body = html`
   <section class="hero">
