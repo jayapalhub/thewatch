@@ -23,14 +23,14 @@ echo "==> Checking the token"
 npx wrangler whoami >/dev/null
 
 echo "==> D1 database"
-if grep -q "00000000-0000-0000-0000-000000000000" wrangler.toml; then
+if grep -Eq "00000000-0000-0000-0000-000000000000|REPLACE_WITH_D1_DATABASE_ID" wrangler.toml; then
   if ! npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);process.exit(j.some(d=>d.name==="'"$DB"'")?0:1)})'; then
     npx wrangler d1 create "$DB" >/dev/null
   fi
   ID=$(npx wrangler d1 list --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);const d=j.find(x=>x.name==="'"$DB"'");console.log(d.uuid||d.id)})')
   echo "    database id: $ID"
   # Write the real id into wrangler.toml (works with BSD and GNU sed)
-  node -e 'const fs=require("fs");let t=fs.readFileSync("wrangler.toml","utf8");t=t.replace("00000000-0000-0000-0000-000000000000",process.argv[1]);fs.writeFileSync("wrangler.toml",t)' "$ID"
+  node -e 'const fs=require("fs");let t=fs.readFileSync("wrangler.toml","utf8");t=t.replace(/00000000-0000-0000-0000-000000000000|REPLACE_WITH_D1_DATABASE_ID/,process.argv[1]);fs.writeFileSync("wrangler.toml",t)' "$ID"
 else
   echo "    wrangler.toml already has a database id"
 fi
