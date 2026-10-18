@@ -1,0 +1,26 @@
+name = "thewatch"
+compatibility_date = "2026-09-01"
+pages_build_output_dir = "public"
+
+# Cloudflare D1 binding. Create the database once with:
+#   npx wrangler d1 create thewatch
+# then paste the database_id it prints below and run:
+#   npx wrangler d1 migrations apply thewatch --remote
+[[d1_databases]]
+binding = "DB"
+database_name = "thewatch"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Non-secret settings. Secrets (BEEHIIV_API_KEY, RESEND_API_KEY, ADMIN_TOKEN,
+# BEEHIIV_WEBHOOK_SECRET) are set in the Cloudflare dashboard, never here.
+[vars]
+SITE_URL = "https://bettersecurity.ai"
+BEEHIIV_PUBLICATION_ID = "pub_dd357204-a389-41bc-9b1b-d0a99892a2f4"
+FROM_EMAIL = "The Watch San Diego <watch@bettersecurity.ai>"
+NOTIFY_EMAIL = "jerome.jayapal@bettersecurity.ai"
+# Cloudflare Access: set these after creating the Access application for /admin
+ACCESS_TEAM_DOMAIN = ""
+ACCESS_AUD = ""
+# Set to "1" only in local dev to bypass Access on /admin
+DEV_MODE = "0"

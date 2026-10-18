@@ -1,0 +1,8 @@
+node_modules/
+.wrangler/
+.dev.vars
+.env
+.env.*
+*.local
+scripts/seed.sql
+.DS_Store
