@@ -20,7 +20,7 @@ BEEHIIV_PUBLICATION_ID = "pub_dd357204-a389-41bc-9b1b-d0a99892a2f4"
 FROM_EMAIL = "The Watch San Diego <watch@bettersecurity.ai>"
 NOTIFY_EMAIL = "jerome.jayapal@bettersecurity.ai"
 # Cloudflare Access: set these after creating the Access application for /admin
-ACCESS_TEAM_DOMAIN = ""
-ACCESS_AUD = ""
+ACCESS_TEAM_DOMAIN = "crimson-recipe-50a5.cloudflareaccess.com"
+ACCESS_AUD = "8e779167a92ab15b535bd5a8efd9a755efcadf1842abce85e8a79e9befd1bed3"
 # Set to "1" only in local dev to bypass Access on /admin
 DEV_MODE = "0"
