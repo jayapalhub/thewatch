@@ -39,6 +39,13 @@ events.push({
   is_better_security_event: 1, status: "published", source: "manual", confidence: "high",
 });
 
+// Organizers referenced by events but missing from orgs.json get a minimal row to edit later.
+const known = new Set(orgs.map((o) => o.slug));
+for (const e of events) {
+  const s = e.organization_slug || (e.organization_name ? slugify(e.organization_name) : null);
+  if (s && !known.has(s)) { known.add(s); out.push(`INSERT INTO organizations (slug, name, type, notes) VALUES (${q(s)}, ${q(e.organization_name || s)}, 'community', 'Auto-created from event seed; fill in details') ON CONFLICT(slug) DO NOTHING;`); }
+}
+
 const TOPICS = new Set(["grc", "ai", "cloud", "appsec", "privacy", "audit", "identity", "network", "threat_intel", "leadership", "careers", "social"]);
 const seen = new Set();
 for (const e of events) {

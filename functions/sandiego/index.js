@@ -34,8 +34,7 @@ export async function onRequestGet({ request, env }) {
     const fromKey = /^\d{4}-\d{2}-\d{2}$/.test(q.get("from") || "") ? q.get("from") : today;
     const horizon = addDays(fromKey, 70);
     const events = await queryEvents(env.DB, { from: fromKey + "T00:00", to: horizon + "T00:00", ...filters });
-    const weekStart = mondayOf(today);
-    const strip = weekStrip(weekStart, events, today);
+    const strip = weekStrip(today, events, today);
     body = html`${header("list", filters, orgs, anyFilter)}${strip}
       <div class="wrap">
         ${dayList(events, { empty: anyFilter ? "No events match these filters in the next ten weeks. Try clearing a filter." : "Nothing published yet. Organizers can submit events and they appear here once approved." })}
@@ -68,8 +67,8 @@ function header(view, f, orgs, anyFilter, monthKey) {
           <h1>${view === "month" ? `${monthName(monthKey)} ${parts(monthKey).y}` : "The next ten weeks"}</h1>
         </div>
         <div class="view-toggle" role="tablist">
-          <a role="tab" aria-selected="${view === "list"}" href="${keep({ view: "" })}">List</a>
-          <a role="tab" aria-selected="${view === "month"}" href="${keep({ view: "month" })}">Month</a>
+          <a role="tab" aria-selected="${view === "list" ? "true" : "false"}" href="${keep({ view: "" })}">List</a>
+          <a role="tab" aria-selected="${view === "month" ? "true" : "false"}" href="${keep({ view: "month" })}">Month</a>
         </div>
       </div>
       <form class="filters" method="get" action="/sandiego">
@@ -94,7 +93,7 @@ function weekStrip(weekStart, events, today) {
     const n = events.filter((e) => e.start_at.slice(0, 10) === k).length;
     days.push({ k, n, past: k < today, today: k === today });
   }
-  return html`<div class="wrap"><ol class="week-strip" aria-label="This week">
+  return html`<div class="wrap"><ol class="week-strip" aria-label="The next seven days">
     ${days.map((d) => html`<li class="${d.today ? "is-today" : ""} ${d.past ? "is-past" : ""} ${d.n ? "has-events" : ""}">
       ${d.n && !d.past ? html`<a href="#d-${d.k}">` : html`<span>`}
         <span class="ws-day">${weekday3(d.k)}</span><span class="ws-num">${dayNum(d.k)}</span><span class="ws-count">${d.n ? `${d.n} event${d.n === 1 ? "" : "s"}` : ""}</span>
