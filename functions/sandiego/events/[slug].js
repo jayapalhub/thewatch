@@ -27,7 +27,7 @@ export async function onRequestGet({ params, env }) {
         <div><dt>Cost</dt><dd>${costLabel(e) || "Not listed"}${e.cost_notes ? html`<br><small>${e.cost_notes}</small>` : ""}${e.member_price_notes ? html`<br><small>${e.member_price_notes}</small>` : ""}</dd></div>
         ${e.cpe_eligible ? html`<div><dt>CPE</dt><dd>Organizer reports ${e.cpe_hours ? `${e.cpe_hours} hours` : "credit"}${e.cpe_body ? ` (${e.cpe_body})` : ""}${e.cpe_notes ? html`<br><small>${e.cpe_notes}</small>` : ""}</dd></div>` : ""}
         <div><dt>Who it's for</dt><dd>${AUDIENCE[e.audience_level] || "Open to all"}</dd></div>
-        ${e.platform ? html`<div><dt>Platform</dt><dd>${e.platform}</dd></div>` : ""}
+        ${e.platform && e.platform !== "other" ? html`<div><dt>Platform</dt><dd>${e.platform}</dd></div>` : ""}
         ${e.speakers ? html`<div><dt>Speakers</dt><dd>${e.speakers}</dd></div>` : ""}
       </dl>
       ${e.discount_code ? html`<p class="notice notice-deal"><strong>Subscriber discount:</strong> ${e.discount_text || "Use this code when you register."} <code>${e.discount_code}</code></p>` : ""}
