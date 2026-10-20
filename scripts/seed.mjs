@@ -12,6 +12,21 @@ const ORG_TYPES = new Set(["chapter", "meetup", "conference", "vendor", "univers
 const out = [];
 const orgs = existsSync("data/seed/orgs.json") ? JSON.parse(readFileSync("data/seed/orgs.json", "utf8")) : [];
 const events = existsSync("data/seed/events.json") ? JSON.parse(readFileSync("data/seed/events.json", "utf8")) : [];
+const virtual = existsSync("data/seed/virtual-events.json") ? JSON.parse(readFileSync("data/seed/virtual-events.json", "utf8")) : [];
+
+// Convert a UTC instant to a Pacific wall-clock string "YYYY-MM-DDTHH:MM:SS"
+function toPacific(iso) {
+  const d = new Date(iso); if (isNaN(d)) return null;
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  const o = {}; f.formatToParts(d).forEach((x) => { o[x.type] = x.value; });
+  return `${o.year}-${o.month}-${o.day}T${o.hour === "24" ? "00" : o.hour}:${o.minute}:${o.second}`;
+}
+for (const v of virtual) {
+  if (!v.start_at_utc) continue;
+  const start = toPacific(v.start_at_utc); if (!start) continue;
+  const endIso = v.end_at_utc || (v.duration_minutes ? new Date(new Date(v.start_at_utc).getTime() + v.duration_minutes * 60000).toISOString() : null);
+  events.push({ ...v, city: "virtual", format: "virtual", start_at: start, end_at: endIso ? toPacific(endIso) : null, start_utc: new Date(v.start_at_utc).toISOString(), end_utc: endIso ? new Date(endIso).toISOString() : null, venue_name: v.platform || "Online", venue_address: "Virtual", audience_level: v.audience_level || "practitioner", organization_type: v.organization_type });
+}
 
 // Better Security itself
 orgs.push({ slug: "better-security", name: "Better Security", short_name: "Better Security", type: "community", website: "https://bettersecurity.ai", events_url: "https://bettersecurity.ai/events", description: "San Diego events company that publishes The Watch San Diego and runs a small number of elevated events for the security community.", usual_cadence_text: "A few events a year", trusted: 1 });
@@ -43,7 +58,7 @@ events.push({
 const known = new Set(orgs.map((o) => o.slug));
 for (const e of events) {
   const s = e.organization_slug || (e.organization_name ? slugify(e.organization_name) : null);
-  if (s && !known.has(s)) { known.add(s); out.push(`INSERT INTO organizations (slug, name, type, notes) VALUES (${q(s)}, ${q(e.organization_name || s)}, 'community', 'Auto-created from event seed; fill in details') ON CONFLICT(slug) DO NOTHING;`); }
+  if (s && !known.has(s)) { known.add(s); const t = ({ vendor: "vendor", association: "chapter", chapter: "chapter", media: "media", government: "government", training: "university" })[e.organization_type] || "community"; out.push(`INSERT INTO organizations (slug, name, type, notes) VALUES (${q(s)}, ${q(e.organization_name || s)}, ${q(t)}, 'Auto-created from event seed; fill in details') ON CONFLICT(slug) DO NOTHING;`); }
 }
 
 const TOPICS = new Set(["grc", "ai", "cloud", "appsec", "privacy", "audit", "identity", "network", "threat_intel", "leadership", "careers", "social"]);
@@ -55,7 +70,8 @@ for (const e of events) {
   const orgSlug = e.organization_slug || (e.organization_name ? slugify(e.organization_name) : null);
   const status = e.status || (e.confidence === "low" ? "pending_review" : "published");
   const row = {
-    slug, city: "sandiego", title: e.title.slice(0, 140),
+    slug, city: e.city || "sandiego", title: e.title.slice(0, 140),
+    start_utc: e.start_utc || null, end_utc: e.end_utc || null, platform: e.platform || null, speakers: e.speakers || null,
     venue_name: e.venue_name, venue_address: e.venue_address || e.neighborhood_or_city,
     start_at: e.start_at.slice(0, 19), end_at: e.end_at ? e.end_at.slice(0, 19) : null, timezone: "America/Los_Angeles",
     format: ["in_person", "virtual", "hybrid"].includes(e.format) ? e.format : "in_person",

@@ -3,7 +3,7 @@ import { TOPICS, FORMATS, COST_TYPES } from "./constants.js";
 import { fmtTimeRange, fmtDateLong, weekday, month3, dayNum, dateKey, todayKey, nowLocalIso } from "./dates.js";
 
 const SELECT = `
-  SELECT e.*, o.name AS org_name, o.slug AS org_slug, o.short_name AS org_short,
+  SELECT e.*, o.name AS org_name, o.slug AS org_slug, o.short_name AS org_short, o.type AS org_type,
          v.name AS v_name, v.address_line AS v_address, v.neighborhood AS v_neighborhood, v.city AS v_city
   FROM events e
   LEFT JOIN organizations o ON o.id = e.organization_id
@@ -20,9 +20,13 @@ export function hydrate(row) {
 }
 
 // Public calendar query with filters.
-export async function queryEvents(db, { city = "sandiego", from, to, topic, org, cost, cpe, format, q, featured, limit = 500, status = "published" } = {}) {
-  const where = ["e.city = ?", "e.status = ?"];
-  const args = [city, status];
+export async function queryEvents(db, { city = "sandiego", from, to, topic, org, orgType, cost, cpe, format, q, featured, limit = 500, status = "published" } = {}) {
+  // The virtual calendar shows events filed under 'virtual' plus any San Diego event flagged also_virtual.
+  const where = [city === "virtual" ? "(e.city = 'virtual' OR (e.also_virtual = 1 AND e.format IN ('virtual','hybrid')))" : "e.city = ?", "e.status = ?"];
+  const args = city === "virtual" ? [status] : [city, status];
+  if (orgType === "vendor") { where.push("o.type = 'vendor'"); }
+  if (orgType === "nonvendor") { where.push("(o.type IS NULL OR o.type != 'vendor')"); }
+  if (orgType && !["vendor","nonvendor"].includes(orgType)) { where.push("o.slug = ?"); args.push(orgType); }
   if (from) { where.push("e.start_at >= ?"); args.push(from); }
   if (to) { where.push("e.start_at < ?"); args.push(to); }
   if (topic) { where.push("e.topics LIKE ?"); args.push(`%"${topic}"%`); }

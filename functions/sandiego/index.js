@@ -66,9 +66,15 @@ function header(view, f, orgs, anyFilter, monthKey) {
           <p class="kicker">San Diego County</p>
           <h1>${view === "month" ? `${monthName(monthKey)} ${parts(monthKey).y}` : "The next ten weeks"}</h1>
         </div>
-        <div class="view-toggle" role="tablist">
-          <a role="tab" aria-selected="${view === "list" ? "true" : "false"}" href="${keep({ view: "" })}">List</a>
-          <a role="tab" aria-selected="${view === "month" ? "true" : "false"}" href="${keep({ view: "month" })}">Month</a>
+        <div class="toggle-row">
+          <div class="view-toggle city-toggle" role="tablist" aria-label="Calendar">
+            <a role="tab" aria-selected="true" href="/sandiego">San Diego</a>
+            <a role="tab" aria-selected="false" href="/virtual">Virtual</a>
+          </div>
+          <div class="view-toggle" role="tablist" aria-label="View">
+            <a role="tab" aria-selected="${view === "list" ? "true" : "false"}" href="${keep({ view: "" })}">List</a>
+            <a role="tab" aria-selected="${view === "month" ? "true" : "false"}" href="${keep({ view: "month" })}">Month</a>
+          </div>
         </div>
       </div>
       <form class="filters" method="get" action="/sandiego">

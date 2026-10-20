@@ -33,6 +33,7 @@ export function eventForm(e, orgs, venues, { action, isNew = false } = {}) {
     </div>
     <div class="a-grid-3">
       <label>Organizer<select name="organization_id"><option value="">None</option>${orgs.map((o) => opt(o.id, o.name, e.organization_id))}</select></label>
+      <label>Calendar<select name="city">${opt("sandiego", "San Diego", e.city || "sandiego")}${opt("virtual", "Virtual (online, anywhere)", e.city || "sandiego")}</select></label>
       <label>Status<select name="status">${EVENT_STATUSES.map((s) => opt(s, s.replace("_", " "), e.status || "pending_review"))}</select></label>
       <label>Source<select name="source">${["manual", "submission", "feed", "recurrence", "research"].map((s) => opt(s, s, e.source || "manual"))}</select></label>
     </div>
@@ -69,6 +70,11 @@ export function eventForm(e, orgs, venues, { action, isNew = false } = {}) {
       <label>CPE body<select name="cpe_body">${["", "ISACA", "ISC2", "IIA", "IAPP", "other", "self_reported"].map((b) => opt(b, b || "None", e.cpe_body || ""))}</select></label>
     </div>
     <fieldset class="a-chips"><legend>Topics</legend>${Object.entries(TOPICS).map(([k, v]) => html`<label class="a-chip"><input type="checkbox" name="topics" value="${k}" ${topics.includes(k) ? raw("checked") : ""}> ${v}</label>`)}</fieldset>
+    <div class="a-grid-3">
+      <label>Platform<select name="platform">${["", "Zoom", "Webex", "BrightTALK", "LinkedIn Live", "YouTube", "Teams", "other"].map((b) => opt(b, b || "None", e.platform || ""))}</select></label>
+      <label>Speakers<input name="speakers" value="${e.speakers || ""}" maxlength="200"></label>
+      <label>Recording URL <small>(after it airs)</small><input type="url" name="recording_url" value="${e.recording_url || ""}" maxlength="500"></label>
+    </div>
     <div class="a-grid-2">
       <label>Discount code<input name="discount_code" value="${e.discount_code || ""}" maxlength="40"></label>
       <label>Discount text<input name="discount_text" value="${e.discount_text || ""}" maxlength="200"></label>
@@ -76,6 +82,7 @@ export function eventForm(e, orgs, venues, { action, isNew = false } = {}) {
     <div class="a-grid-3">
       <label class="a-check"><input type="checkbox" name="is_better_security_event" value="1" ${e.is_better_security_event ? raw("checked") : ""}> Better Security event</label>
       <label class="a-check"><input type="checkbox" name="is_featured" value="1" ${e.is_featured ? raw("checked") : ""}> Jerome's pick</label>
+      <label class="a-check"><input type="checkbox" name="also_virtual" value="1" ${e.also_virtual ? raw("checked") : ""}> Also list on the Virtual calendar (San Diego online events)</label>
     </div>
     <label>Reviewer notes <small>(private)</small><textarea name="reviewer_notes" rows="2">${e.reviewer_notes || ""}</textarea></label>
     ${e.submitted_by_name ? html`<p class="a-muted">Submitted by ${e.submitted_by_name} &lt;${e.submitted_by_email}&gt; on ${e.created_at}</p>` : ""}

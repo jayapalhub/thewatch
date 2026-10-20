@@ -26,7 +26,8 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const fullTitle = title ? `${title} | The Watch San Diego` : "The Watch San Diego: cybersecurity events in San Diego";
   const desc = description || "Every cybersecurity, AI security, privacy and audit event in San Diego County, in one calendar and one Sunday email. By Better Security.";
   const nav = [
-    ["/sandiego", "Calendar"],
+    ["/sandiego", "San Diego"],
+    ["/virtual", "Virtual"],
     ["/events", "Our events"],
     ["/submit", "Submit an event"],
     ["/sponsor", "Sponsor"],
@@ -81,6 +82,7 @@ ${body}
       <h3>Calendar</h3>
       <a href="/sandiego">This week</a>
       <a href="/sandiego?view=month">Month view</a>
+      <a href="/virtual">Virtual sessions and CPE</a>
       <a href="/sandiego/feed.ics">Subscribe to the calendar feed</a>
       <a href="/submit">Submit an event</a>
     </div>

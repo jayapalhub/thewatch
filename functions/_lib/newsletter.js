@@ -15,7 +15,12 @@ export async function loadIssueData(db, issue) {
   const bs = (await queryEvents(db, { city: issue.city || "sandiego", from: issue.week_start + "T00:00", limit: 50 })).filter((e) => e.is_better_security_event);
   let featuredIds = []; try { featuredIds = JSON.parse(issue.featured_event_ids || "[]"); } catch {}
   const featured = events.filter((e) => featuredIds.includes(e.id));
-  return { events, soon, bs, featured };
+  // Virtual CPE picks for the week: prefer non-vendor, free, CPE eligible; cap at five
+  const virt = (await queryEvents(db, { city: "virtual", from, to, cpe: "1", limit: 200 }))
+    .filter((e) => !events.find((x) => x.id === e.id))
+    .sort((a, b) => (a.org_type === "vendor") - (b.org_type === "vendor") || (a.cost_type !== "free") - (b.cost_type !== "free") || a.start_at.localeCompare(b.start_at))
+    .slice(0, 5);
+  return { events, soon, bs, featured, virt };
 }
 
 function go(siteUrl, e, t, issueId) { return `${siteUrl}/go/${e.id}?t=${t}&i=${issueId || ""}`; }
@@ -68,6 +73,9 @@ export function renderIssueHtml(issue, data, siteUrl) {
     <div style="font-size:11px;font-weight:700;color:${ELECTRIC};margin-bottom:6px;">From Better Security</div>
     ${totalBs.map((e) => `<div style="margin:0 0 8px;"><a href="${go(siteUrl, e, "page", issue.id)}" style="color:#fff;font-weight:700;text-decoration:none;font-size:15px;">${esc(e.title)}</a><div style="color:rgba(255,255,255,.75);font-size:13px;">${esc(weekday(e.start_at))}, ${esc(monthName(e.start_at))} ${dayNum(e.start_at)}${e.venue_display ? " · " + esc(e.venue_display) : ""}${costLabel(e) && e.cost_type !== "unknown" ? " · " + esc(costLabel(e)) : ""}</div></div>`).join("")}
   </div>` : ""}
+  ${data.virt && data.virt.length ? `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">CPE from your desk</div>
+  <div style="font-size:13px;color:${MUTED};margin:0 0 6px;">Live online sessions this week with credit hours, times in Pacific. <a href="${siteUrl}/virtual" style="color:${SHIELD};">See all virtual sessions</a>.</div>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${data.virt.map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(weekday(e.start_at)).slice(0, 3)} ${esc(fmtTimeRange(e.start_at, e.end_at))}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a> <span style="color:${MUTED};">· ${esc(e.org_display)}${cpeLabel(e) ? " · " + esc(cpeLabel(e)) : ""}${e.org_type === "vendor" ? " · Vendor" : ""}</span></td></tr>`).join("")}</table>` : ""}
   ${soon.length ? `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">Coming up, register early</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${soon.slice(0, 8).map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(monthName(e.start_at)).slice(0, 3)} ${dayNum(e.start_at)}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a>${e.org_display ? ` <span style="color:${MUTED};">· ${esc(e.org_display)}</span>` : ""}</td></tr>`).join("")}</table>` : ""}
   <div style="margin:26px 0 0;padding-top:14px;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};line-height:1.6;">

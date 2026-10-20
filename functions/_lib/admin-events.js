@@ -1,6 +1,7 @@
 import { str, list, slugify } from "./html.js";
 import { TOPICS } from "./constants.js";
 import { sendEmail, emailShell } from "./integrations.js";
+import { toUtc } from "./dates.js";
 
 const num = (v) => { const s = str(v); if (s === "") return null; const n = parseFloat(s); return Number.isFinite(n) ? n : null; };
 
@@ -37,13 +38,20 @@ export function parseEventForm(p) {
     status: ["draft", "pending_review", "published", "cancelled", "rejected"].includes(str(p.status)) ? str(p.status) : "pending_review",
     source: str(p.source, 20) || "manual",
     reviewer_notes: str(p.reviewer_notes, 2000) || null,
+    city: str(p.city) === "virtual" ? "virtual" : "sandiego",
+    platform: str(p.platform, 30) || null,
+    speakers: str(p.speakers, 200) || null,
+    recording_url: str(p.recording_url, 500) || null,
+    also_virtual: str(p.also_virtual) === "1" ? 1 : 0,
   };
+  row.start_utc = toUtc(row.start_at, "America/Los_Angeles").toISOString();
+  row.end_utc = row.end_at ? toUtc(row.end_at, "America/Los_Angeles").toISOString() : null;
   return { row };
 }
 
 export async function insertEvent(db, row) {
   const cols = Object.keys(row);
-  const sql = `INSERT INTO events (${cols.join(",")}, city) VALUES (${cols.map(() => "?").join(",")}, 'sandiego')`;
+  const sql = `INSERT INTO events (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})`;
   const r = await db.prepare(sql).bind(...cols.map((c) => row[c])).run();
   return r.meta.last_row_id;
 }

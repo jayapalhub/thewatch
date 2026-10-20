@@ -281,3 +281,18 @@ small { color: var(--muted); }
 .footer-address { font-size: .8rem; color: rgba(255,255,255,.55); margin: 6px 0 0; }
 @media (max-width: 820px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 520px) { .footer-grid { grid-template-columns: 1fr; } }
+
+/* Virtual calendar */
+.cal-sub { color: var(--muted); max-width: 64ch; margin: 6px 0 0; }
+.city-toggle a { min-width: 96px; text-align: center; }
+.virtual-list { margin-top: 10px; }
+.virtual-list .day-sep { list-style: none; font-family: var(--display); font-weight: 800; font-size: 1.15rem; color: var(--shield); padding: 22px 0 6px; border-top: 1px solid var(--mist); }
+.virtual-list .day-sep:first-child { border-top: 0; padding-top: 10px; }
+.virtual-row .event-time { display: flex; flex-direction: column; gap: 2px; }
+.virtual-row .v-time { color: var(--ink); }
+.tag-vendor { background: #FFF1E0; color: #8A4B00; }
+.btn-ghost-dark { background: transparent; color: var(--muted); border-color: var(--mist); }
+.btn-ghost-dark:hover { color: var(--ink); border-color: var(--muted); }
+.virtual-row.is-vendor .event-title a { color: var(--ink); }
+@media (max-width: 720px) { .virtual-row .event-time { flex-direction: row; gap: 8px; } }
+.toggle-row { display: flex; gap: 10px; flex-wrap: wrap; }

@@ -24,10 +24,11 @@ export async function onRequestGet({ request, env }) {
         </div>
         <div class="row-3">
           <label>Date <input type="date" name="date" required min="2026-10-01"></label>
-          <label>Start time <input type="time" name="start_time" required></label>
+          <label>Start time <span class="hint">Pacific time</span><input type="time" name="start_time" required></label>
           <label>End time <input type="time" name="end_time"></label>
         </div>
         <div class="row-2">
+          <label>Which calendar <select name="calendar"><option value="sandiego">San Diego (in person or local online)</option><option value="virtual">Virtual (online, open to anyone)</option></select></label>
           <label>Format <select name="format"><option value="in_person">In person</option><option value="virtual">Virtual</option><option value="hybrid">Hybrid</option></select></label>
           <label>Registration link <input type="url" name="registration_url" required placeholder="https://"></label>
         </div>

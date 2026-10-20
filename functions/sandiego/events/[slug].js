@@ -4,6 +4,7 @@ import { eventBySlug, eventTags, upcomingEvents, eventRow, eventJsonLd, costLabe
 import { fmtDateLong, fmtTimeRange } from "../../_lib/dates.js";
 import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
 import { FORMATS, AUDIENCE } from "../../_lib/constants.js";
+import { toUtc } from "../../_lib/dates.js";
 
 export async function onRequestGet({ params, env }) {
   const e = await eventBySlug(env.DB, params.slug);
@@ -16,20 +17,23 @@ export async function onRequestGet({ params, env }) {
   const body = html`
   <article class="event-page">
     <div class="wrap narrow">
-      <p class="crumbs"><a href="/sandiego">Calendar</a> <span class="sep"></span> ${e.org_display ? html`<a href="/sandiego/organizers/${e.org_slug}">${e.org_display}</a>` : "Event"}</p>
+      <p class="crumbs"><a href="${e.city === "virtual" ? "/virtual" : "/sandiego"}">${e.city === "virtual" ? "Virtual" : "Calendar"}</a> <span class="sep"></span> ${e.org_display ? html`<a href="/sandiego/organizers/${e.org_slug}">${e.org_display}</a>` : "Event"}</p>
       ${e.status === "cancelled" ? html`<p class="notice notice-warn">This event has been cancelled by the organizer.</p>` : ""}
       <h1>${e.title}</h1>
       <div class="tags">${eventTags(e)}</div>
       <dl class="event-facts">
-        <div><dt>When</dt><dd>${fmtDateLong(e.start_at)}<br>${fmtTimeRange(e.start_at, e.end_at) || "Time to be announced"} Pacific</dd></div>
+        <div><dt>When</dt><dd>${fmtDateLong(e.start_at)}<br>${fmtTimeRange(e.start_at, e.end_at) || "Time to be announced"} Pacific${e.format !== "in_person" ? html`<br><small data-local-time data-start="${e.start_utc || (toUtc(e.start_at, e.timezone) || new Date()).toISOString()}" data-end="${e.end_utc || (e.end_at ? toUtc(e.end_at, e.timezone).toISOString() : "")}"></small>` : ""}</dd></div>
         <div><dt>Where</dt><dd>${where || "To be announced"}${mapsUrl ? html`<br><a href="${mapsUrl}" rel="noopener" target="_blank">Open in Maps</a>` : ""}${e.format === "hybrid" ? html`<br>Also available online` : ""}</dd></div>
         <div><dt>Cost</dt><dd>${costLabel(e) || "Not listed"}${e.cost_notes ? html`<br><small>${e.cost_notes}</small>` : ""}${e.member_price_notes ? html`<br><small>${e.member_price_notes}</small>` : ""}</dd></div>
         ${e.cpe_eligible ? html`<div><dt>CPE</dt><dd>Organizer reports ${e.cpe_hours ? `${e.cpe_hours} hours` : "credit"}${e.cpe_body ? ` (${e.cpe_body})` : ""}${e.cpe_notes ? html`<br><small>${e.cpe_notes}</small>` : ""}</dd></div>` : ""}
         <div><dt>Who it's for</dt><dd>${AUDIENCE[e.audience_level] || "Open to all"}</dd></div>
+        ${e.platform ? html`<div><dt>Platform</dt><dd>${e.platform}</dd></div>` : ""}
+        ${e.speakers ? html`<div><dt>Speakers</dt><dd>${e.speakers}</dd></div>` : ""}
       </dl>
       ${e.discount_code ? html`<p class="notice notice-deal"><strong>Subscriber discount:</strong> ${e.discount_text || "Use this code when you register."} <code>${e.discount_code}</code></p>` : ""}
       <div class="cta-row">
         ${e.registration_url && e.status !== "cancelled" ? html`<a class="btn btn-primary" href="/go/${e.id}?t=register" rel="noopener">Register with the organizer</a>` : ""}
+        ${e.recording_url ? html`<a class="btn btn-outline" href="${e.recording_url}" rel="noopener" target="_blank">Watch the recording</a>` : ""}
         <details class="add-cal"><summary class="btn btn-outline">Add to calendar</summary>
           <div class="add-cal-menu">
             <a href="${googleCalendarUrl(e, siteUrl)}" target="_blank" rel="noopener">Google Calendar</a>

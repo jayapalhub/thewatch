@@ -58,3 +58,57 @@
     document.querySelectorAll('details.add-cal[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
   });
 })();
+
+// Virtual calendar: render UTC instants in the viewer's chosen zone and group by day.
+(function () {
+  var list = document.querySelector('[data-virtual-list]');
+  var sel = document.getElementById('tz-select');
+  if (!list || !sel) return;
+  var KEY = 'watch-tz';
+  var saved = null; try { saved = localStorage.getItem(KEY); } catch (e) {}
+  if (saved) sel.value = saved;
+  function zone() { var v = sel.value; return v === 'auto' ? (Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles') : v; }
+  function render() {
+    var tz = zone();
+    var dayFmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'long', month: 'short', day: 'numeric' });
+    var keyFmt = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' });
+    var timeFmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    var tFmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit' });
+    var lastKey = null;
+    list.querySelectorAll('.day-sep').forEach(function (n) { n.remove(); });
+    list.querySelectorAll('.virtual-row').forEach(function (row) {
+      var s = new Date(row.getAttribute('data-start')); var eAttr = row.getAttribute('data-end'); var en = eAttr ? new Date(eAttr) : null;
+      var k = keyFmt.format(s);
+      if (k !== lastKey) {
+        var sep = document.createElement('li'); sep.className = 'day-sep'; sep.textContent = dayFmt.format(s); row.parentNode.insertBefore(sep, row); lastKey = k;
+      }
+      var t = row.querySelector('[data-tz-time]'); var d = row.querySelector('[data-tz-date]');
+      if (d) d.textContent = '';
+      if (t) t.textContent = en ? (tFmt.format(s) + ' to ' + timeFmt.format(en)) : timeFmt.format(s);
+    });
+    var opt = sel.querySelector('option[value="auto"]'); if (opt) opt.textContent = 'My time zone (' + (Intl.DateTimeFormat().resolvedOptions().timeZone || 'local') + ')';
+  }
+  sel.addEventListener('change', function () { try { localStorage.setItem(KEY, sel.value); } catch (e) {} render(); });
+  render();
+  // Checkboxes that mean "off" when unchecked: submit an explicit 0 so the default can be on.
+  var form = sel.closest('form');
+  if (form) form.addEventListener('submit', function () {
+    form.querySelectorAll('input[type="checkbox"][data-off-value]').forEach(function (cb) {
+      if (!cb.checked) { var h = document.createElement('input'); h.type = 'hidden'; h.name = cb.name; h.value = cb.getAttribute('data-off-value'); form.appendChild(h); }
+    });
+    sel.disabled = true; // don't submit the zone picker
+  });
+})();
+
+// Event page: show a virtual session's time in the viewer's own zone.
+(function () {
+  var el = document.querySelector('[data-local-time]');
+  if (!el) return;
+  try {
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    var s = new Date(el.getAttribute('data-start')); var eAttr = el.getAttribute('data-end'); var en = eAttr ? new Date(eAttr) : null;
+    var f = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    var t = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+    el.textContent = 'In your time zone: ' + f.format(s) + (en ? ' to ' + t.format(en) : '');
+  } catch (e) {}
+})();
