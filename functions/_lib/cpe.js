@@ -1,6 +1,8 @@
 // Personal CPE log. A subscriber is identified by their profile token: in ?t= on links we email them, or in the
 // watch_pt cookie that /profile and /cpe set (HttpOnly, so page scripts never see it). The readable watch_cpe=1
 // cookie only tells event pages to show the Mark attended button; it carries nothing private.
+import { toUtc } from "./dates.js";
+
 export const PT_COOKIE = "watch_pt";
 export const FLAG_COOKIE = "watch_cpe";
 const YEAR = 31536000;
@@ -25,9 +27,11 @@ export async function subscriberByToken(db, token) {
   return db.prepare("SELECT id, email, first_name, profile_token, status, city FROM subscribers WHERE profile_token=?").bind(token).first();
 }
 
-// Has the event started? Uses the stored UTC instant.
+// Has the event started? Uses the stored UTC instant, or the local start time in the event's zone for older rows
+// that were entered before start_utc existed.
 export function eventStarted(e, now = Date.now()) {
-  const t = e.start_utc ? Date.parse(e.start_utc) : NaN;
+  let t = e.start_utc ? Date.parse(e.start_utc) : NaN;
+  if (!Number.isFinite(t) && e.start_at) { const d = toUtc(e.start_at, e.timezone || "America/Los_Angeles"); t = d ? d.getTime() : NaN; }
   return Number.isFinite(t) ? t <= now : false;
 }
 
