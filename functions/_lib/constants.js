@@ -40,6 +40,7 @@ export const TOPICS = {
   threat_intel: "Threat intel",
   leadership: "Leadership",
   careers: "Careers",
+  tech: "Tech and IT leadership",
   social: "Social",
 };
 
