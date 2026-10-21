@@ -30,7 +30,7 @@ export async function onRequestGet({ request, env, data }) {
   <p class="a-muted">${speakers.length} people across every published event, parsed from the Speakers field. Public pages: ${["sandiego", "sanjose"].filter((c) => cityOf(c)).map((c) => html`<a href="/${c}/speakers" target="_blank">/${c}/speakers</a> `)}<a href="/virtual/speakers" target="_blank">/virtual/speakers</a>. Names only; no photos, bios or contact details. Merging keeps the spelling you pick and folds the other one's events into it.</p>
   ${dupes.length ? html`<h2>Possible duplicates (${dupes.length})</h2>
   <table class="a-table"><thead><tr><th>Spellings</th><th>Keep which</th></tr></thead><tbody>
-  ${dupes.map((g) => html`<tr><td>${g.map((s) => html`${s.name} <small>(${s.events.length})</small><br>`)}</td><td>${g.map((into) => g.filter((x) => x !== into).map((from) => mergeBtn(from, into)))}</td></tr>`)}
+  ${dupes.map((g) => html`<tr><td class="a-nowrap">${g.map((s) => html`${s.name} <small>(${s.events.length})</small><br>`)}</td><td>${g.flatMap((into) => g.filter((x) => x !== into).map((from) => mergeBtn(from, into)))}</td></tr>`)}
   </tbody></table>` : ""}
   <form class="a-toolbar" method="get"><input type="search" name="q" value="${q}" placeholder="Name or affiliation"><button class="a-btn">Filter</button></form>
   <datalist id="spk-names">${speakers.map((s) => html`<option value="${s.name}">`)}</datalist>
