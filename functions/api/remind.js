@@ -25,7 +25,7 @@ export async function onRequestPost({ request, env }) {
       await env.DB.prepare("UPDATE reminders SET subscriber_id=(SELECT id FROM subscribers WHERE email=?) WHERE event_id=? AND email=?").bind(email, event.id, email).run();
       joined = true;
     }
-    const base = r.already ? "You already have a reminder set for this one." : "Done. We'll email you the morning before.";
+    const base = r.sent ? "We already sent you a reminder for this one." : r.already ? "You already have a reminder set for this one." : "Done. We'll email you the morning before.";
     const extra = joined ? (live ? " You're also on the Sunday email now; check your inbox for a welcome note." : ` You're also on the list for The Watch ${CITIES[event.city].name}, which starts its Sunday email soon.`) : r.subscribed && p.join === "1" ? " You're already on the Sunday email." : "";
     return json({ success: true, message: `${base}${extra} Remember, a reminder is not registration, so register with the organizer to hold your spot.` });
   } catch (e) {

@@ -6,6 +6,10 @@ export async function onRequestGet({ request, env }) {
   const t = (new URL(request.url).searchParams.get("t") || "").slice(0, 64);
   const sub = t ? await env.DB.prepare("SELECT * FROM subscribers WHERE profile_token=?").bind(t).first() : null;
   const interests = sub ? (() => { try { return JSON.parse(sub.interests || "[]"); } catch { return []; } })() : [];
+  if (t === "preview") {
+    const body = html`<section class="hero hero-short"><div class="wrap narrow"><p class="kicker">Preview</p><h1>This is the preview copy.</h1><p class="lede">Subscribers who have not answered the profile questions get a personal link here. Everyone else never sees the box.</p></div></section>`;
+    return page(shell({ title: "Your profile", body, path: "/subscribe", head: '<meta name="robots" content="noindex">' }), 200);
+  }
   const body = sub ? html`
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">You're subscribed</p>

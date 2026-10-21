@@ -27,7 +27,7 @@ export async function requestReminder(db, { event, email, request }) {
   if (!event || event.status !== "published") return { ok: false, status: 404, error: "That event is not on the calendar anymore." };
   if (startUtc(event).getTime() <= Date.now()) return { ok: false, status: 400, error: "That event has already started." };
   const existing = await db.prepare("SELECT id, status FROM reminders WHERE event_id=? AND email=?").bind(event.id, email).first();
-  if (existing && ["queued", "sending"].includes(existing.status)) return { ok: true, already: true };
+  if (existing && ["queued", "sending", "sent"].includes(existing.status)) return { ok: true, already: true, sent: existing.status === "sent" };
   const { n } = await db.prepare("SELECT COUNT(*) AS n FROM reminders WHERE email=? AND status='queued'").bind(email).first();
   if (n >= MAX_QUEUED_PER_EMAIL) return { ok: false, status: 429, error: `That address already has ${MAX_QUEUED_PER_EMAIL} reminders waiting. Once one of those events passes you can add another.` };
   const sub = await db.prepare("SELECT id, status FROM subscribers WHERE email=?").bind(email).first();
