@@ -1,6 +1,7 @@
 import { list, token, sha256 } from "./html.js";
 import { sendEmail, welcomeEmail } from "./integrations.js";
 import { CONSENT_VERSION, CITIES, DEFAULT_CITY } from "./constants.js";
+import { referrerFor, maybeThank } from "./referrals.js";
 
 // Insert or update a subscriber in D1, then mirror to Beehiiv.
 // Returns the subscriber row (with profile_token) so callers can link to /profile.
@@ -16,14 +17,15 @@ export async function upsertSubscriber(db, env, { email, source, tags = [], requ
     const mergedTags = Array.from(new Set([...list(existing.tags), ...tags]));
     const status = existing.status === "unsubscribed" ? "active" : existing.status; // re-subscribing by submitting a form is explicit consent
     const profileToken = existing.profile_token || token();
-    await db.prepare("UPDATE subscribers SET tags=?, status=?, profile_token=?, consented_at=COALESCE(consented_at, ?), consent_text_version=COALESCE(consent_text_version, ?), city=COALESCE(?, city, ?), unsub_token=COALESCE(unsub_token, ?), updated_at=? WHERE id=?")
-      .bind(JSON.stringify(mergedTags), status, profileToken, now, CONSENT_VERSION, city, DEFAULT_CITY, token(), now, existing.id).run();
+    await db.prepare("UPDATE subscribers SET tags=?, status=?, profile_token=?, consented_at=COALESCE(consented_at, ?), consent_text_version=COALESCE(consent_text_version, ?), city=COALESCE(?, city, ?), unsub_token=COALESCE(unsub_token, ?), ref_code=COALESCE(ref_code, ?), updated_at=? WHERE id=?")
+      .bind(JSON.stringify(mergedTags), status, profileToken, now, CONSENT_VERSION, city, DEFAULT_CITY, token(), token(10), now, existing.id).run();
     row = { ...existing, tags: mergedTags, status, profile_token: profileToken };
   } else {
     const profileToken = token();
-    const res = await db.prepare("INSERT INTO subscribers (email, status, source, consent_text_version, consented_at, ip_hash, tags, profile_token, company, first_name, city, unsub_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-      .bind(email, "active", source || null, CONSENT_VERSION, now, ipHash, JSON.stringify(tags), profileToken, extra.company || null, extra.first_name || null, city || DEFAULT_CITY, token()).run();
-    row = { id: res.meta.last_row_id, email, status: "active", source, tags, profile_token: profileToken };
+    const referredBy = await referrerFor(db, request, email); // from a /r/<code> visit in the last 30 days
+    const res = await db.prepare("INSERT INTO subscribers (email, status, source, consent_text_version, consented_at, ip_hash, tags, profile_token, company, first_name, city, unsub_token, ref_code, referred_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .bind(email, "active", source || null, CONSENT_VERSION, now, ipHash, JSON.stringify(tags), profileToken, extra.company || null, extra.first_name || null, city || DEFAULT_CITY, token(), token(10), referredBy).run();
+    row = { id: res.meta.last_row_id, email, status: "active", source, tags, profile_token: profileToken, referred_by: referredBy, isNew: true };
   }
   // Welcome email from the site (new subscribers and people coming back after unsubscribing).
   const rejoined = existing && existing.status === "unsubscribed";
@@ -33,6 +35,8 @@ export async function upsertSubscriber(db, env, { email, source, tags = [], requ
     const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
     await sendEmail(env, { to: email, from: `The Watch ${c.name} <watch@bettersecurity.ai>`, subject: `Welcome to The Watch ${c.name}`, html: welcomeEmail(siteUrl, full, c), headers: { "List-Unsubscribe": `<${siteUrl}/unsubscribe?t=${full.unsub_token}>` } });
   }
+  // A new signup through someone's share link may earn them the thank you at 3 or 10.
+  if (row.isNew && row.referred_by) { try { await maybeThank(env, row.referred_by); } catch (e) { console.error("referral thanks failed", e && e.message); } }
   return row;
 }
 

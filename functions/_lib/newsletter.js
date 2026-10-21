@@ -145,7 +145,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   ${PROFILE_NUDGE}
   ${data.sponsor && !issue.sponsor_name ? sponsorLine(data.sponsor, siteUrl, issue, city) : ""}
   <div style="margin:26px 0 0;padding-top:14px;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};line-height:1.6;">
-    Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/${issue.city || "sandiego"}" style="color:${SHIELD};">bettersecurity.ai/${issue.city || "sandiego"}</a>.<br>
+    {{SHARE}}Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/${issue.city || "sandiego"}" style="color:${SHIELD};">bettersecurity.ai/${issue.city || "sandiego"}</a>.<br>
     ${esc(city.title)} is published by Better Security, ${esc(MAIL_ADDRESS)}.<br>
     You are getting this because you subscribed at bettersecurity.ai. <a href="{{UNSUB}}" style="color:${MUTED};">Unsubscribe</a> in one click.
   </div>

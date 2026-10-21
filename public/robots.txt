@@ -3,4 +3,5 @@ Allow: /
 Disallow: /admin
 Disallow: /profile
 Disallow: /go/
+Disallow: /r/
 Sitemap: https://bettersecurity.ai/sitemap.xml

@@ -1,6 +1,7 @@
 import { json, readForm, str, EMAIL_RE } from "../_lib/html.js";
 import { upsertSubscriber, rateLimited } from "../_lib/subscribers.js";
 import { CITIES } from "../_lib/constants.js";
+import { refCodeFromRequest, clearRefCookie } from "../_lib/referrals.js";
 
 export async function onRequestPost({ request, env }) {
   const p = await readForm(request);
@@ -12,7 +13,9 @@ export async function onRequestPost({ request, env }) {
   try {
     const city = CITIES[str(p.city, 30)] ? str(p.city, 30) : null; // from the city picker, when the form has one
     const row = await upsertSubscriber(env.DB, env, { email, source, request, city });
-    return json({ success: true, next: `/profile?t=${row.profile_token}` });
+    const res = json({ success: true, next: `/profile?t=${row.profile_token}` });
+    if (refCodeFromRequest(request)) res.headers.append("Set-Cookie", clearRefCookie()); // the referral is recorded (or did not apply); done with it
+    return res;
   } catch (e) {
     console.error("subscribe failed", e && e.message);
     return json({ success: false, error: "Something went wrong on our side. Try again in a minute." }, 500);

@@ -4,6 +4,7 @@ import { CITIES, MAIL_ADDRESS } from "./constants.js";
 import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobsBlock, picksBlock, parseInterests } from "./newsletter.js";
 import { TOPICS } from "./constants.js";
 import { mondayOf, addDays } from "./dates.js";
+import { shareLineHtml } from "./referrals.js";
 
 export const SEND_HOUR = 8;           // local time, Sunday
 export const PREVIEW_HOUR = 8;        // local time, Saturday
@@ -54,7 +55,8 @@ function personalize(html, siteUrl, sub, ctx = {}) {
   const nudge = sub.profile_token && !sub.profile_completed_at ? profileNudgeHtml(siteUrl, sub.profile_token) : "";
   const jobs = html.includes("{{JOBS}}") && ctx.city ? jobsBlock(siteUrl, ctx.city, ctx.jobs, sub.seniority, ctx.issueId) : "";
   const picks = html.includes("{{PICKS}}") ? picksBlock(siteUrl, ctx.events, sub.interests, ctx.issueId) : "";
-  return html.replace(/\{\{UNSUB\}\}/g, `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`).replace(/\{\{PROFILE_NUDGE\}\}/g, nudge).replace(/\{\{JOBS\}\}/g, jobs).replace(/\{\{PICKS\}\}/g, picks);
+  const share = shareLineHtml(siteUrl, sub.ref_code); // "Share The Watch" line in the footer, with this subscriber's own link
+  return html.replace(/\{\{SHARE\}\}/g, share).replace(/\{\{UNSUB\}\}/g, `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`).replace(/\{\{PROFILE_NUDGE\}\}/g, nudge).replace(/\{\{JOBS\}\}/g, jobs).replace(/\{\{PICKS\}\}/g, picks);
 }
 
 // For previews: how many subscribers in a city have interests, and the most common ones (used as the sample).
@@ -80,7 +82,7 @@ export async function sendPreview(env, issue, city) {
     To change the note, subject or picks, edit it at <a href="${siteUrl}/admin/issues/${issue.id}">${siteUrl}/admin/issues/${issue.id}</a> any time before then. To stop it, press Cancel this send on that page. If you do nothing, it goes out as shown.<br>
     ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}.${picksNote} The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.${data.jobs && data.jobs.length ? ` Hiring this week shows three of the ${data.jobs.length} live roles, matched to each subscriber's level; this preview shows the default pick.` : ""}</div>`;
   const to = env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai";
-  await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) });
+  await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", ref_code: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) });
   await env.DB.prepare("UPDATE issues SET subject=COALESCE(subject, ?), preview_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(subject, issue.id).run();
   return { to, subject, subscribers: n };
 }
@@ -93,7 +95,7 @@ export async function dispatchIssue(env, issue, city) {
   if (issue.status !== "sending") await env.DB.prepare("UPDATE issues SET status='sending', subject=?, dispatched_at=COALESCE(dispatched_at, datetime('now')), generated_html=?, updated_at=datetime('now') WHERE id=?").bind(subject, html, issue.id).run();
   let lastId = issue.last_sent_subscriber_id || 0, sent = 0, batches = 0;
   while (batches < MAX_BATCHES_PER_RUN) {
-    const { results } = await env.DB.prepare("SELECT id, email, unsub_token, profile_token, profile_completed_at, seniority, interests FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
+    const { results } = await env.DB.prepare("SELECT id, email, unsub_token, profile_token, ref_code, profile_completed_at, seniority, interests FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
     if (!results.length) {
       await env.DB.prepare("UPDATE issues SET status='sent', completed_at=datetime('now'), sent_count=sent_count+?, last_sent_subscriber_id=?, updated_at=datetime('now') WHERE id=?").bind(sent, lastId, issue.id).run();
       return { done: true, sent };
