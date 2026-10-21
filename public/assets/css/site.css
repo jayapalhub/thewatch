@@ -296,3 +296,14 @@ small { color: var(--muted); }
 .virtual-row.is-vendor .event-title a { color: var(--ink); }
 @media (max-width: 720px) { .virtual-row .event-time { flex-direction: row; gap: 8px; } }
 .toggle-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* City chooser */
+.city-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.city-card { display: flex; flex-direction: column; gap: 6px; padding: 22px 22px 20px; border: 1px solid var(--mist); border-radius: 14px; background: var(--white); text-decoration: none; color: var(--ink); transition: border-color .15s, transform .15s, box-shadow .15s; }
+.city-card:hover { border-color: var(--electric); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(27,74,138,.10); }
+.city-card-name { font-family: var(--display); font-weight: 800; font-size: 1.6rem; line-height: 1.1; }
+.city-card-region { color: var(--muted); font-size: .92rem; }
+.city-card-count { font-weight: 700; color: var(--shield); margin-top: 6px; }
+.city-card-next { color: var(--muted); font-size: .85rem; }
+.city-card-virtual { background: linear-gradient(135deg, #F3FAFF, #FFFFFF); }
+.city-foot { margin-top: 18px; color: var(--muted); font-size: .9rem; }

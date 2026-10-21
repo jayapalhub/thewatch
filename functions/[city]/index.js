@@ -54,7 +54,9 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       ${signupForm({ source: city.slug === DEFAULT_CITY ? "calendar" : `calendar:${city.slug}` })}
     </div></section>`;
 
-  return page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
+  const res = page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
+  res.headers.append("Set-Cookie", `watch_city=${city.slug}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
+  return res;
 }
 
 function header(city, view, f, orgs, anyFilter, monthKey) {

@@ -3,7 +3,7 @@ import { TOPICS, FORMATS, COST_TYPES, AUDIENCE, EVENT_STATUSES, ORG_TYPES, ASSET
 import { mark } from "./layout.js";
 
 export function adminShell({ title, body, path = "/admin", user }) {
-  const nav = [["/admin", "Overview"], ["/admin/review", "Review queue"], ["/admin/events", "Events"], ["/admin/organizations", "Organizers"], ["/admin/people", "People"], ["/admin/sponsors", "Sponsor inquiries"], ["/admin/issues", "Newsletter"], ["/admin/feeds", "Feeds"]];
+  const nav = [["/admin", "Overview"], ["/admin/review", "Review queue"], ["/admin/events", "Events"], ["/admin/organizations", "Organizers"], ["/admin/people", "People"], ["/admin/sponsors", "Sponsor inquiries"], ["/admin/issues", "Newsletter"], ["/admin/feeds", "Feeds"], ["/admin/cities", "Cities"]];
   return html`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">
 <title>${title} | Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">

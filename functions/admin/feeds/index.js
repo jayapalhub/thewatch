@@ -1,6 +1,7 @@
 import { html, page, raw, readForm, redirect, str } from "../../_lib/html.js";
 import { adminShell, flash } from "../../_lib/admin.js";
 import { runAllSources } from "../../_lib/feeds.js";
+import { CITIES } from "../../_lib/constants.js";
 
 const KINDS = { brighttalk: "BrightTALK channel feed", ical: "iCal / ICS feed" };
 
@@ -31,7 +32,7 @@ export async function onRequestGet({ request, env, data }) {
     </div>
     <div class="a-grid-3">
       <label>Kind<select name="kind">${Object.entries(KINDS).map(([k, v]) => html`<option value="${k}">${v}</option>`)}</select></label>
-      <label>Calendar<select name="city"><option value="virtual">Virtual</option><option value="sandiego">San Diego</option></select></label>
+      <label>Calendar<select name="city"><option value="virtual">Virtual</option>${Object.values(CITIES).map((c) => html`<option value="${c.slug}">${c.name}</option>`)}</select></label>
       <label>Organizer<select name="organization_id"><option value="">None (set per event)</option>${orgs.map((o) => html`<option value="${o.id}">${o.name}</option>`)}</select></label>
     </div>
     <div class="a-grid-3">
@@ -70,7 +71,7 @@ export async function onRequestPost({ request, env }) {
     if (!name || !/^https?:\/\//i.test(url)) return redirect("/admin/feeds?msg=Name+and+a+valid+URL+are+required");
     const topics = str(p.topics, 200).split(",").map((t) => t.trim()).filter(Boolean);
     await env.DB.prepare("INSERT INTO feed_sources (name, kind, url, organization_id, city, timezone, cpe_default, cpe_body, topics, notes, keywords) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
-      .bind(name, kind, url, parseInt(str(p.organization_id), 10) || null, str(p.city) === "sandiego" ? "sandiego" : "virtual", str(p.timezone, 60) || "America/Los_Angeles",
+      .bind(name, kind, url, parseInt(str(p.organization_id), 10) || null, CITIES[str(p.city)] ? str(p.city) : "virtual", str(p.timezone, 60) || "America/Los_Angeles",
         str(p.cpe_default) === "1" ? 1 : 0, str(p.cpe_body, 20) || null, JSON.stringify(topics), str(p.notes, 300) || null, str(p.keywords, 500) || null).run();
     return redirect("/admin/feeds?msg=Source+added.+Press+Pull+to+try+it.");
   }

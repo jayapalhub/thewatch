@@ -86,6 +86,7 @@ ${body}
       <h3>Calendar</h3>
       ${Object.values(CITIES).map((x) => html`<a href="/${x.slug}">${x.name}</a>`)}
       <a href="/virtual">Virtual sessions and CPE</a>
+      <a href="/?choose=1">Change city</a>
       <a href="${calHome}/feed.ics">Subscribe to the calendar feed</a>
       <a href="/submit">Submit an event</a>
     </div>
