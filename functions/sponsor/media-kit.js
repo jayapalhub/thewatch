@@ -13,10 +13,10 @@ const fmt = (n) => Number(n || 0).toLocaleString("en-US");
 async function cityStats(db, slug, today) {
   const in90 = addDays(today, 90);
   const [up, year, orgs, cpe] = await Promise.all([
-    db.prepare("SELECT COUNT(*) n FROM events WHERE status='published' AND city=? AND start_at >= ? AND start_at < ?").bind(slug, today, in90).first(),
+    db.prepare("SELECT COUNT(*) n FROM events WHERE status='published' AND city=? AND COALESCE(format,'in_person') != 'virtual' AND start_at >= ? AND start_at < ?").bind(slug, today, in90).first(),
     db.prepare("SELECT COUNT(*) n FROM events WHERE status IN ('published','cancelled') AND city=?").bind(slug).first(),
     db.prepare("SELECT COUNT(DISTINCT organization_id) n FROM events WHERE status='published' AND city=? AND organization_id IS NOT NULL").bind(slug).first(),
-    db.prepare("SELECT COUNT(*) n FROM events WHERE status='published' AND city=? AND start_at >= ? AND start_at < ? AND cpe_eligible=1").bind(slug, today, in90).first(),
+    db.prepare("SELECT COUNT(*) n FROM events WHERE status='published' AND city=? AND COALESCE(format,'in_person') != 'virtual' AND start_at >= ? AND start_at < ? AND cpe_eligible=1").bind(slug, today, in90).first(),
   ]);
   return { upcoming: up.n, listed: year.n, orgs: orgs.n, cpeShare: pct(cpe.n, up.n) };
 }
@@ -77,7 +77,7 @@ export async function onRequestGet({ env }) {
         <h3>${x.c.name}</h3>
         <p class="kit-region">${x.c.region}</p>
         <dl>
-          <div><dt>Next 90 days</dt><dd>${fmt(x.upcoming)} events</dd></div>
+          <div><dt>In person, next 90 days</dt><dd>${fmt(x.upcoming)} events</dd></div>
           <div><dt>Organizers covered</dt><dd>${fmt(x.orgs)}</dd></div>
           <div><dt>Events listed so far</dt><dd>${fmt(x.listed)}</dd></div>
           ${x.upcoming ? html`<div><dt>Offering CPE</dt><dd>${x.cpeShare}% of upcoming</dd></div>` : ""}
