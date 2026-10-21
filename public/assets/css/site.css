@@ -307,3 +307,4 @@ small { color: var(--muted); }
 .city-card-next { color: var(--muted); font-size: .85rem; }
 .city-card-virtual { background: linear-gradient(135deg, #F3FAFF, #FFFFFF); }
 .city-foot { margin-top: 18px; color: var(--muted); font-size: .9rem; }
+details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; color: var(--shield); font-weight: 600; } details.more[open] summary { margin-bottom: 10px; }

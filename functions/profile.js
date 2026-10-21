@@ -9,26 +9,25 @@ export async function onRequestGet({ request, env }) {
   const body = sub ? html`
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">You're subscribed</p>
-    <h1>Thanks. One optional step.</h1>
-    <p class="lede">Tell us a little about what you do and we'll use it for one thing: inviting the right people to Better Security's dinners, roundtables and conference sessions. Skip it if you'd rather just get the Sunday email.</p>
+    <h1>Thanks. Two quick questions, if you like.</h1>
+    <p class="lede">Your answers go to one use: telling sponsors what kind of audience reads The Watch (in aggregate, never by name) and inviting the right people to Better Security's own events. Skip it and you still get every Sunday email.</p>
   </div></section>
   <section class="band"><div class="wrap narrow">
     <form class="form" method="post" action="/api/profile" data-ajax>
       <input type="hidden" name="t" value="${t}">
-      <div class="row-2">
-        <label>First name <input name="first_name" value="${sub.first_name || ""}" maxlength="60"></label>
-        <label>Last name <input name="last_name" value="${sub.last_name || ""}" maxlength="60"></label>
-      </div>
-      <div class="row-2">
-        <label>Company <input name="company" value="${sub.company || ""}" maxlength="120"></label>
-        <label>Role <input name="role_title" value="${sub.role_title || ""}" maxlength="120" placeholder="Security engineer, IT auditor, CISO"></label>
-      </div>
-      <label>Seniority <select name="seniority"><option value="">Prefer not to say</option>${Object.entries(SENIORITY).map(([k, v]) => html`<option value="${k}" ${sub.seniority === k ? raw("selected") : ""}>${v}</option>`)}</select></label>
-      <fieldset class="topics"><legend>Areas of interest</legend>
-        ${Object.entries(TOPICS).map(([k, v]) => html`<label class="chip"><input type="checkbox" name="interests" value="${k}" ${interests.includes(k) ? raw("checked") : ""}> ${v}</label>`)}
+      <label>First name <span class="hint">So the email can say hello properly.</span><input name="first_name" value="${sub.first_name || ""}" maxlength="60" autocomplete="given-name"></label>
+      <label>Where you sit <select name="seniority"><option value="">Pick one</option>${Object.entries(SENIORITY).map(([k, v]) => html`<option value="${k}" ${sub.seniority === k ? raw("selected") : ""}>${v}</option>`)}</select></label>
+      <fieldset class="topics"><legend>What you want more of <span class="hint">Optional, pick any.</span></legend>
+        ${Object.entries(TOPICS).filter(([k]) => k !== "social").map(([k, v]) => html`<label class="chip"><input type="checkbox" name="interests" value="${k}" ${interests.includes(k) ? raw("checked") : ""}> ${v}</label>`)}
       </fieldset>
-      <label>LinkedIn <span class="hint">Optional, helps us avoid inviting you to the wrong dinner.</span><input type="url" name="linkedin_url" value="${sub.linkedin_url || ""}" placeholder="https://linkedin.com/in/"></label>
-      <button class="btn btn-primary" type="submit">Save</button> <a class="btn btn-ghost" href="/sandiego">Skip, show me the calendar</a>
+      <details class="more"><summary>Add your company and role (optional)</summary>
+        <div class="row-2">
+          <label>Company <input name="company" value="${sub.company || ""}" maxlength="120" autocomplete="organization"></label>
+          <label>Role <input name="role_title" value="${sub.role_title || ""}" maxlength="120" placeholder="Security engineer, IT auditor, CISO" autocomplete="organization-title"></label>
+        </div>
+        <label>LinkedIn <input type="url" name="linkedin_url" value="${sub.linkedin_url || ""}" placeholder="https://linkedin.com/in/"></label>
+      </details>
+      <button class="btn btn-primary" type="submit">Save</button> <a class="btn btn-ghost" href="/${sub.city || "sandiego"}">Skip, show me the calendar</a>
       <p class="form-msg" role="status" aria-live="polite"></p>
     </form>
   </div></section>` : html`

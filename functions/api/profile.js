@@ -8,7 +8,11 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const t = str(p.t, 64);
   const sub = t ? await env.DB.prepare("SELECT * FROM subscribers WHERE profile_token=?").bind(t).first() : null;
   if (!sub) return json({ success: false, error: "This link has expired. Subscribe again to get a new one." }, 400);
-  const first = str(p.first_name, 60), last = str(p.last_name, 60), company = str(p.company, 120), role = str(p.role_title, 120);
+  const first = str(p.first_name, 60), last = str(p.last_name, 60), role = str(p.role_title, 120);
+  // Company: what they typed, else a guess from a corporate email domain (never from webmail).
+  const domain = (sub.email.split("@")[1] || "").toLowerCase();
+  const webmail = /^(gmail|yahoo|outlook|hotmail|icloud|me|aol|proton|protonmail|live|msn|pm)\./.test(domain + ".");
+  const company = str(p.company, 120) || sub.company || (!webmail && domain ? domain.replace(/\.(com|net|org|io|ai|co|us|gov|edu)(\.[a-z]{2})?$/i, "").split(".").pop() : "");
   const seniority = SENIORITY[str(p.seniority)] ? str(p.seniority) : null;
   const interests = list(p.interests).filter((k) => TOPICS[k]).slice(0, 6);
   const linkedin = str(p.linkedin_url, 200);
