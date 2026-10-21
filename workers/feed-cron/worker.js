@@ -5,7 +5,7 @@
 // Deploy once from the repo root:  cd workers/feed-cron && npx wrangler deploy && npx wrangler secret put ADMIN_TOKEN
 export default {
   async scheduled(event, env, ctx) {
-    const path = event.cron === "0 13 * * 4" ? "/api/feeds/pull" : event.cron === "0 14 * * *" ? "/api/events/autopublish" : "/api/newsletter/tick";
+    const path = event.cron === "0 13 * * THU" ? "/api/feeds/pull" : event.cron === "0 14 * * *" ? "/api/events/autopublish" : "/api/newsletter/tick";
     ctx.waitUntil(call(env, path));
   },
   async fetch(request, env) {
