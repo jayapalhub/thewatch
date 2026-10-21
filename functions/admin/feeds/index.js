@@ -15,7 +15,7 @@ export async function onRequestGet({ request, env, data }) {
   <h2>Sources</h2>
   <table class="a-table"><thead><tr><th>Source</th><th>Kind</th><th>Calendar</th><th>Organizer</th><th>Last run</th><th></th></tr></thead><tbody>
   ${sources.map((s) => html`<tr class="${s.active ? "" : "a-dim"}">
-    <td><strong>${s.name}</strong><br><small><a href="${s.url}" target="_blank" rel="noopener">${s.url.length > 70 ? s.url.slice(0, 70) + "…" : s.url}</a></small>${s.notes ? html`<br><small class="a-muted">${s.notes}</small>` : ""}</td>
+    <td><strong>${s.name}</strong><br><small><a href="${s.url}" target="_blank" rel="noopener">${s.url.length > 70 ? s.url.slice(0, 70) + "…" : s.url}</a></small>${s.notes ? html`<br><small class="a-muted">${s.notes}</small>` : ""}${s.keywords ? html`<br><small class="a-muted">Keeps only: ${s.keywords}</small>` : ""}</td>
     <td>${KINDS[s.kind] || s.kind}</td><td>${s.city}</td><td>${s.org_name || html`<span class="a-muted">none</span>`}</td>
     <td><small>${s.last_run_at ? html`${s.last_run_at}<br>${s.last_status || ""}` : html`<span class="a-muted">never</span>`}</small></td>
     <td><form method="post" class="a-inline"><input type="hidden" name="id" value="${s.id}">
@@ -40,6 +40,7 @@ export async function onRequestGet({ request, env, data }) {
       <label>CPE body<select name="cpe_body"><option value="">Not set</option>${["ISACA", "ISC2", "IIA", "IAPP", "other", "self_reported"].map((b) => html`<option>${b}</option>`)}</select></label>
     </div>
     <label>Default topics <small>(comma separated: grc, audit, privacy, ai, cloud, appsec, identity, network, threat_intel, leadership, careers)</small><input name="topics" placeholder="threat_intel"></label>
+    <label>Only keep sessions mentioning <small>(comma separated keywords matched against title and description; leave blank for feeds that are all security)</small><input name="keywords" placeholder="cyber, security, privacy, ransomware, risk, audit, AI"></label>
     <label>Notes<input name="notes" maxlength="300"></label>
     <button class="a-btn a-btn-primary">Add source</button>
   </form>
@@ -68,9 +69,9 @@ export async function onRequestPost({ request, env }) {
     const name = str(p.name, 120), url = str(p.url, 500), kind = KINDS[str(p.kind)] ? str(p.kind) : "ical";
     if (!name || !/^https?:\/\//i.test(url)) return redirect("/admin/feeds?msg=Name+and+a+valid+URL+are+required");
     const topics = str(p.topics, 200).split(",").map((t) => t.trim()).filter(Boolean);
-    await env.DB.prepare("INSERT INTO feed_sources (name, kind, url, organization_id, city, timezone, cpe_default, cpe_body, topics, notes) VALUES (?,?,?,?,?,?,?,?,?,?)")
+    await env.DB.prepare("INSERT INTO feed_sources (name, kind, url, organization_id, city, timezone, cpe_default, cpe_body, topics, notes, keywords) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
       .bind(name, kind, url, parseInt(str(p.organization_id), 10) || null, str(p.city) === "sandiego" ? "sandiego" : "virtual", str(p.timezone, 60) || "America/Los_Angeles",
-        str(p.cpe_default) === "1" ? 1 : 0, str(p.cpe_body, 20) || null, JSON.stringify(topics), str(p.notes, 300) || null).run();
+        str(p.cpe_default) === "1" ? 1 : 0, str(p.cpe_body, 20) || null, JSON.stringify(topics), str(p.notes, 300) || null, str(p.keywords, 500) || null).run();
     return redirect("/admin/feeds?msg=Source+added.+Press+Pull+to+try+it.");
   }
   return redirect("/admin/feeds");

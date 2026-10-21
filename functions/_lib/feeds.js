@@ -89,7 +89,7 @@ export function parseIcal(text, defaultTz = TZ) {
     if (!ds || ds.allDay) continue; // no confirmed start time
     const de = props.DTEND && parseIcsDate(props.DTEND.value, props.DTEND.params, defaultTz);
     const endUtc = de && de.utc ? de.utc : new Date(ds.utc.getTime() + 3600000);
-    const desc = stripHtml(icsUnescape(props.DESCRIPTION?.value || ""));
+    const desc = stripHtml(icsUnescape(props.DESCRIPTION?.value || "")).replace(/^[^\n]{0,80}\n+(?=#+\s|\S)/, (m) => (/meetup|group|chapter/i.test(m) ? "" : m)).replace(/^#+\s*/gm, "").trim();
     const location = icsUnescape(props.LOCATION?.value || "").trim();
     const url = (props.URL?.value || (desc.match(/https?:\/\/\S+/) || [])[0] || "").trim();
     out.push({
@@ -124,7 +124,12 @@ export async function runSource(db, src, { now = new Date() } = {}) {
   }
   const horizon = new Date(now.getTime() + WINDOW_DAYS * 86400000);
   let topics = []; try { topics = JSON.parse(src.topics || "[]"); } catch {}
+  const kw = (src.keywords || "").split(",").map((k) => k.trim().toLowerCase()).filter(Boolean);
   for (const it of items) {
+    if (kw.length) {
+      const hay = `${it.title} ${it.summary || ""}`.toLowerCase();
+      if (!kw.some((k) => hay.includes(k))) { stats.skipped++; continue; }
+    }
     if (!it.title || !it.startUtc || !(it.url || "").startsWith("http")) { stats.skipped++; continue; }
     if (it.startUtc < now || it.startUtc > horizon) { stats.skipped++; continue; }
     stats.fetched++;
