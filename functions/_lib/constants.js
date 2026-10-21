@@ -61,10 +61,15 @@ export const BS_EVENT_KEYS = {
 // Better Security's own events (Padel Social, dinners, conference) stay off public pages until the ISACA details are final.
 export const SHOW_BS_EVENTS = false;
 
+// Audience numbers stay off public pages until they are big enough to mean something.
+export const MEDIA_KIT_MIN_SUBSCRIBERS = 250;     // total active subscribers before any count is shown
+export const MEDIA_KIT_MIN_CITY_SUBSCRIBERS = 50; // per city count on the media kit
+export const MEDIA_KIT_MIN_PROFILES = 50;         // answered profiles before seniority and topic shares
+
 export const CONSENT_VERSION = "2026-10";
 export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekly email and occasional notes about Better Security events. Unsubscribe any time with one click.";
 
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 
 // Bump on any CSS or JS change so browsers fetch the new file.
-export const ASSET_VERSION = "2026-10-21m";
+export const ASSET_VERSION = "2026-10-21n";

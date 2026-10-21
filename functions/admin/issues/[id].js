@@ -14,6 +14,7 @@ export async function onRequestGet({ params, request, env, data }) {
   const htmlOut = renderIssueHtml(issue, d, siteUrl, city).replace(/\{\{UNSUB\}\}/g, siteUrl + "/unsubscribe?t=preview");
   const { n: subCount } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=?").bind(city.slug).first();
   const subjects = suggestSubjects(d, issue);
+  const sc = issue.sponsor_name ? await env.DB.prepare("SELECT COUNT(*) n FROM link_clicks WHERE issue_id=? AND target='sponsor'").bind(issue.id).first() : null;
   let featuredIds = []; try { featuredIds = JSON.parse(issue.featured_event_ids || "[]"); } catch {}
   const body = html`${flash(new URL(request.url).searchParams.get("msg"))}
   <div class="a-issue">
@@ -27,11 +28,12 @@ export async function onRequestGet({ params, request, env, data }) {
         ${d.events.length ? d.events.map((e) => html`<label class="a-chip"><input type="checkbox" name="featured" value="${e.id}" ${featuredIds.includes(e.id) ? raw("checked") : ""}> ${fmtDateShort(e.start_at)} ${fmtTimeRange(e.start_at, e.end_at)}: ${e.title}</label>`) : html`<p class="a-muted">No published events this week yet.</p>`}
       </fieldset>
       <div class="a-grid-2">
-        <label>Sponsor name <small>(blank for no sponsor slot)</small><input name="sponsor_name" value="${issue.sponsor_name || ""}"></label>
+        <label>Sponsor name <small>(blank to use the standing sponsor's Supported by line, if one is live${d.sponsor ? `: ${d.sponsor.name}` : ""})</small><input name="sponsor_name" value="${issue.sponsor_name || ""}"></label>
         <label>Sponsor link<input type="url" name="sponsor_url" value="${issue.sponsor_url || ""}"></label>
       </div>
       <label>Sponsor logo URL<input type="url" name="sponsor_logo_url" value="${issue.sponsor_logo_url || ""}"></label>
       <label>Sponsor copy<textarea name="sponsor_copy" rows="3">${issue.sponsor_copy || ""}</textarea></label>
+      ${sc ? html`<p class="a-muted">Sponsor link clicks from this issue: <strong>${sc.n}</strong></p>` : ""}
       <div class="a-actions">
         <button class="a-btn a-btn-primary" name="action" value="save">Save and re-render</button>
         <button class="a-btn" name="action" value="preview">Email me a preview now</button>

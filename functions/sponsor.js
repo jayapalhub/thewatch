@@ -1,5 +1,6 @@
 import { html, page } from "./_lib/html.js";
 import { shell } from "./_lib/layout.js";
+import { MEDIA_KIT_MIN_SUBSCRIBERS } from "./_lib/constants.js";
 
 export async function onRequestGet({ env }) {
   const subs = await env.DB.prepare("SELECT COUNT(*) AS n FROM subscribers WHERE status='active'").first().catch(() => ({ n: 0 }));
@@ -20,11 +21,12 @@ export async function onRequestGet({ env }) {
     <div>
       <h2>Who you reach</h2>
       <p>Security, GRC, audit, privacy and AI governance professionals across San Diego County, weighted toward mid career and senior practitioners because that's who our events are built for and who the Sunday email is written for. Subscribers tell us their role, seniority and areas of interest when they sign up, which is how we match the right people to a dinner topic.</p>
-      <p>${subs.n >= 250 ? html`<strong>${subs.n}</strong> subscribers and counting.` : html`The list is new and growing weekly; ask for current numbers.`} Jerome Jayapal, who writes The Watch, sits on the ISACA San Diego chapter board as Community Director and has spent more than a decade in enterprise security, which is why the people who come are the people who do the work.</p>
+      <p>${subs.n >= MEDIA_KIT_MIN_SUBSCRIBERS ? html`<strong>${subs.n}</strong> subscribers and counting.` : html`The list is new and growing weekly; ask for current numbers.`} Jerome Jayapal, who writes The Watch, sits on the ISACA San Diego chapter board as Community Director and has spent more than a decade in enterprise security, which is why the people who come are the people who do the work.</p>
       <h2>How it works</h2>
+      <p>Coverage by city, audience and placements are in the <a href="/sponsor/media-kit">media kit</a>, updated live from the calendar.</p>
       <p>Fill in the form and you'll get the current sponsor deck with options and pricing within two business days, then a short call to match you to the right format. We keep the number of sponsors per issue and per event small on purpose.</p>
     </div>
-    <form class="form" method="post" action="/api/sponsor" data-ajax>
+    <form class="form" id="sponsor-form" method="post" action="/api/sponsor" data-ajax>
       <input type="text" name="website_hp" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       <h2>Talk to Jerome</h2>
       <label>Company <input name="company" required maxlength="120"></label>

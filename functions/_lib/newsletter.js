@@ -75,7 +75,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
     <div style="font-size:11px;font-weight:700;color:${MUTED};margin-bottom:6px;">Sponsored by ${esc(issue.sponsor_name)}</div>
     ${issue.sponsor_logo_url ? `<img src="${esc(issue.sponsor_logo_url)}" alt="${esc(issue.sponsor_name)}" style="height:36px;width:auto;display:block;margin-bottom:8px;">` : ""}
     <div style="font-size:14px;line-height:1.55;">${esc(issue.sponsor_copy || "")}</div>
-    ${issue.sponsor_url ? `<div style="margin-top:6px;"><a href="${esc(issue.sponsor_url)}" style="color:${SHIELD};font-weight:700;font-size:13px;">Learn more</a></div>` : ""}
+    ${issue.sponsor_url ? `<div style="margin-top:6px;"><a href="${issue.id ? `${siteUrl}/go/is/${issue.id}` : esc(issue.sponsor_url)}" style="color:${SHIELD};font-weight:700;font-size:13px;">Learn more</a></div>` : ""}
   </div>` : ""}
   <div style="font-size:18px;font-weight:800;margin:6px 0 0;">This week</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
