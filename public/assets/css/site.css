@@ -313,7 +313,7 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .issue-body { padding-top: 10px; } .issue-body table { width: 100%; }
 
 /* Organizer directory */
-.org-dir { padding: 36px 0 48px; }
+.org-dir { padding-top: 36px; padding-bottom: 48px; }
 .org-dir h1 { font-size: clamp(1.9rem, 4.4vw, 2.8rem); }
 .dir-jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 28px; }
 .dir-jump a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--mist); border-radius: 999px; font-size: .85rem; font-weight: 600; text-decoration: none; color: var(--ink); }
