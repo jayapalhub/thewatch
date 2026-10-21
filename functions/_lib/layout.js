@@ -25,8 +25,9 @@ export function signupForm({ source, compact = false, cta = "Get the Sunday emai
 export function shell({ title, description, body, city = null, path = "/", wide = false, head = "" }) {
   const c = cityOf(city) || CITIES[DEFAULT_CITY];
   const isVirtual = c.slug === "virtual";
-  const brandTitle = c.title;
-  const fullTitle = title ? `${title} | ${brandTitle}` : `${brandTitle}: cybersecurity events in ${c.name}`;
+  const atRoot = !city && path === "/";
+  const brandTitle = atRoot ? "The Watch" : c.title;
+  const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? "The Watch: cybersecurity events calendars by Better Security" : `${brandTitle}: cybersecurity events in ${c.name}`;
   const desc = description || `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`;
   const calHome = isVirtual ? "/virtual" : `/${c.slug}`;
   const nav = [
@@ -60,7 +61,7 @@ ${raw(head)}
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header">
   <div class="wrap header-row">
-    <a class="brand" href="/" aria-label="Better Security home">${mark(34)}<span class="brand-text"><span class="brand-name">The Watch</span><span class="brand-city">${c.name}</span></span></a>
+    <a class="brand" href="/" aria-label="Better Security home">${mark(34)}<span class="brand-text"><span class="brand-name">The Watch</span><span class="brand-city">${atRoot ? "by Better Security" : c.name}</span></span></a>
     <nav class="site-nav" aria-label="Main">
       ${nav.map(([href, label]) => html`<a href="${href}" ${path === href || (href !== "/" && path.startsWith(href + "/")) ? raw('aria-current="page"') : ""}>${label}</a>`)}
       <a class="btn btn-small btn-electric" href="/subscribe">Subscribe</a>
