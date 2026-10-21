@@ -1,5 +1,5 @@
 // Share card images (Open Graph), 1200 by 630, rendered on the fly with workers-og and cached a day.
-import { ImageResponse } from "workers-og";
+import { ImageResponse } from "../_vendor/workers-og/index.js";
 import { esc } from "./html.js";
 import { fmtDateLong, fmtTimeRange } from "./dates.js";
 
