@@ -42,7 +42,7 @@ export const BS_EVENT_KEYS = {
 };
 
 export const CONSENT_VERSION = "2026-10";
-export const CONSENT_TEXT = "By subscribing you agree to receive The Watch San Diego weekly email and occasional notes about Better Security events. Unsubscribe any time with one click.";
+export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekly email and occasional notes about Better Security events. Unsubscribe any time with one click.";
 
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 

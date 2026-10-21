@@ -1,7 +1,7 @@
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay } from "../_lib/events.js";
-import { TOPICS, COST_TYPES, CITIES, cityOf } from "../_lib/constants.js";
+import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/constants.js";
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
 
 export async function onRequestGet({ request, env, params }) {
@@ -46,8 +46,10 @@ export async function onRequestGet({ request, env, params }) {
 
   const full = html`${body}
     <section class="band band-navy band-tight"><div class="wrap split-center">
-      <div><h2>Get the week in your inbox on Sunday.</h2><p>Everything above, curated down to what's worth your time, with a note from Jerome.</p></div>
-      ${signupForm({ source: "calendar" })}
+      ${city.slug === DEFAULT_CITY
+        ? html`<div><h2>Get the week in your inbox on Sunday.</h2><p>Everything above, curated down to what's worth your time, with a note from Jerome.</p></div>`
+        : html`<div><h2>A ${city.name} email is on the way.</h2><p>Subscribe now and you're on the first send. Until then you get the Sunday email, which includes the best virtual sessions each week.</p></div>`}
+      ${signupForm({ source: city.slug === DEFAULT_CITY ? "calendar" : `calendar:${city.slug}` })}
     </div></section>`;
 
   return page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
