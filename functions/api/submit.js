@@ -70,7 +70,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const id = r.meta.last_row_id;
 
   const tasks = [];
-  if (str(p.subscribe) === "1") tasks.push(upsertSubscriber(env.DB, env, { email: byEmail, source: "submit_form", tags: ["organizer"], request, extra: { first_name: byName.split(" ")[0] } }));
+  if (str(p.subscribe) === "1") tasks.push(upsertSubscriber(env.DB, env, { email: byEmail, source: "submit_form", tags: ["organizer"], request, city: city !== "virtual" ? city : null, extra: { first_name: byName.split(" ")[0] } }));
   const site = env.SITE_URL || "";
   tasks.push(notifyJerome(env, `Event submitted: ${title}`, emailShell("New event submission", `
     <p><strong>${esc(title)}</strong><br>${esc(startAt)} (${esc(format)})<br>Submitted by ${esc(byName)} &lt;${esc(byEmail)}&gt;</p>

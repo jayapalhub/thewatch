@@ -1,6 +1,6 @@
 import { html, page } from "../_lib/html.js";
 import { shell } from "../_lib/layout.js";
-import { CITIES, TOPICS, SENIORITY, MEDIA_KIT_MIN_SUBSCRIBERS, MEDIA_KIT_MIN_CITY_SUBSCRIBERS, MEDIA_KIT_MIN_PROFILES } from "../_lib/constants.js";
+import { CITIES, TOPICS, SENIORITY, cityListText, MEDIA_KIT_MIN_SUBSCRIBERS, MEDIA_KIT_MIN_CITY_SUBSCRIBERS, MEDIA_KIT_MIN_PROFILES } from "../_lib/constants.js";
 import { todayKey, addDays, fmtDateLong } from "../_lib/dates.js";
 
 // Public media kit. Every number is read live from D1. Audience numbers stay hidden until they are
@@ -52,8 +52,7 @@ export async function onRequestGet({ env }) {
     }
   }
   const cityCounts = Object.fromEntries(subsByCity.results.map((r) => [r.city, r.n]));
-  const cityNames = cities.map((c) => c.name);
-  const cityList = cityNames.length > 1 ? `${cityNames.slice(0, -1).join(", ")} and ${cityNames.at(-1)}` : cityNames[0];
+  const cityList = cityListText(cities);
   const bars = (rows) => html`<ul class="kit-bars">${rows.map((r) => html`<li><span class="kit-bar-label">${r.label}</span><span class="kit-bar"><span style="width:${Math.max(r.share, 2)}%"></span></span><span class="kit-bar-n">${r.share}%</span></li>`)}</ul>`;
 
   const body = html`

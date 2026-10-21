@@ -2,7 +2,7 @@ import { html, page } from "./_lib/html.js";
 import { shell, signupForm } from "./_lib/layout.js";
 import { upcomingEvents, eventRow, groupByDay, dayHeading } from "./_lib/events.js";
 import { addDays, todayKey } from "./_lib/dates.js";
-import { CITIES, cityOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
+import { CITIES, cityOf, SHOW_BS_EVENTS, cityListText, liveNewsletterCities, pendingNewsletterCities, DEFAULT_CITY } from "./_lib/constants.js";
 
 // The root is a city chooser. A returning reader who has visited a calendar is sent straight back to it
 // (cookie watch_city) unless they ask to choose again with ?choose=1.
@@ -48,8 +48,8 @@ export async function onRequestGet({ request, env }) {
   </section>
 
   <section class="band band-navy band-tight"><div class="wrap split-center">
-    <div><h2>Get the week in your inbox on Sunday.</h2><p>The San Diego email goes out every Sunday at 5 PM with a short note from Jerome. Other cities are on the way; subscribe now and you are on the first send.</p></div>
-    ${signupForm({ source: "home" })}
+    <div><h2>Get the week in your inbox on Sunday.</h2><p>Each city's email goes out Sunday at 8 AM local time with a short note from Jerome.${(() => { const live = liveNewsletterCities(), pend = pendingNewsletterCities(); return pend.length ? ` ${live.length ? `${cityListText(live)} ${live.length === 1 ? "is" : "are"} sending now; ` : ""}${cityListText(pend)} ${pend.length === 1 ? "starts" : "start"} soon, and subscribing now puts you on the first send.` : ""; })()}</p></div>
+    ${signupForm({ source: "home", chooseCity: true, city: remembered || DEFAULT_CITY })}
   </div></section>
 
   <section class="band band-paper">

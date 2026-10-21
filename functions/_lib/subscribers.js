@@ -4,13 +4,13 @@ import { CONSENT_VERSION, CITIES, DEFAULT_CITY } from "./constants.js";
 
 // Insert or update a subscriber in D1, then mirror to Beehiiv.
 // Returns the subscriber row (with profile_token) so callers can link to /profile.
-export async function upsertSubscriber(db, env, { email, source, tags = [], request, sendWelcome = true, extra = {} }) {
+export async function upsertSubscriber(db, env, { email, source, tags = [], request, sendWelcome = true, extra = {}, city: chosenCity = null }) {
   email = email.toLowerCase();
   const ip = request ? (request.headers.get("cf-connecting-ip") || "") : "";
   const ipHash = ip ? (await sha256(ip)).slice(0, 16) : null;
   const existing = await db.prepare("SELECT * FROM subscribers WHERE email=?").bind(email).first();
   const now = new Date().toISOString();
-  const m = /^calendar:([a-z]+)$/.exec(source || ""); const city = m && CITIES[m[1]] ? m[1] : null;
+  const m = /^calendar:([a-z]+)$/.exec(source || ""); const city = chosenCity && CITIES[chosenCity] ? chosenCity : m && CITIES[m[1]] ? m[1] : null;
   let row;
   if (existing) {
     const mergedTags = Array.from(new Set([...list(existing.tags), ...tags]));

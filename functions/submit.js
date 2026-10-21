@@ -1,6 +1,7 @@
 import { html, page, raw } from "./_lib/html.js";
 import { shell } from "./_lib/layout.js";
 import { TOPICS, CITIES } from "./_lib/constants.js";
+import { cityListText } from "./_lib/constants.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -10,7 +11,7 @@ export async function onRequestGet({ request, env }) {
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">For organizers</p>
     <h1>Submit an event</h1>
-    <p class="lede">Anything security related happening in San Diego County belongs here: chapter meetings, meetups, conferences, vendor sessions, university talks. Submissions are reviewed by a person, usually within a day, and published to the calendar, the feed and the Sunday email.</p>
+    <p class="lede">Anything security related happening in ${cityListText()}, or online, belongs here: chapter meetings, meetups, conferences, vendor sessions, university talks. Submissions are reviewed by a person, usually within a day, and published to the calendar, the feed and the Sunday email.</p>
   </div></section>
   <section class="band"><div class="wrap narrow">
     <form class="form big-form" method="post" action="/api/submit" data-ajax>
@@ -65,7 +66,7 @@ export async function onRequestGet({ request, env }) {
           <label>Your name <input name="submitted_by_name" required maxlength="80"></label>
           <label>Your email <span class="hint">Only used to confirm the listing.</span><input type="email" name="submitted_by_email" required></label>
         </div>
-        <label class="check"><input type="checkbox" name="subscribe" value="1" checked> Also send me The Watch San Diego on Sundays</label>
+        <label class="check"><input type="checkbox" name="subscribe" value="1" checked> Also send me The Watch for my city on Sundays</label>
       </fieldset>
       <button class="btn btn-primary btn-large" type="submit">Submit for review</button>
       <p class="form-msg" role="status" aria-live="polite"></p>

@@ -5,7 +5,7 @@ import { MAIL_ADDRESS } from "./_lib/constants.js";
 export async function onRequestGet() {
   const body = html`
   <section class="hero hero-short"><div class="wrap narrow"><p class="kicker">Last updated October 2026</p><h1>Privacy policy</h1>
-  <p class="lede">This is the privacy policy for bettersecurity.ai and The Watch San Diego, published by Better Security. It's written in plain language because that's how we'd want to read it.</p></div></section>
+  <p class="lede">This is the privacy policy for bettersecurity.ai and The Watch, published by Better Security. It's written in plain language because that's how we'd want to read it.</p></div></section>
   <section class="band"><div class="wrap narrow prose">
     <h2>Who we are</h2>
     <p>Better Security is a San Diego events business operated by Jerome Jayapal. Our mailing address is ${MAIL_ADDRESS}, and you can reach us at <a href="mailto:watch@bettersecurity.ai">watch@bettersecurity.ai</a>. Better Security is in the process of being organized under a limited liability company; this policy will be updated when that happens and nothing about how your data is handled will change.</p>

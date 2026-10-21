@@ -76,7 +76,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     <p class="list-foot">Times are shown in your selected zone; the underlying schedule comes from each organizer's page, which stays authoritative. CPE hours are as the organizer reports them. <a href="/virtual/feed.ics">Subscribe to this calendar</a>.</p>
   </div>
   <section class="band band-navy band-tight"><div class="wrap split-center">
-    <div><h2>Five of these, every Sunday.</h2><p>The Sunday email picks the week's best CPE eligible sessions alongside the San Diego calendar.</p></div>
+    <div><h2>Five of these, every Sunday.</h2><p>The Sunday email picks the week's best CPE eligible sessions alongside your city's calendar.</p></div>
     ${signupForm({ source: "virtual" })}
   </div></section>`;
 

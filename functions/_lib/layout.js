@@ -1,5 +1,5 @@
 import { html, raw } from "./html.js";
-import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS } from "./constants.js";
+import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS, cityListText } from "./constants.js";
 
 export const SHIELD_PATH = "M12699.99 19504.82l-4476.78 -2847.86c-440.67,-280.35 -871.71,-817.92 -871.71,-1701.16l0 -6890.42 5348.49 -2170.18 5348.48 2170.18 0 6890.42c0,883.24 -431.04,1420.81 -871.71,1701.16l-4476.77 2847.86zm0 -2838.35l2953.65 -1878.91 0 -1261.73 -1771.64 -1083.78 1771.64 -1083.74 0 -1680.18 -2953.65 -1198.49 -2953.66 1198.49 0 5109.43 2953.66 1878.91z";
 
@@ -7,11 +7,12 @@ export function mark(size = 36, cls = "") {
   return raw(`<svg class="mark ${cls}" width="${size}" height="${size}" viewBox="0 0 25400 25400" aria-hidden="true"><rect width="25400" height="25400" rx="5600" fill="#1FB6F0"/><g transform="translate(12700 12700) scale(1.42) translate(-12700 -12700)"><path fill="#1B4A8A" fill-rule="evenodd" d="${SHIELD_PATH}"/></g></svg>`);
 }
 
-export function signupForm({ source, compact = false, cta = "Get the Sunday email" }) {
+export function signupForm({ source, compact = false, cta = "Get the Sunday email", chooseCity = false, city = DEFAULT_CITY }) {
   return html`
   <form class="signup ${compact ? "signup-compact" : ""}" method="post" action="/api/subscribe" data-signup>
     <input type="hidden" name="source" value="${source}">
     <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    ${chooseCity && Object.keys(CITIES).length > 1 ? html`<label class="signup-city">Your city <select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === city ? raw("selected") : ""}>${c.name}${c.newsletter === "sunday" ? "" : " (starting soon)"}</option>`)}</select></label>` : ""}
     <label class="sr-only" for="email-${source}">Email address</label>
     <div class="signup-row">
       <input id="email-${source}" type="email" name="email" placeholder="you@company.com" required autocomplete="email" inputmode="email">
@@ -83,7 +84,7 @@ ${body}
   <div class="wrap footer-grid">
     <div class="footer-brand">
       ${mark(40)}
-      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${Object.values(CITIES).map((x) => x.name).join(" and ")}, plus the best online sessions.</p>
+      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${cityListText()}, plus the best online sessions.</p>
       ${signupForm({ source: "footer", compact: true, cta: "Subscribe" })}
     </div>
     <div class="footer-col">

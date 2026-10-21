@@ -12,7 +12,7 @@ export async function onRequestGet() {
     <h2>Better Security events</h2>
     <p>Tickets for Better Security's own events are sold through Eventbrite under the terms shown at purchase, including the refund policy on each event page. Participation in physical activities such as padel is at your own risk; venues will ask you to sign their own waiver.</p>
     <h2>Content and feeds</h2>
-    <p>You're welcome to link to any page and to use the public calendar feeds for personal use or to cross list events, with attribution to The Watch San Diego. Please don't scrape the subscriber forms or republish the site wholesale.</p>
+    <p>You're welcome to link to any page and to use the public calendar feeds for personal use or to cross list events, with attribution to The Watch (bettersecurity.ai). Please don't scrape the subscriber forms or republish the site wholesale.</p>
     <h2>Contact</h2>
     <p><a href="mailto:watch@bettersecurity.ai">watch@bettersecurity.ai</a></p>
   </div></section>`;

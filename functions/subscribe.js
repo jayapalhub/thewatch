@@ -1,14 +1,17 @@
 import { html, page } from "./_lib/html.js";
 import { shell, signupForm } from "./_lib/layout.js";
+import { preferredCity, liveNewsletterCities, pendingNewsletterCities, cityListText } from "./_lib/constants.js";
 
 export async function onRequestGet({ request }) {
   const src = new URL(request.url).searchParams.get("src") || "subscribe_page";
+  const live = liveNewsletterCities(), pending = pendingNewsletterCities();
   const body = html`
   <section class="hero hero-short"><div class="wrap narrow">
-    <p class="kicker">Sundays at 5 PM</p>
-    <h1>The week in San Diego security, in one email.</h1>
-    <p class="lede">A short note from Jerome, then the week day by day: chapter meetings, meetups, summits and vendor sessions. Which ones carry CPE, which ones cost money, and which ones are worth your evening.</p>
-    ${signupForm({ source: src.replace(/[^a-z0-9_:-]/gi, "").slice(0, 40) || "subscribe_page" })}
+    <p class="kicker">Sundays at 8 AM</p>
+    <h1>The week in local security, in one email.</h1>
+    <p class="lede">A short note from Jerome, then the week day by day: chapter meetings, meetups, summits and vendor sessions. Which ones carry CPE, which ones cost money, and which ones are worth your evening. One email for your city, at 8 AM your time.</p>
+    ${pending.length ? html`<p class="lede-note">${live.length ? `${cityListText(live)} ${live.length === 1 ? "is" : "are"} sending now. ` : ""}${cityListText(pending)} ${pending.length === 1 ? "starts" : "start"} soon; subscribe now and you get the first issue.</p>` : ""}
+    ${signupForm({ source: src.replace(/[^a-z0-9_:-]/gi, "").slice(0, 40) || "subscribe_page", chooseCity: true, city: preferredCity(request) })}
   </div></section>
   <section class="band band-paper"><div class="wrap narrow three-up">
     <div><h2>Two minute read</h2><p>Scannable by design. If you only read the day headers and the picks, you still know your week.</p></div>

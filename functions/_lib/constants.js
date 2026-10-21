@@ -22,6 +22,19 @@ export async function loadCities(db, { force = false } = {}) {
   return CITIES;
 }
 
+// "San Diego", "San Diego and San Jose", "San Diego, San Jose and Austin". Reads the live city list.
+export function cityListText(list = Object.values(CITIES)) {
+  const n = list.map((c) => c.name);
+  return n.length < 2 ? n[0] || "" : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`;
+}
+export function liveNewsletterCities() { return Object.values(CITIES).filter((c) => c.newsletter === "sunday"); }
+export function pendingNewsletterCities() { return Object.values(CITIES).filter((c) => c.newsletter !== "sunday"); }
+// The city a visitor last browsed (cookie set by the city calendar page), else the default.
+export function preferredCity(request) {
+  const m = ((request && request.headers.get("Cookie")) || "").match(/(?:^|;\s*)watch_city=([a-z]+)/);
+  return m && CITIES[m[1]] ? m[1] : DEFAULT_CITY;
+}
+
 export function cityOf(slug) { return CITIES[slug] || (slug === "virtual" ? VIRTUAL : null); }
 // Canonical paths. Virtual events live at /virtual/events/<slug>; city events at /<city>/events/<slug>.
 export function eventPath(e) { return `/${cityOf(e.city) ? e.city : DEFAULT_CITY}/events/${e.slug}`; }
@@ -72,4 +85,4 @@ export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekl
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 
 // Bump on any CSS or JS change so browsers fetch the new file.
-export const ASSET_VERSION = "2026-10-21n";
+export const ASSET_VERSION = "2026-10-21o";
