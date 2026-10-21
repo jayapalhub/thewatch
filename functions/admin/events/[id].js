@@ -1,5 +1,6 @@
 import { html, page, redirect, readForm, notFound } from "../../_lib/html.js";
-import { adminShell, eventForm, flash } from "../../_lib/admin.js";
+import { adminShell, eventForm, flash, clashNotice } from "../../_lib/admin.js";
+import { findClashes } from "../../_lib/clashes.js";
 import { parseEventForm, updateEvent, setStatus, notifySubmitter } from "../../_lib/admin-events.js";
 import { eventById } from "../../_lib/events.js";
 
@@ -11,9 +12,11 @@ export async function onRequestGet({ params, request, env, data }) {
   const e = await eventById(env.DB, params.id);
   if (!e) return notFound();
   const { orgs, venues } = await lookups(env.DB);
+  const clashes = await findClashes(env.DB, [e]);
   const clicks = await env.DB.prepare("SELECT target, COUNT(*) n FROM link_clicks WHERE event_id=? GROUP BY target").bind(e.id).all();
   const body = html`${flash(new URL(request.url).searchParams.get("msg"))}
     <p class="a-muted">#${e.id} &middot; ${e.status.replace("_", " ")} &middot; created ${e.created_at}${e.published_at ? ` &middot; published ${e.published_at}` : ""} &middot; clicks: ${clicks.results.map((c) => `${c.target} ${c.n}`).join(", ") || "none yet"}</p>
+    ${clashNotice(clashes.get(e.id))}
     ${eventForm(e, orgs, venues, { action: `/admin/events/${e.id}` })}`;
   return page(adminShell({ title: e.title, body, path: "/admin/events", user: data.user }));
 }

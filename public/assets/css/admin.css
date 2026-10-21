@@ -70,3 +70,6 @@ h1 { font-size: 1.5rem; margin: 0 0 16px; } h2 { font-size: 1.1rem; margin: 24px
 .a-preview-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .a-email-frame { border: 1px solid var(--mist); border-radius: 8px; padding: 18px; background: #fff; }
 .a-src { width: 100%; font: 11px/1.4 ui-monospace, Menlo, monospace; margin-top: 10px; border: 1px solid var(--mist); border-radius: 7px; padding: 8px; }
+
+.a-queue-item.has-clash { border-left: 4px solid #F5C77A; }
+.a-clash { display: block; margin: 6px 0; }

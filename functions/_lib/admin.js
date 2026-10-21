@@ -1,6 +1,7 @@
 import { html, raw } from "./html.js";
 import { TOPICS, FORMATS, COST_TYPES, AUDIENCE, EVENT_STATUSES, ORG_TYPES, ASSET_VERSION, CITIES, DEFAULT_CITY, eventPath, orgPath } from "./constants.js";
 import { mark } from "./layout.js";
+import { fmtTime } from "./dates.js";
 
 export function adminShell({ title, body, path = "/admin", user }) {
   const nav = [["/admin", "Overview"], ["/admin/review", "Review queue"], ["/admin/events", "Events"], ["/admin/organizations", "Organizers"], ["/admin/people", "People"], ["/admin/sponsors", "Sponsor inquiries"], ["/admin/issues", "Newsletter"], ["/admin/feeds", "Feeds"], ["/admin/cities", "Cities"]];
@@ -16,6 +17,11 @@ export function adminShell({ title, body, path = "/admin", user }) {
 <script src="/assets/js/admin.js?v=${ASSET_VERSION}" defer></script></body></html>`;
 }
 
+// One line clash notice for the admin. `hits` comes from findClashes in clashes.js.
+export function clashNotice(hits) {
+  if (!hits || !hits.length) return "";
+  return html`<p class="a-warn a-clash">Same time slot: ${hits.map((o, i) => html`${i ? "; " : ""}<a href="/admin/events/${o.id}">${o.title}</a>${o.org_short || o.org_name ? ` (${o.org_short || o.org_name})` : ""} at ${fmtTime(o.start_at)}`)}. Starts within two hours on the same day.</p>`;
+}
 export function flash(msg, kind = "ok") { return msg ? html`<p class="a-flash a-flash-${kind}">${msg}</p>` : ""; }
 
 const opt = (k, v, cur) => html`<option value="${k}" ${String(cur) === String(k) ? raw("selected") : ""}>${v}</option>`;

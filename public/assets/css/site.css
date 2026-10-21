@@ -335,3 +335,18 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .dir-cta { margin-top: 40px; padding: 24px; background: var(--paper); border-radius: 12px; }
 .dir-cta p:last-child { margin-bottom: 0; }
 @media (max-width: 560px) { .dir-when { white-space: normal; display: block; margin-top: 2px; } }
+
+/* Organizer page: clash notice and date checker */
+.clash-box { margin: 28px 0; padding: 18px 20px; background: var(--warn-bg); border-radius: 12px; }
+.clash-box h2 { font-size: 1.15rem; margin-bottom: .4em; color: var(--warn-ink); }
+.clash-box ul { margin: 0; padding-left: 1.1em; }
+.clash-box li { margin: 4px 0; }
+.date-check { margin: 32px 0; padding: 20px; background: var(--paper); border-radius: 12px; scroll-margin-top: 90px; }
+.date-check h2 { font-size: 1.15rem; margin-bottom: .3em; }
+.date-check-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.date-check-row input { font: inherit; padding: 9px 12px; border: 1px solid var(--mist); border-radius: 8px; background: var(--white); }
+.date-check-results { list-style: none; margin: 16px 0 0; padding: 0; }
+.date-check-results li { padding: 8px 0; border-top: 1px solid var(--mist); }
+.dc-time { display: inline-block; min-width: 120px; color: var(--muted); font-size: .9rem; }
+.dc-org { color: var(--muted); font-size: .9rem; }
+.date-check-clear { margin: 14px 0 0; font-weight: 600; }
