@@ -33,7 +33,7 @@ export function welcomeEmail(siteUrl, sub, city) {
   const unsub = `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`;
   const inner = `
     <p>Hi${sub.first_name ? " " + sub.first_name : ""},</p>
-    <p>You're on the list for The Watch ${city.name}. Every Sunday at 8 AM you'll get the week's security events in ${city.name}, curated down to what's worth your time, with a short note from me on what I'd show up for.</p>
+    <p>You're on the list for The Watch ${city.name}. ${city.newsletter === "sunday" ? `Every Sunday at 8 AM you'll get the week's security events in ${city.name}, curated down to what's worth your time, with a short note from me on what I'd show up for.` : `The ${city.name} Sunday email is starting soon, and you'll get the first issue the week it launches: the week's security events, curated down to what's worth your time, with a short note from me on what I'd show up for.`}</p>
     <p>Until Sunday, the full calendar is at <a href="${cal}" style="color:#1B4A8A;">${cal.replace(/^https?:\/\//, "")}</a>, and the live online sessions with CPE are at <a href="${siteUrl}/virtual" style="color:#1B4A8A;">bettersecurity.ai/virtual</a>.</p>
     <p>Two quick questions, if you have a minute, so the email and our own events fit you better: <a href="${siteUrl}/profile?t=${sub.profile_token || ""}" style="color:#1B4A8A;">tell us where you sit and what you want more of</a>. Skip it and you still get every issue.</p>
     <p>If you run events, <a href="${siteUrl}/submit" style="color:#1B4A8A;">submit them here</a> and they go on the calendar and into the email. And if this isn't for you, <a href="${unsub}" style="color:#5B6B80;">unsubscribe</a> in one click.</p>`;

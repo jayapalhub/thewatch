@@ -5,8 +5,10 @@ import { fmtDateLong, fmtTimeRange } from "../../_lib/dates.js";
 import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
 import { FORMATS, AUDIENCE, cityOf, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
 import { toUtc } from "../../_lib/dates.js";
+import { lazyReminders } from "../../_lib/reminders.js";
 
-export async function onRequestGet({ params, env, request }) {
+export async function onRequestGet({ params, env, request, waitUntil }) {
+  lazyReminders(env, waitUntil);
   if (!cityOf(params.city)) return notFound("Calendar not found");
   const e = await eventBySlug(env.DB, params.slug);
   if (!e || !["published", "cancelled"].includes(e.status)) return notFound("Event not found");
@@ -16,6 +18,10 @@ export async function onRequestGet({ params, env, request }) {
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
   const more = e.org_slug ? (await upcomingEvents(env.DB, { org: e.org_slug, limit: 4 })).filter((x) => x.id !== e.id).slice(0, 3) : [];
   const where = e.format === "virtual" ? "Online" : [e.venue_display, e.venue_address_display].filter(Boolean).join(", ");
+  const startMs = (e.start_utc ? new Date(e.start_utc) : toUtc(e.start_at, e.timezone) || new Date(0)).getTime();
+  const canRemind = e.status === "published" && startMs > Date.now();
+  const calName = e.city === "virtual" ? "" : ` ${city.name}`;
+  const sendsSunday = e.city === "virtual" || city.newsletter === "sunday";
   const mapsUrl = e.format !== "virtual" && where ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}` : null;
 
   const body = html`
@@ -45,6 +51,18 @@ export async function onRequestGet({ params, env, request }) {
             <a href="${eventPath(e)}/ics">Apple, Outlook desktop (.ics)</a>
           </div></details>
       </div>
+      ${canRemind ? html`<details class="remind">
+        <summary>Email me a reminder the day before</summary>
+        <form class="remind-form" method="post" action="/api/remind" data-ajax>
+          <input type="hidden" name="event" value="${e.id}">
+          <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label class="sr-only" for="remind-email">Email address</label>
+          <div class="signup-row"><input id="remind-email" type="email" name="email" placeholder="you@company.com" required autocomplete="email" inputmode="email"><button type="submit" class="btn btn-primary">Remind me</button></div>
+          <label class="remind-join" data-remind-join><input type="checkbox" name="join" value="1"> ${sendsSunday ? `Also send me The Watch${calName} every Sunday` : `Also add me to The Watch${calName} (its Sunday email starts soon)`}</label>
+          <p class="remind-note">A reminder is not registration. ${e.registration_url ? "Register with the organizer to hold your spot." : "Check the organizer's page for how to attend."} One email, the morning before. We never share your address.</p>
+          <p class="form-msg" role="status" aria-live="polite"></p>
+        </form>
+      </details>` : ""}
       <div class="event-body">${(e.description_long || e.description_short || "").split(/\n{2,}/).map((p) => html`<p>${p}</p>`)}</div>
       ${e.source_url ? html`<p class="source">Details from <a href="${e.source_url}" rel="noopener nofollow" target="_blank">the organizer's page</a>. Times and prices can change; the organizer's page is authoritative. <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Correction: " + e.title)}">Report a correction</a>.</p>` : ""}
     </div>

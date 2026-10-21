@@ -26,6 +26,7 @@
         .then(function (j) {
           if (btn) btn.disabled = false;
           if (j.success) {
+            if (form.hasAttribute('data-signup')) { try { localStorage.setItem('watch-sub', '1'); } catch (e) {} }
             if (form.hasAttribute('data-signup') && j.next) { window.location.href = j.next; return; }
             if (msg) { msg.textContent = j.message || 'Done.'; msg.classList.add('ok'); }
             if (!form.hasAttribute('data-keep')) form.reset();
@@ -35,6 +36,8 @@
     });
   }
   document.querySelectorAll('form[data-signup], form[data-ajax]').forEach(wire);
+  // Reminder form: people who subscribed in this browser do not need the Sunday email checkbox.
+  try { if (localStorage.getItem('watch-sub') === '1') document.querySelectorAll('[data-remind-join]').forEach(function (el) { el.hidden = true; }); } catch (e) {}
 
   // Submit form: reveal the new organization field
   var orgSel = document.querySelector('select[name="organization_slug"]');
