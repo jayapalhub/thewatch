@@ -1,6 +1,7 @@
 import { lazyAutoPublish } from "../_lib/autopublish.js";
 import { lazyNewsletterTick } from "../_lib/dispatch.js";
 import { lazyReminders } from "../_lib/reminders.js";
+import { pageSponsor, clickUrl } from "../_lib/sponsors.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay } from "../_lib/events.js";
@@ -50,7 +51,13 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       </div>`;
   }
 
+  const sp = await pageSponsor(env.DB, city.slug);
   const full = html`${body}
+    ${sp ? html`<aside class="sponsor-strip" aria-label="Sponsor"><div class="wrap">
+      <span class="sponsor-label">The Watch ${city.name} is supported by</span>
+      <a class="sponsor-link" href="${clickUrl("", sp, "page", { city: city.slug })}" rel="sponsored noopener" target="_blank">${sp.logo_url ? html`<img src="${sp.logo_url}" alt="${sp.name}" loading="lazy">` : html`<strong>${sp.name}</strong>`}</a>
+      ${sp.tagline ? html`<span class="sponsor-tagline">${sp.tagline}</span>` : ""}
+    </div></aside>` : ""}
     <section class="band band-navy band-tight"><div class="wrap split-center">
       ${city.slug === DEFAULT_CITY
         ? html`<div><h2>Get the week in your inbox on Sunday.</h2><p>Everything above, curated down to what's worth your time, with a note from Jerome.</p></div>`

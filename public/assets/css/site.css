@@ -373,3 +373,11 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .deal-terms { margin: 0; font-weight: 600; }
 .deal-code { display: flex; align-items: center; gap: 10px; }
 .deal-code code { font-size: 1.1rem; font-weight: 800; letter-spacing: .04em; padding: 6px 12px; background: var(--white); border: 1px solid var(--mist); border-radius: 8px; }
+
+/* Standing sponsor strip on city calendars */
+.sponsor-strip { border-top: 1px solid var(--mist-soft); padding: 18px 0; background: var(--white); }
+.sponsor-strip .wrap { display: flex; align-items: center; justify-content: center; gap: 10px 16px; flex-wrap: wrap; text-align: center; }
+.sponsor-label { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.sponsor-link { display: inline-flex; align-items: center; color: var(--ink); text-decoration: none; }
+.sponsor-link img { height: 30px; width: auto; max-width: 180px; object-fit: contain; display: block; }
+.sponsor-tagline { font-size: .9rem; color: var(--muted); }

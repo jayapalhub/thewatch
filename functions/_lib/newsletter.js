@@ -1,4 +1,5 @@
 import { esc } from "./html.js";
+import { emailSponsor, clickUrl, absUrl } from "./sponsors.js";
 import { queryEvents, groupByDay, costLabel, cpeLabel } from "./events.js";
 import { fmtTimeRange, weekday, monthName, dayNum, addDays, parts } from "./dates.js";
 import { TOPICS, MAIL_ADDRESS, CITIES, DEFAULT_CITY, SHOW_BS_EVENTS } from "./constants.js";
@@ -20,7 +21,8 @@ export async function loadIssueData(db, issue) {
     .filter((e) => !events.find((x) => x.id === e.id))
     .sort((a, b) => (a.org_type === "vendor") - (b.org_type === "vendor") || (a.cost_type !== "free") - (b.cost_type !== "free") || a.start_at.localeCompare(b.start_at))
     .slice(0, 5);
-  return { events, soon, bs, featured, virt };
+  const sponsor = issue.sponsor_name ? null : await emailSponsor(db, issue);
+  return { events, soon, bs, featured, virt, sponsor };
 }
 
 function go(siteUrl, e, t, issueId) { return `${siteUrl}/go/${e.id}?t=${t}&i=${issueId || ""}`; }
@@ -42,6 +44,15 @@ function eventLine(e, siteUrl, issueId) {
 function dayBlock(key, evs, siteUrl, issueId) {
   return `<tr><td style="padding:18px 0 4px;"><span style="font-size:22px;font-weight:800;color:${SHIELD};">${dayNum(key)}</span> <span style="font-weight:700;">${weekday(key)}</span> <span style="color:${MUTED};font-size:13px;">${monthName(key)}</span></td></tr>
   <tr><td><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${evs.map((e) => eventLine(e, siteUrl, issueId)).join("")}</table></td></tr>`;
+}
+
+// One "Supported by" line above the footer for the standing sponsor (only when the issue has no sponsor of its own).
+function sponsorLine(s, siteUrl, issue, city) {
+  const href = clickUrl(siteUrl, s, "email", { city: city.slug, issueId: issue.id });
+  const logo = s.logo_url ? `<img src="${esc(absUrl(siteUrl, s.logo_url))}" alt="${esc(s.name)}" height="22" style="height:22px;width:auto;vertical-align:middle;border:0;">` : `<b style="color:${INK};">${esc(s.name)}</b>`;
+  return `<div style="margin:26px 0 0;padding:12px 0 0;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};">
+    <span style="vertical-align:middle;">Supported by</span> <a href="${href}" style="text-decoration:none;color:${INK};vertical-align:middle;">${logo}</a>${s.tagline ? ` <span style="vertical-align:middle;">· ${esc(s.tagline)}</span>` : ""}
+  </div>`;
 }
 
 export function renderIssueHtml(issue, data, siteUrl, city = null) {
@@ -79,6 +90,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${data.virt.map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(weekday(e.start_at)).slice(0, 3)} ${esc(fmtTimeRange(e.start_at, e.end_at))}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a> <span style="color:${MUTED};">· ${esc(e.org_display)}${cpeLabel(e) ? " · " + esc(cpeLabel(e)) : ""}${e.org_type === "vendor" ? " · Vendor" : ""}</span></td></tr>`).join("")}</table>` : ""}
   ${soon.length ? `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">Coming up, register early</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${soon.slice(0, 8).map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(monthName(e.start_at)).slice(0, 3)} ${dayNum(e.start_at)}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a>${e.org_display ? ` <span style="color:${MUTED};">· ${esc(e.org_display)}</span>` : ""}</td></tr>`).join("")}</table>` : ""}
+  ${data.sponsor && !issue.sponsor_name ? sponsorLine(data.sponsor, siteUrl, issue, city) : ""}
   <div style="margin:26px 0 0;padding-top:14px;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};line-height:1.6;">
     Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/${issue.city || "sandiego"}" style="color:${SHIELD};">bettersecurity.ai/${issue.city || "sandiego"}</a>.<br>
     ${esc(city.title)} is published by Better Security, ${esc(MAIL_ADDRESS)}.<br>
