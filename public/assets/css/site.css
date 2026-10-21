@@ -308,3 +308,6 @@ small { color: var(--muted); }
 .city-card-virtual { background: linear-gradient(135deg, #F3FAFF, #FFFFFF); }
 .city-foot { margin-top: 18px; color: var(--muted); font-size: .9rem; }
 details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; color: var(--shield); font-weight: 600; } details.more[open] summary { margin-bottom: 10px; }
+.issue-list { list-style: none; padding: 0; margin: 0; } .issue-list li { padding: 14px 0; border-bottom: 1px solid var(--mist); }
+.issue-list a { text-decoration: none; color: var(--ink); display: block; } .issue-week { display: block; font-size: .85rem; color: var(--muted); } .issue-subject { font-family: var(--display); font-weight: 700; font-size: 1.15rem; } .issue-pre { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.issue-body { padding-top: 10px; } .issue-body table { width: 100%; }

@@ -54,7 +54,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   const totalBs = bs.filter((e) => !events.find((x) => x.id === e.id));
 
   return `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:${INK};">
-  <div style="font-size:13px;color:${MUTED};margin:0 0 14px;">The week of ${range} · ${events.length} event${events.length === 1 ? "" : "s"} in ${esc(city.name)}</div>
+  <div style="font-size:13px;color:${MUTED};margin:0 0 14px;">The week of ${range} · ${events.length} event${events.length === 1 ? "" : "s"} in ${esc(city.name)} · <a href="${siteUrl}/${city.slug}/issues/${issue.week_start}" style="color:${MUTED};">Read online</a></div>
   ${note ? `<div style="margin:0 0 18px;">${note}</div>` : ""}
   ${featured.length ? `<div style="background:${PAPER};border-left:4px solid ${ELECTRIC};padding:12px 16px;border-radius:8px;margin:0 0 18px;">
     <div style="font-weight:800;font-size:13px;color:${SHIELD};margin-bottom:4px;">Worth your evening</div>

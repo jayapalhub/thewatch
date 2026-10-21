@@ -1,5 +1,5 @@
 import { list, token, sha256 } from "./html.js";
-import { beehiivSubscribe } from "./integrations.js";
+import { beehiivSubscribe, sendEmail, welcomeEmail } from "./integrations.js";
 import { CONSENT_VERSION, CITIES, DEFAULT_CITY } from "./constants.js";
 
 // Insert or update a subscriber in D1, then mirror to Beehiiv.
@@ -25,8 +25,16 @@ export async function upsertSubscriber(db, env, { email, source, tags = [], requ
       .bind(email, "active", source || null, CONSENT_VERSION, now, ipHash, JSON.stringify(tags), profileToken, extra.company || null, extra.first_name || null, city || DEFAULT_CITY, token()).run();
     row = { id: res.meta.last_row_id, email, status: "active", source, tags, profile_token: profileToken, beehiiv_subscriber_id: null };
   }
-  // Mirror to Beehiiv (best effort). Custom field names must exist in Beehiiv: Source, Tags, Company.
-  const bh = await beehiivSubscribe(env, { email, source, sendWelcome: sendWelcome && !existing, customFields: { Source: source || "", Tags: row.tags.join(", "), Company: extra.company || "" } });
+  // Welcome email from the site (new subscribers and people coming back after unsubscribing).
+  const rejoined = existing && existing.status === "unsubscribed";
+  if (sendWelcome && (!existing || rejoined)) {
+    const full = await db.prepare("SELECT * FROM subscribers WHERE id=?").bind(row.id).first();
+    const c = CITIES[full.city] || CITIES[DEFAULT_CITY];
+    const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
+    await sendEmail(env, { to: email, from: `The Watch ${c.name} <watch@bettersecurity.ai>`, subject: `Welcome to The Watch ${c.name}`, html: welcomeEmail(siteUrl, full, c), headers: { "List-Unsubscribe": `<${siteUrl}/unsubscribe?t=${full.unsub_token}>` } });
+  }
+  // Mirror to Beehiiv while it is still around (no Beehiiv welcome; the site sends its own).
+  const bh = await beehiivSubscribe(env, { email, source, sendWelcome: false, customFields: { Source: source || "", Tags: row.tags.join(", "), Company: extra.company || "" } });
   if (bh.ok && bh.id && bh.id !== row.beehiiv_subscriber_id) {
     await db.prepare("UPDATE subscribers SET beehiiv_subscriber_id=? WHERE id=?").bind(bh.id, row.id).run();
     row.beehiiv_subscriber_id = bh.id;
