@@ -437,3 +437,32 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .jobs-empty { padding: 28px 0; font-size: 1.05rem; }
 .jobs-fine { margin-top: 22px; color: var(--muted); font-size: .85rem; }
 @media (max-width: 560px) { .job-row { grid-template-columns: 1fr; } .job-apply { justify-self: start; } }
+
+/* CPE log */
+.attend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -6px 0 24px; }
+.attend[hidden] { display: none; }
+.attend-msg { font-weight: 600; color: #0B7A3E; }
+.attend-log { font-size: .9rem; }
+.profile-cpe { margin-top: 18px; color: var(--muted); }
+.cpe-years { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 0 0 26px; }
+.cpe-year { background: var(--paper); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 2px; }
+.cpe-y { font-weight: 800; color: var(--muted); font-size: .85rem; }
+.cpe-n { font-family: var(--display); font-weight: 800; font-size: 2.2rem; color: var(--shield); line-height: 1.05; }
+.cpe-l { color: var(--muted); font-size: .9rem; font-weight: 600; }
+.cpe-b { font-size: .85rem; color: var(--ink); margin-top: 4px; }
+.cpe-csv { font-size: .85rem; margin-top: 6px; }
+.cpe-list { list-style: none; margin: 0; padding: 0; }
+.cpe-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 0; border-top: 1px solid var(--mist-soft); }
+.cpe-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cpe-date { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.cpe-title { font-weight: 700; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.cpe-title:hover { text-decoration: underline; }
+.cpe-org { font-size: .88rem; color: var(--muted); }
+.cpe-edit { display: flex; align-items: flex-end; gap: 8px; }
+.cpe-edit label { display: flex; flex-direction: column; font-size: .75rem; font-weight: 700; color: var(--muted); gap: 3px; }
+.cpe-edit input { width: 5.5em; font: inherit; padding: 7px 8px; border: 1px solid var(--mist); border-radius: 7px; }
+.cpe-empty { padding: 18px 20px; background: var(--paper); border-radius: 12px; }
+.cpe-foot { margin-top: 18px; font-size: .92rem; }
+.cpe-fine { margin-top: 22px; color: var(--muted); font-size: .85rem; }
+@media (max-width: 600px) { .cpe-row { grid-template-columns: 1fr; } }
+.cpe-remove { background: none; border: 0; padding: 6px 4px; font: inherit; font-size: .85rem; color: #B42318; cursor: pointer; text-decoration: underline; }

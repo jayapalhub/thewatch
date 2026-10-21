@@ -6,6 +6,7 @@ import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
 import { FORMATS, AUDIENCE, cityOf, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
 import { toUtc } from "../../_lib/dates.js";
 import { lazyReminders } from "../../_lib/reminders.js";
+import { eventStarted } from "../../_lib/cpe.js";
 
 export async function onRequestGet({ params, env, request, waitUntil }) {
   lazyReminders(env, waitUntil);
@@ -66,6 +67,11 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
           <p class="form-msg" role="status" aria-live="polite"></p>
         </form>
       </details>` : ""}
+      ${e.status === "published" && eventStarted(e) ? html`<div class="attend" data-attend data-event="${e.id}" hidden>
+        <button type="button" class="btn btn-outline" data-attend-btn>Mark attended</button>
+        <span class="attend-msg" data-attend-msg role="status" aria-live="polite"></span>
+        <a class="attend-log" href="/cpe">Your CPE log</a>
+      </div>` : ""}
       <div class="event-body">${(e.description_long || e.description_short || "").split(/\n{2,}/).map((p) => html`<p>${p}</p>`)}</div>
       ${e.source_url ? html`<p class="source">Details from <a href="${e.source_url}" rel="noopener nofollow" target="_blank">the organizer's page</a>. Times and prices can change; the organizer's page is authoritative. <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Correction: " + e.title)}">Report a correction</a>.</p>` : ""}
     </div>

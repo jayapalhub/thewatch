@@ -56,6 +56,28 @@
     }); });
   }
 
+  // CPE log: past event pages carry a hidden Mark attended block. Show it only to subscribers who opened their
+  // profile link on this device (watch_cpe=1); the private token itself stays in an HttpOnly cookie.
+  var att = document.querySelector('[data-attend]');
+  if (att && /(?:^|;\s*)watch_cpe=1/.test(document.cookie)) {
+    var ev = att.getAttribute('data-event'), btn = att.querySelector('[data-attend-btn]'), amsg = att.querySelector('[data-attend-msg]');
+    var done = function (text) { btn.hidden = true; amsg.textContent = text; };
+    fetch('/api/attend?event=' + encodeURIComponent(ev), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.signedIn) return;
+        att.hidden = false;
+        if (j.attended) done(j.hours != null ? 'In your CPE log, ' + j.hours + (j.hours === 1 ? ' hour.' : ' hours.') : 'In your CPE log.');
+      }).catch(function () {});
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      fetch('/api/attend', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, body: 'event=' + encodeURIComponent(ev) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (j.success) done(j.message); else { btn.disabled = false; amsg.textContent = j.error || 'Something went wrong.'; } })
+        .catch(function () { btn.disabled = false; amsg.textContent = 'Network problem. Try again.'; });
+    });
+  }
+
   // Copy buttons (subscriber discount codes)
   document.querySelectorAll('[data-copy]').forEach(function (b) {
     b.addEventListener('click', function () {
