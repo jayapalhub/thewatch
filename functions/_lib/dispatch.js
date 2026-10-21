@@ -1,7 +1,7 @@
 // Newsletter dispatch: one issue per city per week, previewed Saturday 8 AM local to Jerome,
 // sent Sunday 8 AM local to that city's subscribers through Resend, with no human step required.
 import { CITIES, MAIL_ADDRESS } from "./constants.js";
-import { loadIssueData, renderIssueHtml, suggestSubjects } from "./newsletter.js";
+import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml } from "./newsletter.js";
 import { mondayOf, addDays } from "./dates.js";
 
 export const SEND_HOUR = 8;           // local time, Sunday
@@ -50,19 +50,21 @@ export async function buildIssue(env, issue, city) {
 }
 
 function personalize(html, siteUrl, sub) {
-  return html.replace(/\{\{UNSUB\}\}/g, `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`);
+  const nudge = sub.profile_token && !sub.profile_completed_at ? profileNudgeHtml(siteUrl, sub.profile_token) : "";
+  return html.replace(/\{\{UNSUB\}\}/g, `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`).replace(/\{\{PROFILE_NUDGE\}\}/g, nudge);
 }
 
 // Saturday: the preview to Jerome.
 export async function sendPreview(env, issue, city) {
   const { data, subject, html, siteUrl } = await buildIssue(env, issue, city);
   const { n } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=?").bind(city.slug).first();
+  const { n: noProfile } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=? AND profile_completed_at IS NULL").bind(city.slug).first();
   const banner = `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto 18px;padding:12px 16px;border:2px solid #1FB6F0;border-radius:10px;font-size:14px;line-height:1.5;color:#0E1B2E;">
     <strong>Preview for ${city.name}.</strong> This goes to ${n} subscriber${n === 1 ? "" : "s"} on Sunday at ${SEND_HOUR}:00 AM ${city.name} time with the subject line <em>${subject.replace(/</g, "&lt;")}</em>.<br>
     To change the note, subject or picks, edit it at <a href="${siteUrl}/admin/issues/${issue.id}">${siteUrl}/admin/issues/${issue.id}</a> any time before then. To stop it, press Cancel this send on that page. If you do nothing, it goes out as shown.<br>
-    ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}.</div>`;
+    ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}. The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.</div>`;
   const to = env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai";
-  await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview" }) });
+  await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview" }) });
   await env.DB.prepare("UPDATE issues SET subject=COALESCE(subject, ?), preview_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(subject, issue.id).run();
   return { to, subject, subscribers: n };
 }
@@ -74,7 +76,7 @@ export async function dispatchIssue(env, issue, city) {
   if (issue.status !== "sending") await env.DB.prepare("UPDATE issues SET status='sending', subject=?, dispatched_at=COALESCE(dispatched_at, datetime('now')), generated_html=?, updated_at=datetime('now') WHERE id=?").bind(subject, html, issue.id).run();
   let lastId = issue.last_sent_subscriber_id || 0, sent = 0, batches = 0;
   while (batches < MAX_BATCHES_PER_RUN) {
-    const { results } = await env.DB.prepare("SELECT id, email, unsub_token FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
+    const { results } = await env.DB.prepare("SELECT id, email, unsub_token, profile_token, profile_completed_at FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
     if (!results.length) {
       await env.DB.prepare("UPDATE issues SET status='sent', completed_at=datetime('now'), sent_count=sent_count+?, last_sent_subscriber_id=?, updated_at=datetime('now') WHERE id=?").bind(sent, lastId, issue.id).run();
       return { done: true, sent };

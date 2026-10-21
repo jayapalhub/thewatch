@@ -46,6 +46,17 @@ function dayBlock(key, evs, siteUrl, issueId) {
   <tr><td><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${evs.map((e) => eventLine(e, siteUrl, issueId)).join("")}</table></td></tr>`;
 }
 
+// Profile nudge, filled in per subscriber at send time (see personalize in dispatch.js): only people who have not
+// answered the three profile questions see it. The archive and anyone who has answered get nothing in its place.
+export const PROFILE_NUDGE = "{{PROFILE_NUDGE}}";
+export function profileNudgeHtml(siteUrl, token) {
+  return `<div style="margin:26px 0 0;padding:14px 16px;background:${PAPER};border-radius:10px;font-size:14px;line-height:1.55;">
+    <div style="font-weight:800;color:${INK};margin-bottom:4px;">Two quick questions</div>
+    Tell us where you sit and what you want more of, and the Sunday email gets more useful for you. You will also hear first when we host a dinner or roundtable on your topic. It takes under a minute.
+    <div style="margin-top:8px;"><a href="${siteUrl}/profile?t=${encodeURIComponent(token || "")}" style="color:${SHIELD};font-weight:700;">Answer the two questions</a></div>
+  </div>`;
+}
+
 // One "Supported by" line above the footer for the standing sponsor (only when the issue has no sponsor of its own).
 function sponsorLine(s, siteUrl, issue, city) {
   const href = clickUrl(siteUrl, s, "email", { city: city.slug, issueId: issue.id });
@@ -90,6 +101,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${data.virt.map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(weekday(e.start_at)).slice(0, 3)} ${esc(fmtTimeRange(e.start_at, e.end_at))}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a> <span style="color:${MUTED};">· ${esc(e.org_display)}${cpeLabel(e) ? " · " + esc(cpeLabel(e)) : ""}${e.org_type === "vendor" ? " · Vendor" : ""}</span></td></tr>`).join("")}</table>` : ""}
   ${soon.length ? `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">Coming up, register early</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${soon.slice(0, 8).map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(monthName(e.start_at)).slice(0, 3)} ${dayNum(e.start_at)}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a>${e.org_display ? ` <span style="color:${MUTED};">· ${esc(e.org_display)}</span>` : ""}</td></tr>`).join("")}</table>` : ""}
+  ${PROFILE_NUDGE}
   ${data.sponsor && !issue.sponsor_name ? sponsorLine(data.sponsor, siteUrl, issue, city) : ""}
   <div style="margin:26px 0 0;padding-top:14px;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};line-height:1.6;">
     Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/${issue.city || "sandiego"}" style="color:${SHIELD};">bettersecurity.ai/${issue.city || "sandiego"}</a>.<br>
