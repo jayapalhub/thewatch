@@ -1,7 +1,7 @@
 import { html, page, raw } from "./_lib/html.js";
 import { shell } from "./_lib/layout.js";
 import { TOPICS, SENIORITY } from "./_lib/constants.js";
-import { withCookies } from "./_lib/cpe.js";
+import { withCookies, maySignIn } from "./_lib/cpe.js";
 
 export async function onRequestGet({ request, env }) {
   const t = (new URL(request.url).searchParams.get("t") || "").slice(0, 64);
@@ -39,5 +39,6 @@ export async function onRequestGet({ request, env }) {
   </div></section>` : html`
   <section class="hero hero-short"><div class="wrap narrow"><h1>This link isn't valid anymore.</h1><p class="lede">Profile links are personal and expire if you resubscribe. <a href="/subscribe">Subscribe again</a> to get a fresh one, or just enjoy the <a href="/sandiego">calendar</a>.</p></div></section>`;
   const res = page(shell({ title: "Your profile", body, path: "/subscribe", head: '<meta name="robots" content="noindex">' }), sub ? 200 : 404);
-  return sub && sub.status === "active" ? withCookies(res, sub.profile_token) : res; // so event pages can offer Mark attended
+  // So event pages can offer Mark attended. Never replaces a different person's sign in on this device.
+  return sub && sub.status === "active" && (await maySignIn(env.DB, request, sub.profile_token)) ? withCookies(res, sub.profile_token) : res;
 }

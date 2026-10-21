@@ -17,6 +17,14 @@ export function cpeCookies(token) {
     `${FLAG_COOKIE}=1; Path=/; Max-Age=${YEAR}; Secure; SameSite=Lax`,
   ];
 }
+// Should a page reached with ?t=<token> sign this device in? Yes when nobody is signed in, when it is the same
+// person, or when the existing cookie no longer matches anyone. Never silently swap one person's sign in for another's:
+// otherwise a link could plant someone else's token and collect what this device marks as attended.
+export async function maySignIn(db, request, token) {
+  const current = tokenFromCookie(request);
+  if (!current || current === token) return true;
+  return !(await subscriberByToken(db, current));
+}
 export function withCookies(res, token) {
   for (const c of cpeCookies(token)) res.headers.append("Set-Cookie", c);
   return res;
@@ -72,6 +80,6 @@ export function yearTotals(rows) {
 
 export function csvCell(v) {
   const s = v == null ? "" : String(v);
-  const safe = /^[=+\-@]/.test(s) ? "'" + s : s; // keep spreadsheet apps from treating a title as a formula
-  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  const safe = /^[=+\-@\t\r]/.test(s) ? "'" + s : s; // keep spreadsheet apps from treating a title as a formula
+  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }

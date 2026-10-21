@@ -52,6 +52,9 @@ export async function onRequestGet({ env }) {
     }
   }
   const cityCounts = Object.fromEntries(subsByCity.results.map((r) => [r.city, r.n]));
+  // Per city counts appear only when every city with subscribers clears the bar; otherwise the total minus the shown
+  // cities would reveal the small one.
+  const showCityCounts = showAudience && Object.values(cityCounts).every((n) => n >= MEDIA_KIT_MIN_CITY_SUBSCRIBERS);
   const cityList = cityListText(cities);
   const bars = (rows) => html`<ul class="kit-bars">${rows.map((r) => html`<li><span class="kit-bar-label">${r.label}</span><span class="kit-bar"><span style="width:${Math.max(r.share, 2)}%"></span></span><span class="kit-bar-n">${r.share}%</span></li>`)}</ul>`;
 
@@ -80,7 +83,7 @@ export async function onRequestGet({ env }) {
           <div><dt>Organizers covered</dt><dd>${fmt(x.orgs)}</dd></div>
           <div><dt>Events listed so far</dt><dd>${fmt(x.listed)}</dd></div>
           ${x.upcoming ? html`<div><dt>Offering CPE</dt><dd>${x.cpeShare}% of upcoming</dd></div>` : ""}
-          ${showAudience && (cityCounts[x.c.slug] || 0) >= MEDIA_KIT_MIN_CITY_SUBSCRIBERS ? html`<div><dt>Subscribers</dt><dd>${fmt(cityCounts[x.c.slug])}</dd></div>` : ""}
+          ${showCityCounts && cityCounts[x.c.slug] ? html`<div><dt>Subscribers</dt><dd>${fmt(cityCounts[x.c.slug])}</dd></div>` : ""}
         </dl>
         <a href="/${x.c.slug}">See the ${x.c.name} calendar</a>
       </div>`)}

@@ -1,6 +1,6 @@
 import { html, page, redirect, readForm, str } from "../../_lib/html.js";
 import { adminShell, flash } from "../../_lib/admin.js";
-import { cityOf } from "../../_lib/constants.js";
+import { cityOf, CITIES } from "../../_lib/constants.js";
 import { todayKey } from "../../_lib/dates.js";
 import { buildSpeakers, loadOverrides, resolveKey, nameKey, looseKey, bySurname } from "../../_lib/speakers.js";
 
@@ -27,7 +27,7 @@ export async function onRequestGet({ request, env, data }) {
   const mergeBtn = (from, into) => html`<form method="post" class="a-inline"><input type="hidden" name="action" value="merge"><input type="hidden" name="from" value="${from.key}"><input type="hidden" name="into" value="${into.key}"><button class="a-btn a-btn-small">Use ${into.name}</button></form>`;
 
   const body = html`${flash(u.searchParams.get("msg"))}
-  <p class="a-muted">${speakers.length} people across every published event, parsed from the Speakers field. Public pages: ${["sandiego", "sanjose"].filter((c) => cityOf(c)).map((c) => html`<a href="/${c}/speakers" target="_blank">/${c}/speakers</a> `)}<a href="/virtual/speakers" target="_blank">/virtual/speakers</a>. Names only; no photos, bios or contact details. Merging keeps the spelling you pick and folds the other one's events into it.</p>
+  <p class="a-muted">${speakers.length} people across every published event, parsed from the Speakers field. Public pages: ${Object.keys(CITIES).map((c) => html`<a href="/${c}/speakers" target="_blank">/${c}/speakers</a> `)}<a href="/virtual/speakers" target="_blank">/virtual/speakers</a>. Names only; no photos, bios or contact details. Merging keeps the spelling you pick and folds the other one's events into it. Public pages refresh within five minutes of a change.</p>
   ${dupes.length ? html`<h2>Possible duplicates (${dupes.length})</h2>
   <table class="a-table"><thead><tr><th>Spellings</th><th>Keep which</th></tr></thead><tbody>
   ${dupes.map((g) => html`<tr><td class="a-nowrap">${g.map((s) => html`${s.name} <small>(${s.events.length})</small><br>`)}</td><td>${g.flatMap((into) => g.filter((x) => x !== into).map((from) => mergeBtn(from, into)))}</td></tr>`)}
@@ -63,15 +63,17 @@ export async function onRequestPost({ request, env, data }) {
   const back = (m) => redirect("/admin/speakers?msg=" + encodeURIComponent(m), 303);
   const by = String((data.user && (data.user.email || data.user)) || "admin").slice(0, 120);
   const overrides = await loadOverrides(db);
+  // Hidden form fields carry a key exactly as the board made it; normalizing it again could change it. Free text gets normalized.
+  const asKey = (v) => { const x = str(v, 120); return /^[\p{Ll}\p{N}' -]+$/u.test(x) ? x : nameKey(x); };
   if (action === "hide") {
-    const key = nameKey(str(p.key, 120));
+    const key = asKey(p.key);
     if (!key) return back("Nothing to hide.");
     await db.prepare("INSERT OR REPLACE INTO speaker_overrides (name_key, action, target_key, created_by) VALUES (?, 'hide', NULL, ?)").bind(key, by).run();
     return back("Hidden from the speaker board. Undo it under Your changes.");
   }
   if (action === "merge") {
-    const from = nameKey(str(p.from, 120));
-    const into = resolveKey(nameKey(str(p.into, 120)), overrides);
+    const from = asKey(p.from);
+    const into = resolveKey(asKey(p.into), overrides);
     if (!from || !into) return back("Pick a name to merge into.");
     if (into === resolveKey(from, overrides)) return back("Those are already the same person.");
     const known = (await buildSpeakers(db)).some((s) => s.key === into);
@@ -80,7 +82,7 @@ export async function onRequestPost({ request, env, data }) {
     return back("Merged.");
   }
   if (action === "undo") {
-    await db.prepare("DELETE FROM speaker_overrides WHERE name_key=?").bind(nameKey(str(p.key, 120))).run();
+    await db.prepare("DELETE FROM speaker_overrides WHERE name_key=?").bind(asKey(p.key)).run();
     return back("Undone.");
   }
   return back("Unknown action.");

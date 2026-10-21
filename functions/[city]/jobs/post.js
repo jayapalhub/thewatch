@@ -3,9 +3,8 @@ import { shell } from "../../_lib/layout.js";
 import { CITIES, TOPICS, SENIORITY } from "../../_lib/constants.js";
 import { rateLimited } from "../../_lib/subscribers.js";
 import { notifyJerome, emailShell } from "../../_lib/integrations.js";
-import { autoPublishAt } from "../../_lib/autopublish.js";
-import { REMOTE } from "../../_lib/jobs.js";
-import { resolveEmployer } from "../../_lib/admin-jobs.js";
+import { REMOTE, cleanJobUrl, isJobBoard } from "../../_lib/jobs.js";
+import { findEmployer } from "../../_lib/admin-jobs.js";
 
 // Free employer form. Trusted employers publish after the usual 24 hour window; everyone else waits for Jerome.
 export async function onRequestGet({ params }) {
@@ -62,24 +61,26 @@ export async function onRequestPost({ params, request, env, waitUntil }) {
   const p = await readForm(request);
   if (str(p.website_hp)) return json({ success: true, message: "Thanks." });
   if (await rateLimited(env.DB, request, "jobpost", 6, 60)) return json({ success: false, error: "Too many submissions from this connection. Try again later." }, 429);
-  const employer = str(p.employer, 120), title = str(p.title, 140), url = str(p.url, 500);
+  const employer = str(p.employer, 120), title = str(p.title, 140), url = cleanJobUrl(str(p.url, 500)) || "";
   const byName = str(p.submitted_by_name, 80), byEmail = str(p.submitted_by_email, 200);
   if (!employer || !title || !byName || !EMAIL_RE.test(byEmail)) return json({ success: false, error: "Please fill in the company, role title, your name and a valid email." }, 400);
-  if (!/^https?:\/\//i.test(url)) return json({ success: false, error: "The posting link needs to start with https://" }, 400);
-  if (/linkedin\.com\/jobs|indeed\.com|ziprecruiter\.com|glassdoor\.com|dice\.com/i.test(url)) return json({ success: false, error: "Please link to your own careers page or applicant tracking system rather than a job board." }, 400);
+  if (!url) return json({ success: false, error: "The posting link needs to be a full web address starting with https://" }, 400);
+  if (isJobBoard(url)) return json({ success: false, error: "Please link to your own careers page or applicant tracking system rather than a job board." }, 400);
   const pbUrl = str(p.posted_by_url, 500);
   if (pbUrl && !/^https?:\/\//i.test(pbUrl)) return json({ success: false, error: "The LinkedIn post link needs to start with https://" }, 400);
   const dup = await env.DB.prepare("SELECT id FROM jobs WHERE url=? AND status IN ('pending_review','published','draft')").bind(url).first();
   if (dup) return json({ success: true, message: "That role is already listed or waiting for review. Thanks." });
-  const emp = await resolveEmployer(env.DB, employer, { contactName: byName, contactEmail: byEmail, note: "Created from the employer job form; review details" });
+  // Every public submission waits for Jerome, whatever name it gives: typing a trusted organizer's name is not proof
+  // of being that organizer. Link an existing organization if the name matches; never create one from here.
+  const emp = await findEmployer(env.DB, employer);
   const topics = JSON.stringify(list(p.topics).filter((k) => TOPICS[k]).slice(0, 3));
   const r = await env.DB.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, seniority, topics, salary_text, posted_at, status, hold, auto_publish_at, source,
       posted_by_name, posted_by_title, posted_by_url, posted_by_kind, posted_by_date, submitted_by_name, submitted_by_email) VALUES (?,?,?,?,?,?,?,?,?,?,date('now'),'pending_review',?,?,'employer_form',?,?,?,?,?,?,?)`)
-    .bind(city.slug, emp.id, employer, title, url, str(p.location, 120) || null, REMOTE[str(p.remote)] ? str(p.remote) : "onsite", SENIORITY[str(p.seniority)] ? str(p.seniority) : null, topics, str(p.salary_text, 80) || null,
-      emp.trusted ? 0 : 1, emp.trusted ? autoPublishAt() : null,
+    .bind(city.slug, emp ? emp.id : null, employer, title, url, str(p.location, 120) || null, REMOTE[str(p.remote)] ? str(p.remote) : "onsite", SENIORITY[str(p.seniority)] ? str(p.seniority) : null, topics, str(p.salary_text, 80) || null,
+      1, null,
       str(p.posted_by_name, 100) || null, str(p.posted_by_title, 120) || null, pbUrl || null, str(p.posted_by_name, 100) ? "employer" : null, null, byName, byEmail).run();
   const site = env.SITE_URL || "";
-  const note = notifyJerome(env, `Job posted: ${title} at ${employer}`, emailShell("New job post", `<p><strong>${esc(title)}</strong> at ${esc(employer)} (${esc(city.name)})<br><a href="${esc(url)}">${esc(url)}</a><br>From ${esc(byName)} &lt;${esc(byEmail)}&gt;</p><p>${emp.trusted ? "Trusted employer: it publishes in 24 hours unless you hold it." : "Waiting for you."} <a href="${site}/admin/jobs/${r.meta.last_row_id}">Review it</a>.</p>`));
+  const note = notifyJerome(env, `Job posted: ${title} at ${employer}`, emailShell("New job post", `<p><strong>${esc(title)}</strong> at ${esc(employer)} (${esc(city.name)})<br><a href="${esc(url)}">${esc(url)}</a><br>From ${esc(byName)} &lt;${esc(byEmail)}&gt;</p><p>Waiting for you${emp ? "" : " (new employer; saving it in the editor adds the organization)"}. <a href="${site}/admin/jobs/${r.meta.last_row_id}">Review it</a>.</p>`));
   if (waitUntil) waitUntil(note); else await note;
   return json({ success: true, message: "Thanks. A person reviews every listing, usually within a day, and you'll see it on the jobs page once it's live." });
 }

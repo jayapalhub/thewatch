@@ -66,7 +66,7 @@ function readSponsor(p) {
   const name = str(p.name, 120), url = str(p.url, 500), logo = str(p.logo_url, 500);
   if (!name) return { error: "Sponsor name is required" };
   if (!/^https?:\/\//.test(url)) return { error: "The link must start with https://" };
-  if (logo && !/^https:\/\//.test(logo) && !logo.startsWith("/")) return { error: "The logo must be an https URL or a site path starting with /" };
+  if (logo && !/^https:\/\//.test(logo) && !(logo.startsWith("/") && !logo.startsWith("//"))) return { error: "The logo must be an https URL or a site path starting with /" };
   const starts = str(p.starts_at, 10), ends = str(p.ends_at, 10);
   if ((starts && !DATE_RE.test(starts)) || (ends && !DATE_RE.test(ends))) return { error: "Dates must be YYYY-MM-DD" };
   if (starts && ends && ends < starts) return { error: "The end date is before the start date" };

@@ -3,17 +3,20 @@ import { shell } from "../../_lib/layout.js";
 import { upcomingEvents, queryEvents, dayList } from "../../_lib/events.js";
 import { nowLocalIso, todayKey, fmtDateLong, fmtTime, fmtTimeRange } from "../../_lib/dates.js";
 import { findClashes, eventsOnDate } from "../../_lib/clashes.js";
-import { CITIES, eventPath } from "../../_lib/constants.js";
+import { CITIES, eventPath, SHOW_BS_EVENTS } from "../../_lib/constants.js";
 
 export async function onRequestGet({ params, env, request }) {
   const city = CITIES[params.city];
   if (!city) return notFound("Calendar not found");
   const o = await env.DB.prepare("SELECT * FROM organizations WHERE slug=?").bind(params.slug).first();
-  if (!o) return notFound("Organizer not found");
+  if (!o || (!SHOW_BS_EVENTS && o.slug === "better-security")) return notFound("Organizer not found");
   // An organizer page shows that organizer's events in this city plus its virtual sessions.
-  const merge = (a, b) => a.concat(b).sort((x, y) => x.start_at < y.start_at ? -1 : 1);
+  // A hybrid event flagged also_virtual comes back from both lists; keep one copy.
+  const merge = (a, b) => [...new Map(a.concat(b).map((e) => [e.id, e])).values()].sort((x, y) => x.start_at < y.start_at ? -1 : 1);
   const upcoming = merge(await upcomingEvents(env.DB, { city: city.slug, org: o.slug, limit: 50 }), await upcomingEvents(env.DB, { city: "virtual", org: o.slug, limit: 50 }));
   const past = merge(await queryEvents(env.DB, { city: city.slug, org: o.slug, to: nowLocalIso(), limit: 400 }), await queryEvents(env.DB, { city: "virtual", org: o.slug, to: nowLocalIso(), limit: 400 })).reverse().slice(0, 8);
+  // No published events at all (for example an employer added from a job post): there is no organizer page to show.
+  if (!upcoming.length && !past.length) return notFound("Organizer not found");
   // Clashes: this organizer's upcoming in person dates that start within two hours of another group's event.
   const clashes = await findClashes(env.DB, upcoming.filter((e) => e.city === city.slug));
   const clashRows = upcoming.filter((e) => clashes.has(e.id))

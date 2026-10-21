@@ -1,3 +1,5 @@
+import { SHOW_BS_EVENTS } from "./constants.js";
+const BS_OFF = "COALESCE(e.is_better_security_event, 0) = 0 AND COALESCE(o.slug, '') != 'better-security'";
 // Clash checker: two in person events in the same city that start within two hours of each other on the same day.
 // start_at is stored as local wall time ("2026-11-12T17:30:00"), so comparing wall times within one city is safe.
 // The virtual calendar and online only events are skipped: they do not compete for the same room or evening.
@@ -25,7 +27,7 @@ export async function findClashes(db, events) {
     const { results } = await db.prepare(
       `SELECT e.id, e.slug, e.title, e.city, e.start_at, e.end_at, e.organization_id, o.name AS org_name, o.short_name AS org_short
        FROM events e LEFT JOIN organizations o ON o.id = e.organization_id
-       WHERE e.status = 'published' AND COALESCE(e.format, 'in_person') != 'virtual' AND (${cond})`
+       WHERE e.status = 'published' AND COALESCE(e.format, 'in_person') != 'virtual' AND (${cond})${SHOW_BS_EVENTS ? "" : " AND " + BS_OFF}`
     ).bind(...args).all();
     others.push(...results);
   }
@@ -43,7 +45,7 @@ export async function eventsOnDate(db, city, date) {
   const { results } = await db.prepare(
     `SELECT e.id, e.slug, e.title, e.city, e.format, e.start_at, e.end_at, o.name AS org_name, o.short_name AS org_short, o.slug AS org_slug
      FROM events e LEFT JOIN organizations o ON o.id = e.organization_id
-     WHERE e.status = 'published' AND e.city = ? AND substr(e.start_at, 1, 10) = ? ORDER BY e.start_at`
+     WHERE e.status = 'published' AND e.city = ? AND substr(e.start_at, 1, 10) = ?${SHOW_BS_EVENTS ? "" : " AND " + BS_OFF} ORDER BY e.start_at`
   ).bind(city, date).all();
   return results;
 }

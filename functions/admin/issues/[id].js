@@ -13,7 +13,7 @@ export async function onRequestGet({ params, request, env, data }) {
   const city = CITIES[issue.city] || CITIES[DEFAULT_CITY];
   const d = await loadIssueData(env.DB, issue);
   const sample = await interestSample(env.DB, city.slug);
-  const htmlOut = renderIssueHtml(issue, d, siteUrl, city).replace(/\{\{PICKS\}\}/g, picksBlock(siteUrl, d.events, sample.top, issue.id)).replace(/\{\{SHARE\}\}/g, shareLineHtml(siteUrl, "preview")).replace(/\{\{UNSUB\}\}/g, siteUrl + "/unsubscribe?t=preview").replace(/\{\{PROFILE_NUDGE\}\}/g, profileNudgeHtml(siteUrl, "preview")).replace(/\{\{JOBS\}\}/g, jobsBlock(siteUrl, city, d.jobs, null, issue.id)); // nudge: only people without a profile; jobs: matched per subscriber
+  const htmlOut = renderIssueHtml(issue, d, siteUrl, city).replace(/\{\{PICKS\}\}/g, () => picksBlock(siteUrl, d.events, sample.top, issue.id)).replace(/\{\{SHARE\}\}/g, () => shareLineHtml(siteUrl, "preview")).replace(/\{\{UNSUB\}\}/g, () => siteUrl + "/unsubscribe?t=preview").replace(/\{\{PROFILE_NUDGE\}\}/g, () => profileNudgeHtml(siteUrl, "preview")).replace(/\{\{JOBS\}\}/g, () => jobsBlock(siteUrl, city, d.jobs, null, issue.id)); // nudge: only people without a profile; jobs: matched per subscriber
   const { n: subCount } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=?").bind(city.slug).first();
   const subjects = suggestSubjects(d, issue);
   const sc = issue.sponsor_name ? await env.DB.prepare("SELECT COUNT(*) n FROM link_clicks WHERE issue_id=? AND target='sponsor'").bind(issue.id).first() : null;
@@ -69,10 +69,10 @@ export async function onRequestPost({ params, request, env }) {
   const city = CITIES[issue.city] || CITIES[DEFAULT_CITY];
   let msg = "Saved";
   try {
-    if (action === "preview") { const r = await sendPreview(env, issue, city); msg = `Preview sent to ${r.to}`; }
+    if (action === "preview") { const r = await sendPreview(env, { ...issue, force_preview: true }, city); msg = `Preview sent to ${r.to}`; }
     else if (action === "cancel") { await env.DB.prepare("UPDATE issues SET status='cancelled', updated_at=datetime('now') WHERE id=?").bind(id).run(); msg = "Cancelled; nothing goes out this week"; }
     else if (action === "uncancel") { await env.DB.prepare("UPDATE issues SET status='draft', updated_at=datetime('now') WHERE id=?").bind(id).run(); msg = "Back on the schedule"; }
-    else if (action === "send_now") { const r = await dispatchIssue(env, { ...issue, status: "draft" }, city); msg = r.error ? `Send stopped: ${r.error}` : `Sent to ${r.sent} subscriber${r.sent === 1 ? "" : "s"}${r.done ? "" : " so far; the rest follow within minutes"}`; }
+    else if (action === "send_now") { const r = await dispatchIssue(env, { ...issue, status: "draft" }, city); /* Send now also works from cancelled */ msg = r.error ? `Send stopped: ${r.error}` : `Sent to ${r.sent} subscriber${r.sent === 1 ? "" : "s"}${r.done ? "" : " so far; the rest follow within minutes"}`; }
   } catch (e) { msg = `Error: ${String(e.message).slice(0, 200)}`; }
   return redirect(`/admin/issues/${id}?msg=${encodeURIComponent(msg)}`);
 }

@@ -28,11 +28,24 @@ export function emailShell(title, inner, city = null) {
 }
 
 // Welcome email, sent by the site the moment someone subscribes (replaces the Beehiiv welcome automation).
+const escH = (v) => String(v || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// Sent when an address that unsubscribed is entered in a signup form. Nothing changes until they press the button.
+export function resubscribeEmail(siteUrl, sub, city) {
+  const url = `${siteUrl}/resubscribe?t=${sub.unsub_token || ""}`;
+  const inner = `
+    <p>Hi${sub.first_name ? " " + escH(sub.first_name) : ""},</p>
+    <p>Someone, hopefully you, asked to start The Watch ${escH(city.name)} again for this address. You unsubscribed earlier, so nothing changes until you confirm.</p>
+    <p><a href="${url}" style="display:inline-block;background:#1B4A8A;color:#fff;text-decoration:none;font-weight:700;padding:11px 18px;border-radius:8px;">Yes, start it again</a></p>
+    <p style="color:#5B6B80;font-size:14px;">If this wasn't you, ignore this note and you stay unsubscribed.</p>`;
+  return emailShell(`Start The Watch ${escH(city.name)} again?`, inner, city);
+}
+
 export function welcomeEmail(siteUrl, sub, city) {
   const cal = `${siteUrl}/${city.slug}`;
   const unsub = `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`;
   const inner = `
-    <p>Hi${sub.first_name ? " " + sub.first_name : ""},</p>
+    <p>Hi${sub.first_name ? " " + escH(sub.first_name) : ""},</p>
     <p>You're on the list for The Watch ${city.name}. ${city.newsletter === "sunday" ? `Every Sunday at 8 AM you'll get the week's security events in ${city.name}, curated down to what's worth your time, with a short note from me on what I'd show up for.` : `The ${city.name} Sunday email is starting soon, and you'll get the first issue the week it launches: the week's security events, curated down to what's worth your time, with a short note from me on what I'd show up for.`}</p>
     <p>Until Sunday, the full calendar is at <a href="${cal}" style="color:#1B4A8A;">${cal.replace(/^https?:\/\//, "")}</a>, and the live online sessions with CPE are at <a href="${siteUrl}/virtual" style="color:#1B4A8A;">bettersecurity.ai/virtual</a>.</p>
     <p>Two quick questions, if you have a minute, so the email and our own events fit you better: <a href="${siteUrl}/profile?t=${sub.profile_token || ""}" style="color:#1B4A8A;">tell us where you sit and what you want more of</a>. Skip it and you still get every issue.</p>

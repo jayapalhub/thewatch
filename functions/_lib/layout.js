@@ -12,6 +12,7 @@ export function signupForm({ source, compact = false, cta = "Get the Sunday emai
   <form class="signup ${compact ? "signup-compact" : ""}" method="post" action="/api/subscribe" data-signup>
     <input type="hidden" name="source" value="${source}">
     <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    ${!chooseCity && CITIES[city] ? html`<input type="hidden" name="city" value="${city}">` : ""}
     ${chooseCity && Object.keys(CITIES).length > 1 ? html`<label class="signup-city">Your city <select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === city ? raw("selected") : ""}>${c.name}${c.newsletter === "sunday" ? "" : " (starting soon)"}</option>`)}</select></label>` : ""}
     <label class="sr-only" for="email-${source}">Email address</label>
     <div class="signup-row">
@@ -86,7 +87,7 @@ ${body}
     <div class="footer-brand">
       ${mark(40)}
       <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${cityListText()}, plus the best online sessions.</p>
-      ${signupForm({ source: "footer", compact: true, cta: "Subscribe" })}
+      ${CITIES[c.slug] ? signupForm({ source: "footer", compact: true, cta: "Subscribe", city: c.slug }) : signupForm({ source: "footer", compact: true, cta: "Subscribe", chooseCity: true })}
     </div>
     <div class="footer-col">
       <h3>Calendar</h3>

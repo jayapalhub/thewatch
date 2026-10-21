@@ -278,6 +278,7 @@ small { color: var(--muted); }
 .footer-brand p { max-width: 36ch; font-size: .92rem; }
 .footer-brand strong { color: var(--white); }
 .footer-brand .signup { max-width: 380px; }
+.site-footer .signup-city { color: var(--white); font-size: .85rem; }
 .footer-address { font-size: .8rem; color: rgba(255,255,255,.55); margin: 6px 0 0; }
 @media (max-width: 820px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 520px) { .footer-grid { grid-template-columns: 1fr; } }
@@ -379,7 +380,7 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .deal-label { display: block; font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); margin-bottom: 2px; }
 .deal-terms { margin: 0; font-weight: 600; }
 .deal-code { display: flex; align-items: center; gap: 10px; }
-.deal-code code { font-size: 1.1rem; font-weight: 800; letter-spacing: .04em; padding: 6px 12px; background: var(--white); border: 1px solid var(--mist); border-radius: 8px; }
+.deal-code code { overflow-wrap: anywhere; word-break: break-all; font-size: 1.1rem; font-weight: 800; letter-spacing: .04em; padding: 6px 12px; background: var(--white); border: 1px solid var(--mist); border-radius: 8px; }
 
 /* Standing sponsor strip on city calendars */
 .sponsor-strip { border-top: 1px solid var(--mist-soft); padding: 18px 0; background: var(--white); }
@@ -421,8 +422,8 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 @media (max-width: 820px) { .kit-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kit-ways, .kit-split { grid-template-columns: 1fr; } }
 
 /* City picker in signup forms */
-.signup-city { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-weight: 700; font-size: .92rem; }
-.signup-city select { font: inherit; font-weight: 600; padding: 9px 12px; border-radius: 8px; border: 2px solid var(--mist); background: var(--white); color: var(--ink); }
+.signup-city { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 10px; font-weight: 700; font-size: .92rem; }
+.signup-city select { max-width: 100%; min-width: 0; font: inherit; font-weight: 600; padding: 9px 12px; border-radius: 8px; border: 2px solid var(--mist); background: var(--white); color: var(--ink); }
 .band-navy .signup-city, .hero .signup-city { color: var(--white); }
 .lede-note { color: var(--muted); font-weight: 600; margin-top: -4px; }
 .hero .lede-note { color: #A9B8CC; }

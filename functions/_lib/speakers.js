@@ -10,7 +10,12 @@
 import { SHOW_BS_EVENTS } from "./constants.js";
 
 const ROLE_RE = /^(moderator|co-?moderator|host|co-?host|keynote|keynote speaker|panelist|chair|emcee|mc|facilitator|presenter|speaker|day \d+( keynote)?)$/i;
-const HONORIFIC_RE = /^(dr|col|prof|mr|ms|mrs|sir|lt|capt|gen|hon)\.?\s+/i;
+// Common titles may come without a period; rarer ones (which double as first names, like Gen) only with one.
+const HONORIFIC_RE = /^(?:(?:dr|prof|mr|ms|mrs|mx)\.?|(?:col|gen|lt|capt|sir|hon|rev)\.)\s+/i;
+// Credentials and suffixes after a name are dropped rather than rejecting the person ("Jane Doe PhD", "Steve Piper, CISSP").
+const SUFFIX_RE = /(?:,?\s+(?:Ph\.?D\.?|CISSP|CISA|CISM|CRISC|CGEIT|CCSP|CIPP(?:\/\w+)?|CIPM|CIPT|AIGP|CPA|CFE|CEH|OSCP|GSEC|MBA|JD|Esq\.?|MD|Jr\.?|III|II))+$/;
+// An affiliation that looks like contact details is never shown: email, web address, handle path or phone number.
+const CONTACTISH = /@|:\/\/|www\.|\/|\d[\d\s().-]{6,}\d/;
 const PARTICLES = new Set(["de", "da", "das", "dos", "do", "del", "della", "di", "du", "van", "von", "der", "den", "la", "le", "bin", "al", "el", "y", "e", "ter", "ten"]);
 const NOT_A_PERSON = /\b(team|teams|experts?|leaders|speakers|announced|collaborators|members|membership|staff|panel|group|labs?|security|research|inc|llc|ltd|company|university|institute|agency|department|office|committee|vp|svp|evp|ceo|cto|ciso|cio|cfo|coo|cso|president|director|manager|engineer|officer|head|lead|senior|sr|principal|analyst|consultant|founder|partner|chief|specialist|architect|marketing|product|sales|intelligence|incident|response|consulting|solutions|systems|networks|technologies|partners|services|global|federal|cloud|software|association|chapter|foundation|council|the|tbd|tba)\b/i;
 
@@ -23,6 +28,7 @@ function splitTop(s, seps) {
     if (depth === 0 && seps.includes(ch)) { out.push(cur); cur = ""; } else cur += ch;
   }
   out.push(cur);
+  if (depth > 0) return s.split(new RegExp(`[${seps.map((c) => "\\" + c).join("")}]`)).map((x) => x.trim()).filter(Boolean); // unbalanced "(": ignore parentheses
   return out.map((x) => x.trim()).filter(Boolean);
 }
 
@@ -55,8 +61,8 @@ export function parseSpeakers(raw) {
     const masked = seg.replace(/\(([^()]*)\)/g, (_, inner) => `\u0000${parens.push(inner.trim()) - 1}\u0000`);
     const pieces = masked.split(/\s*,\s*|\s+and\s+|\s*&\s*/i).map((piece) => {
       let affiliation = null;
-      const text = piece.replace(/\u0000(\d+)\u0000/g, (_, i) => { const v = parens[+i]; if (v && !ROLE_RE.test(v) && !affiliation) affiliation = v; return " "; });
-      return { name: text.replace(/\s+/g, " ").trim().replace(/[,;:]+$/, ""), affiliation };
+      const text = piece.replace(/\u0000(\d+)\u0000/g, (_, i) => { const v = parens[+i]; if (v && !ROLE_RE.test(v) && !CONTACTISH.test(v) && !affiliation) affiliation = v; return " "; });
+      return { name: text.replace(/[()]/g, " ").replace(/\s+/g, " ").trim().replace(/[,;:]+$/, "").replace(SUFFIX_RE, "").trim(), affiliation };
     });
     for (let i = pieces.length - 2; i >= 0; i--) if (!pieces[i].affiliation && !/\u0000/.test(masked.split(/\s*,\s*|\s+and\s+|\s*&\s*/i)[i])) pieces[i].affiliation = pieces[i + 1].affiliation;
     for (const p of pieces) if (p.name && looksLikePerson(p.name)) out.push(p);
@@ -67,7 +73,7 @@ export function parseSpeakers(raw) {
 // Grouping key: case, accents, honorifics, periods and extra spaces do not matter.
 export function nameKey(name) {
   return String(name).normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(HONORIFIC_RE, "")
-    .toLowerCase().replace(/\./g, " ").replace(/[^a-z0-9' -]/g, "").replace(/\s+/g, " ").trim();
+    .toLowerCase().replace(/\./g, " ").replace(/[^\p{L}\p{N}' -]/gu, "").replace(/\s+/g, " ").trim();
 }
 // Looser key used only to suggest merges: drops single letter middle initials ("morey j haber" -> "morey haber").
 export function looseKey(key) {
@@ -98,7 +104,7 @@ export function resolveKey(key, overrides) {
 export async function buildSpeakers(db, { city = null, raw = false } = {}) {
   const where = ["e.status = 'published'", "e.speakers IS NOT NULL", "trim(e.speakers) != ''"]; const args = [];
   if (city) { where.push("e.city = ?"); args.push(city); }
-  if (!SHOW_BS_EVENTS) where.push("COALESCE(o.slug, '') != 'better-security'");
+  if (!SHOW_BS_EVENTS) where.push("COALESCE(e.is_better_security_event, 0) = 0 AND COALESCE(o.slug, '') != 'better-security'");
   const { results: events } = await db.prepare(`SELECT e.id, e.slug, e.title, e.city, e.start_at, e.end_at, e.speakers, COALESCE(o.short_name, o.name) AS org_display
     FROM events e LEFT JOIN organizations o ON o.id = e.organization_id WHERE ${where.join(" AND ")} ORDER BY e.start_at DESC`).bind(...args).all();
   const overrides = raw ? new Map() : await loadOverrides(db);

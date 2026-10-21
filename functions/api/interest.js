@@ -17,7 +17,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     await addInterest(env.DB, row.id, key);
     const note = notifyJerome(env, `Interest: ${BS_EVENT_KEYS[key]}`, emailShell("New interest sign up", `<p>${email} wants to hear about <strong>${BS_EVENT_KEYS[key]}</strong>.</p>`));
     if (waitUntil) waitUntil(note); else await note;
-    return json({ success: true, next: `/profile?t=${row.profile_token}`, message: `You're on the list for ${BS_EVENT_KEYS[key]}.` });
+    return json({ success: true, ...(row.isNew ? { next: `/profile?t=${row.profile_token}` } : {}), message: `You're on the list for ${BS_EVENT_KEYS[key]}.` });
   } catch (e) {
     console.error("interest failed", e && e.message);
     return json({ success: false, error: "Something went wrong on our side. Try again in a minute." }, 500);

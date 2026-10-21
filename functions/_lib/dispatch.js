@@ -56,7 +56,9 @@ function personalize(html, siteUrl, sub, ctx = {}) {
   const jobs = html.includes("{{JOBS}}") && ctx.city ? jobsBlock(siteUrl, ctx.city, ctx.jobs, sub.seniority, ctx.issueId) : "";
   const picks = html.includes("{{PICKS}}") ? picksBlock(siteUrl, ctx.events, sub.interests, ctx.issueId) : "";
   const share = shareLineHtml(siteUrl, sub.ref_code); // "Share The Watch" line in the footer, with this subscriber's own link
-  return html.replace(/\{\{SHARE\}\}/g, share).replace(/\{\{UNSUB\}\}/g, `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`).replace(/\{\{PROFILE_NUDGE\}\}/g, nudge).replace(/\{\{JOBS\}\}/g, jobs).replace(/\{\{PICKS\}\}/g, picks);
+  const unsub = `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`;
+  // Function replacers: a "$" in an event title or job must never be read as a replacement pattern like "$&".
+  return html.replace(/\{\{SHARE\}\}/g, () => share).replace(/\{\{UNSUB\}\}/g, () => unsub).replace(/\{\{PROFILE_NUDGE\}\}/g, () => nudge).replace(/\{\{JOBS\}\}/g, () => jobs).replace(/\{\{PICKS\}\}/g, () => picks);
 }
 
 // For previews: how many subscribers in a city have interests, and the most common ones (used as the sample).
@@ -82,33 +84,65 @@ export async function sendPreview(env, issue, city) {
     To change the note, subject or picks, edit it at <a href="${siteUrl}/admin/issues/${issue.id}">${siteUrl}/admin/issues/${issue.id}</a> any time before then. To stop it, press Cancel this send on that page. If you do nothing, it goes out as shown.<br>
     ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}.${picksNote} The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.${data.jobs && data.jobs.length ? ` Hiring this week shows three of the ${data.jobs.length} live roles, matched to each subscriber's level; this preview shows the default pick.` : ""}</div>`;
   const to = env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai";
-  await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", ref_code: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) });
+  // Claim the preview so two ticks at once cannot both send it (forced previews from the admin pass issue.force_preview).
+  if (!issue.force_preview) {
+    const c = await env.DB.prepare("UPDATE issues SET preview_sent_at=datetime('now') WHERE id=? AND preview_sent_at IS NULL").bind(issue.id).run();
+    if (!c.meta || c.meta.changes !== 1) return { skipped: "preview already sent" };
+  }
+  try { await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", ref_code: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) }); }
+  catch (e) { if (!issue.force_preview) await env.DB.prepare("UPDATE issues SET preview_sent_at=NULL WHERE id=?").bind(issue.id).run(); throw e; }
   await env.DB.prepare("UPDATE issues SET subject=COALESCE(subject, ?), preview_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(subject, issue.id).run();
   return { to, subject, subscribers: n };
 }
 
-// Sunday: send to subscribers. Resumable: each run sends up to MAX_BATCHES_PER_RUN batches and records progress.
+// Sunday: send to subscribers. Safe to run from several places at once (the cron, page views, Send now):
+// every batch is claimed in the database before it goes out, so no subscriber can be sent the issue twice, and
+// Resend gets an idempotency key per batch as a second guard. The HTML is built once, on the first run, and every
+// later run reuses it so the whole list (and the archive) get the same issue. Cancel stops it before the next batch.
+async function resendBatch(env, emails, key) {
+  const r = await fetch("https://api.resend.com/emails/batch", { method: "POST", headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(emails) });
+  const text = await r.text();
+  if (!r.ok) throw new Error(`resend ${r.status}: ${text.slice(0, 300)}`);
+}
+
 export async function dispatchIssue(env, issue, city) {
+  const db = env.DB;
   if (issue.status === "cancelled" || issue.status === "sent") return { skipped: issue.status };
-  const { data, subject, html, siteUrl } = await buildIssue(env, issue, city);
+  if (issue.status !== "sending") {
+    const { data, subject, html } = await buildIssue(env, issue, city);
+    // Only one run moves the issue from draft (or cancelled, for Send now) to sending and stores the HTML.
+    await db.prepare("UPDATE issues SET status='sending', subject=?, dispatched_at=COALESCE(dispatched_at, datetime('now')), generated_html=?, updated_at=datetime('now') WHERE id=? AND status IN ('draft','cancelled')").bind(subject, html, issue.id).run();
+  }
+  issue = await db.prepare("SELECT * FROM issues WHERE id=?").bind(issue.id).first();
+  if (!issue || issue.status !== "sending" || !issue.generated_html) return { skipped: issue ? issue.status : "missing" };
+  const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
+  const data = await loadIssueData(db, issue); // for the per subscriber blocks (jobs, picks); the main HTML is the stored copy
   const ctx = { jobs: data.jobs, events: data.events, city, issueId: issue.id };
-  if (issue.status !== "sending") await env.DB.prepare("UPDATE issues SET status='sending', subject=?, dispatched_at=COALESCE(dispatched_at, datetime('now')), generated_html=?, updated_at=datetime('now') WHERE id=?").bind(subject, html, issue.id).run();
+  const html = issue.generated_html, subject = issue.subject;
   let lastId = issue.last_sent_subscriber_id || 0, sent = 0, batches = 0;
   while (batches < MAX_BATCHES_PER_RUN) {
-    const { results } = await env.DB.prepare("SELECT id, email, unsub_token, profile_token, ref_code, profile_completed_at, seniority, interests FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
+    const { results } = await db.prepare("SELECT id, email, unsub_token, profile_token, ref_code, profile_completed_at, seniority, interests FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
     if (!results.length) {
-      await env.DB.prepare("UPDATE issues SET status='sent', completed_at=datetime('now'), sent_count=sent_count+?, last_sent_subscriber_id=?, updated_at=datetime('now') WHERE id=?").bind(sent, lastId, issue.id).run();
+      await db.prepare("UPDATE issues SET status='sent', completed_at=datetime('now'), updated_at=datetime('now') WHERE id=? AND status='sending' AND last_sent_subscriber_id=?").bind(issue.id, lastId).run();
       return { done: true, sent };
     }
+    const nextId = results[results.length - 1].id;
+    // Claim this batch: only the run that moves the pointer from lastId to nextId sends it. A cancelled issue claims nothing.
+    const claim = await db.prepare("UPDATE issues SET last_sent_subscriber_id=?, sent_count=sent_count+?, updated_at=datetime('now') WHERE id=? AND status='sending' AND COALESCE(last_sent_subscriber_id,0)=?").bind(nextId, results.length, issue.id, lastId).run();
+    if (!claim.meta || claim.meta.changes !== 1) return { done: false, sent, yielded: true }; // another run has it, or it was cancelled
     const emails = results.map((s) => ({
       from: fromFor(city), to: s.email, subject, html: personalize(html, siteUrl, s, ctx),
       headers: { "List-Unsubscribe": `<${siteUrl}/unsubscribe?t=${s.unsub_token}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
       tags: [{ name: "issue", value: String(issue.id) }, { name: "city", value: city.slug }],
     }));
-    try { await resend(env, "/emails/batch", emails); }
-    catch (e) { await env.DB.prepare("UPDATE issues SET send_error=?, updated_at=datetime('now') WHERE id=?").bind(String(e.message).slice(0, 300), issue.id).run(); return { error: String(e.message), sent }; }
-    lastId = results[results.length - 1].id; sent += results.length; batches++;
-    await env.DB.prepare("UPDATE issues SET sent_count=sent_count+?, last_sent_subscriber_id=?, send_error=NULL, updated_at=datetime('now') WHERE id=?").bind(results.length, lastId, issue.id).run();
+    try { await resendBatch(env, emails, `issue-${issue.id}-after-${lastId}`); }
+    catch (e) {
+      // Give the batch back so the next tick retries it (the idempotency key stops a double send if Resend did take it).
+      await db.prepare("UPDATE issues SET last_sent_subscriber_id=?, sent_count=sent_count-?, send_error=?, updated_at=datetime('now') WHERE id=? AND last_sent_subscriber_id=?").bind(lastId, results.length, String(e.message).slice(0, 300), issue.id, nextId).run();
+      return { error: String(e.message), sent };
+    }
+    lastId = nextId; sent += results.length; batches++;
+    await db.prepare("UPDATE issues SET send_error=NULL WHERE id=? AND send_error IS NOT NULL").bind(issue.id).run();
   }
   return { done: false, sent };
 }

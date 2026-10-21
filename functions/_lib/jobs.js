@@ -5,6 +5,22 @@ import { TOPICS, SENIORITY, cityOf } from "./constants.js";
 import { todayKey, addDays } from "./dates.js";
 
 export const JOB_DAYS = 30;
+
+// Job boards and shorteners we never link to: the point of the page is the employer's own posting.
+const BOARD_HOSTS = ["linkedin.com", "lnkd.in", "indeed.com", "ziprecruiter.com", "glassdoor.com", "dice.com", "simplyhired.com", "monster.com",
+  "builtin.com", "builtinsf.com", "builtinla.com", "builtinnyc.com", "builtinaustin.com", "builtinchicago.com", "builtinboston.com", "builtinseattle.com", "builtincolorado.com", "wellfound.com", "angel.co", "careerbuilder.com", "jooble.org", "talent.com", "snagajob.com", "clearancejobs.com", "bit.ly", "tinyurl.com"];
+
+// Parses a posting URL. Returns the normalized https?:// URL string, or null when it is not a usable web address.
+export function cleanJobUrl(raw) {
+  let u; try { u = new URL(String(raw || "").trim()); } catch { return null; }
+  if (!/^https?:$/.test(u.protocol) || !u.hostname.includes(".") || u.username || u.password) return null;
+  u.hostname = u.hostname.toLowerCase().replace(/\.+$/, "");
+  return u.toString();
+}
+export function isJobBoard(url) {
+  let host; try { host = new URL(url).hostname.toLowerCase().replace(/\.+$/, ""); } catch { return false; }
+  return BOARD_HOSTS.some((b) => host === b || host.endsWith("." + b));
+}
 export const REMOTE = { onsite: "Onsite", hybrid: "Hybrid", remote: "Remote" };
 export const POSTER_KINDS = { employer: "Employer's own recruiter or hiring manager", staffing: "Staffing firm recruiter" };
 export const JOB_STATUSES = ["draft", "pending_review", "published", "rejected", "expired", "closed"];
@@ -101,7 +117,7 @@ export async function runJobMaintenance(db, { recheck = 8, fetcher = fetch } = {
         reviewer_notes=COALESCE(reviewer_notes,'') || ' Auto published ' || date('now') || '.', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND status='pending_review'`).bind(r.id).run();
       out.published++;
     }
-    const exp = await db.prepare(`UPDATE jobs SET status='expired', closed_reason='Expired after ${JOB_DAYS} days', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE status='published' AND expires_at IS NOT NULL AND expires_at < date('now')`).run();
+    const exp = await db.prepare(`UPDATE jobs SET status='expired', closed_reason='Expired after ${JOB_DAYS} days', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE status='published' AND expires_at IS NOT NULL AND expires_at < date('now', '-1 day')`).run(); // a day of slack: the page already hides it once the local date passes
     out.expired = (exp.meta && exp.meta.changes) || 0;
     const { results } = await db.prepare(`SELECT id, url FROM jobs WHERE status='published' AND (last_checked_at IS NULL OR last_checked_at < datetime('now', '-7 days')) ORDER BY COALESCE(last_checked_at, '0') LIMIT ?`).bind(recheck).all();
     for (const j of results) {

@@ -25,7 +25,7 @@ export async function onRequestGet({ params, env }) {
     `SELECT o.id, o.slug, o.name, o.short_name, o.type, o.usual_cadence_text, o.description,
             COUNT(e.id) AS n, MAX(e.start_at) AS last_at
      FROM organizations o JOIN events e ON e.organization_id = o.id
-     WHERE e.city = ? AND e.status = 'published'
+     WHERE e.city = ? AND e.status = 'published'${SHOW_BS_EVENTS ? "" : " AND COALESCE(e.is_better_security_event, 0) = 0 AND COALESCE(o.slug, '') != 'better-security'"}
      GROUP BY o.id`
   ).bind(city.slug).all();
   const visible = orgs.filter((o) => SHOW_BS_EVENTS || o.slug !== "better-security");
@@ -50,7 +50,8 @@ export async function onRequestGet({ params, env }) {
   <div class="wrap narrow org-dir">
     <p class="crumbs"><a href="/${city.slug}">${city.name} calendar</a> <span class="sep"></span> Organizers</p>
     <h1>Who runs security events in ${city.name}</h1>
-    <p class="lede">${visible.length === 1 ? "One organization has" : `${visible.length} organizations have`} put events on The Watch ${city.name}, and ${withNext === visible.length ? (visible.length === 1 ? "it has" : "every one of them has") : `${withNext} of them have`} something on the calendar right now. Each one links to its own page with every upcoming date.</p>
+    <p class="lede">${!visible.length ? `No organizers have put events on The Watch ${city.name} yet. As chapters, meetups and conferences submit their dates, each one gets a page here.`
+      : html`${visible.length === 1 ? "One organization has" : `${visible.length} organizations have`} put events on The Watch ${city.name}, and ${withNext === visible.length ? (visible.length === 1 ? "it has" : "every one of them has") : withNext === 0 ? "none of them has" : `${withNext} of them ${withNext === 1 ? "has" : "have"}`} something on the calendar right now. Each one links to its own page with every upcoming date.`}</p>
     ${groups.length > 1 ? html`<nav class="dir-jump" aria-label="Jump to a group">${groups.map((g) => html`<a href="#${g.type}">${g.label} <span>${g.items.length}</span></a>`)}</nav>` : ""}
     ${groups.map((g) => html`
     <section class="dir-group" id="${g.type}">
@@ -77,7 +78,7 @@ export async function onRequestGet({ params, env }) {
   </div>`;
 
   return page(
-    shell({ title: `Organizers in ${city.name}`, description: `Every chapter, meetup, conference and company that runs cybersecurity, privacy and audit events in ${city.region || city.name}, with each one's next date.`, body, city: city.slug, path: `/${city.slug}/organizers` }),
+    shell({ head: visible.length ? "" : '<meta name="robots" content="noindex">', title: `Organizers in ${city.name}`, description: `Every chapter, meetup, conference and company that runs cybersecurity, privacy and audit events in ${city.region || city.name}, with each one's next date.`, body, city: city.slug, path: `/${city.slug}/organizers` }),
     200,
     { "Cache-Control": "public, max-age=300" }
   );

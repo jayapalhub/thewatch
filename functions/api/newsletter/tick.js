@@ -13,7 +13,7 @@ export async function onRequestPost(context) {
   if (force && CITIES[force]) {
     const city = CITIES[force];
     const issue = await ensureIssue(context.env.DB, city.slug, upcomingWeekStart(localNow(city.timezone).date));
-    return json({ success: true, preview: await sendPreview(context.env, issue, city), issue_id: issue.id });
+    return json({ success: true, preview: await sendPreview(context.env, { ...issue, force_preview: true }, city), issue_id: issue.id });
   }
   return json({ success: true, results: await newsletterTick(context.env) });
 }

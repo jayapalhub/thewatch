@@ -2,7 +2,7 @@ import { json, readForm, str, EMAIL_RE } from "../_lib/html.js";
 import { rateLimited, upsertSubscriber } from "../_lib/subscribers.js";
 import { requestReminder } from "../_lib/reminders.js";
 import { eventById } from "../_lib/events.js";
-import { CITIES, DEFAULT_CITY } from "../_lib/constants.js";
+import { CITIES, preferredCity } from "../_lib/constants.js";
 
 // POST /api/remind: queue a one off reminder email for an event, optionally join the Sunday email too.
 export async function onRequestPost({ request, env }) {
@@ -17,16 +17,22 @@ export async function onRequestPost({ request, env }) {
     const event = await eventById(env.DB, id);
     const r = await requestReminder(env.DB, { event, email, request });
     if (!r.ok) return json({ success: false, error: r.error }, r.status || 400);
-    let joined = false;
-    const live = event.city === "virtual" || (CITIES[event.city] || {}).newsletter === "sunday";
+    let joined = false, pending = false;
+    // A virtual event belongs to no city: file the new subscriber under the city they were browsing.
+    const city = CITIES[event.city] ? event.city : preferredCity(request);
+    const live = (CITIES[city] || {}).newsletter === "sunday";
     if (p.join === "1" && !r.subscribed) {
-      const city = CITIES[event.city] ? event.city : DEFAULT_CITY;
-      await upsertSubscriber(env.DB, env, { email, source: `calendar:${city}`, tags: ["remind"], request });
-      await env.DB.prepare("UPDATE reminders SET subscriber_id=(SELECT id FROM subscribers WHERE email=?) WHERE event_id=? AND email=?").bind(email, event.id, email).run();
-      joined = true;
+      const row = await upsertSubscriber(env.DB, env, { email, source: `calendar:${city}`, tags: ["remind"], request, city });
+      if (row.resubscribePending) pending = true;
+      else {
+        await env.DB.prepare("UPDATE reminders SET subscriber_id=(SELECT id FROM subscribers WHERE email=? AND status='active') WHERE event_id=? AND email=?").bind(email, event.id, email).run();
+        joined = true;
+      }
     }
     const base = r.sent ? "We already sent you a reminder for this one." : r.already ? "You already have a reminder set for this one." : "Done. We'll email you the morning before.";
-    const extra = joined ? (live ? " You're also on the Sunday email now; check your inbox for a welcome note." : ` You're also on the list for The Watch ${CITIES[event.city].name}, which starts its Sunday email soon.`) : r.subscribed && p.join === "1" ? " You're already on the Sunday email." : "";
+    const extra = pending ? " That address unsubscribed from the Sunday email earlier, so we sent it a link to confirm before adding it back."
+      : joined ? (live ? " You're also on the Sunday email now; check your inbox for a welcome note." : ` You're also on the list for The Watch ${(CITIES[city] || {}).name || ""}, which starts its Sunday email soon.`)
+      : r.subscribed && p.join === "1" ? " You're already on the Sunday email." : "";
     return json({ success: true, message: `${base}${extra} Remember, a reminder is not registration, so register with the organizer to hold your spot.` });
   } catch (e) {
     console.error("remind failed", e && e.message);

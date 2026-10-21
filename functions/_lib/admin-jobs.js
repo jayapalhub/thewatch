@@ -1,6 +1,6 @@
 import { html, raw, str, list, slugify } from "./html.js";
 import { CITIES, TOPICS, SENIORITY } from "./constants.js";
-import { REMOTE, POSTER_KINDS, JOB_STATUSES } from "./jobs.js";
+import { REMOTE, POSTER_KINDS, JOB_STATUSES, cleanJobUrl } from "./jobs.js";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const sel = (cond) => (cond ? raw("selected") : "");
@@ -51,13 +51,13 @@ export function jobForm(j = {}, orgs = [], { action, isNew = false } = {}) {
 export function parseJobForm(p) {
   const title = str(p.title, 140), url = str(p.url, 500), employer = str(p.employer, 120);
   if (!title || !employer) return { error: "Role title and employer are required." };
-  if (!/^https?:\/\//i.test(url)) return { error: "The posting URL must start with https://" };
+  if (!cleanJobUrl(url)) return { error: "The posting URL must be a full web address starting with https://" };
   const pbUrl = str(p.posted_by_url, 500);
   if (pbUrl && !/^https?:\/\//i.test(pbUrl)) return { error: "The link to their post must start with https://" };
   const date = (k) => (DATE_RE.test(str(p[k], 10)) ? str(p[k], 10) : null);
   const city = CITIES[str(p.city, 30)] ? str(p.city, 30) : Object.keys(CITIES)[0];
   return { row: {
-    city, employer, title, url,
+    city, employer, title, url: cleanJobUrl(url),
     location: str(p.location, 120) || null,
     remote: REMOTE[str(p.remote)] ? str(p.remote) : "onsite",
     seniority: SENIORITY[str(p.seniority)] ? str(p.seniority) : null,
@@ -69,6 +69,13 @@ export function parseJobForm(p) {
     posted_by_url: pbUrl || null, posted_by_kind: POSTER_KINDS[str(p.posted_by_kind)] ? str(p.posted_by_kind) : null,
     posted_by_date: date("posted_by_date"), reviewer_notes: str(p.reviewer_notes, 500) || null,
   } };
+}
+
+// Finds an existing organization by name or slug without creating one. The public job form uses this, so an
+// unreviewed submission never creates an organizer page. Returns { id } or null.
+export async function findEmployer(db, name) {
+  const o = await db.prepare("SELECT id FROM organizations WHERE slug=? OR lower(name)=lower(?) LIMIT 1").bind(slugify(name), name).first();
+  return o ? { id: o.id } : null;
 }
 
 // Finds the employer by name or slug, or creates it as an 'employer' organization. Returns { id, trusted }.

@@ -1,5 +1,5 @@
 import { html, raw, list } from "./html.js";
-import { TOPICS, FORMATS, COST_TYPES, eventPath, orgPath, calendarPath } from "./constants.js";
+import { TOPICS, FORMATS, COST_TYPES, eventPath, orgPath, calendarPath, SHOW_BS_EVENTS } from "./constants.js";
 import { fmtTimeRange, fmtDateLong, weekday, month3, dayNum, dateKey, todayKey, nowLocalIso } from "./dates.js";
 
 const SELECT = `
@@ -24,6 +24,8 @@ export async function queryEvents(db, { city = "sandiego", from, to, topic, org,
   // The virtual calendar shows events filed under 'virtual' plus any San Diego event flagged also_virtual.
   const where = [city === "virtual" ? "(e.city = 'virtual' OR (e.also_virtual = 1 AND e.format IN ('virtual','hybrid')))" : "e.city = ?", "e.status = ?"];
   const args = city === "virtual" ? [status] : [city, status];
+  // Better Security's own events stay off every public list until SHOW_BS_EVENTS is turned on.
+  if (!SHOW_BS_EVENTS && status === "published") where.push("COALESCE(e.is_better_security_event, 0) = 0 AND COALESCE(o.slug, '') != 'better-security'");
   if (orgType === "vendor") { where.push("o.type = 'vendor'"); }
   if (orgType === "nonvendor") { where.push("(o.type IS NULL OR o.type != 'vendor')"); }
   if (orgType && !["vendor","nonvendor"].includes(orgType)) { where.push("o.slug = ?"); args.push(orgType); }
@@ -47,10 +49,12 @@ export async function upcomingEvents(db, opts = {}) {
   return queryEvents(db, { from: nowLocalIso(), ...opts });
 }
 
+// Public pages only (event page, ics, share card): a Better Security event is not found while the switch is off.
 export async function eventBySlug(db, slug) {
   const row = await db.prepare(`${SELECT} WHERE e.slug = ?`).bind(slug).first();
-  return hydrate(row);
+  return isHiddenBs(row) ? null : hydrate(row);
 }
+export function isHiddenBs(e) { return !SHOW_BS_EVENTS && !!e && (!!e.is_better_security_event || e.org_slug === "better-security"); }
 export async function eventById(db, id) {
   const row = await db.prepare(`${SELECT} WHERE e.id = ?`).bind(id).first();
   return hydrate(row);

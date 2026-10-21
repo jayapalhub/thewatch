@@ -2,7 +2,7 @@ import { html, page, redirect } from "../_lib/html.js";
 import { shell } from "../_lib/layout.js";
 import { eventById } from "../_lib/events.js";
 import { fmtDateLong } from "../_lib/dates.js";
-import { eventStarted, markAttended, withCookies } from "../_lib/cpe.js";
+import { eventStarted, markAttended, withCookies, maySignIn } from "../_lib/cpe.js";
 
 // "Add it to your CPE log" from a reminder email: /cpe/attend?r=<reminder token>.
 // GET shows a confirm button (mail scanners open every link); POST records attendance.
@@ -32,5 +32,8 @@ export async function onRequestPost({ request, env }) {
   const x = await lookup(env, r);
   if (!x || !x.e || !x.sub || x.sub.status !== "active" || !eventStarted(x.e) || x.e.status !== "published") return redirect(`/cpe/attend?r=${encodeURIComponent(r || "")}`, 303);
   await markAttended(env.DB, x.sub.id, x.e, "reminder_email");
-  return withCookies(redirect(`/cpe?t=${x.sub.profile_token}&msg=${encodeURIComponent(`Added ${x.e.title} to your log.`)}#e${x.e.id}`, 303), x.sub.profile_token);
+  const msg = encodeURIComponent(`Added ${x.e.title} to your log.`);
+  // Sign this device in only if nobody else is signed in here; then the token never needs to be in the URL.
+  if (await maySignIn(env.DB, request, x.sub.profile_token)) return withCookies(redirect(`/cpe?msg=${msg}#e${x.e.id}`, 303), x.sub.profile_token);
+  return redirect(`/cpe?t=${x.sub.profile_token}&msg=${msg}#e${x.e.id}`, 303);
 }

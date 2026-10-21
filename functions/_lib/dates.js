@@ -77,10 +77,11 @@ export function toUtc(iso, tz = TZ) {
   const p = parts(iso); if (!p) return null;
   const guess = new Date(Date.UTC(p.y, p.mo - 1, p.d, p.h || 0, p.mi || 0));
   const f = new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
-  const o = {}; f.formatToParts(guess).forEach((x) => { o[x.type] = x.value; });
-  const asIfUtc = Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour % 24, +o.minute, +o.second);
-  const offset = asIfUtc - guess.getTime();
-  return new Date(guess.getTime() - offset);
+  const offsetAt = (d) => { const o = {}; f.formatToParts(d).forEach((x) => { o[x.type] = x.value; }); return Date.UTC(+o.year, +o.month - 1, +o.day, +o.hour % 24, +o.minute, +o.second) - d.getTime(); };
+  // The offset at the guess can differ from the offset at the answer on daylight saving change days; check once more.
+  const first = offsetAt(guess);
+  const second = offsetAt(new Date(guess.getTime() - first));
+  return new Date(guess.getTime() - second);
 }
 export function icsStamp(date) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");

@@ -1,9 +1,9 @@
 // "Email me a reminder". One email per (event, address), sent from 6 AM local time the day before the event.
 // A reminder is not registration: the form and the email both say so and point to the organizer.
-// Sends run from the daily cron (via /api/events/autopublish) and lazily from page views.
+// Sends run from the hourly cron (via /api/events/autopublish) and lazily from page views.
 import { token, sha256 } from "./html.js";
 import { sendEmail, emailShell } from "./integrations.js";
-import { cityOf, eventPath, CITIES, DEFAULT_CITY } from "./constants.js";
+import { cityOf, eventPath, CITIES, DEFAULT_CITY, cityListText, liveNewsletterCities } from "./constants.js";
 import { toUtc, addDays, nowLocalIso, fmtDateLong, fmtTimeRange } from "./dates.js";
 import { googleCalendarUrl } from "./calendar.js";
 import { eventById } from "./events.js";
@@ -26,6 +26,9 @@ export async function requestReminder(db, { event, email, request }) {
   email = email.toLowerCase();
   if (!event || event.status !== "published") return { ok: false, status: 404, error: "That event is not on the calendar anymore." };
   if (startUtc(event).getTime() <= Date.now()) return { ok: false, status: 400, error: "That event has already started." };
+  // Someone who pressed "Stop all reminders" stays stopped: a form anyone can fill in cannot turn them back on.
+  const optedOut = await db.prepare("SELECT 1 FROM reminder_optouts WHERE email=?").bind(email).first();
+  if (optedOut) return { ok: false, status: 403, error: "This address turned off reminders from The Watch, so we won't send one. If that was you and you want them back, reply to any email from The Watch." };
   const existing = await db.prepare("SELECT id, status FROM reminders WHERE event_id=? AND email=?").bind(event.id, email).first();
   if (existing && ["queued", "sending", "sent"].includes(existing.status)) return { ok: true, already: true, sent: existing.status === "sent" };
   const { n } = await db.prepare("SELECT COUNT(*) AS n FROM reminders WHERE email=? AND status='queued'").bind(email).first();
@@ -40,8 +43,6 @@ export async function requestReminder(db, { event, email, request }) {
     await db.prepare("INSERT INTO reminders (event_id, email, subscriber_id, token, requested_start_at, ip_hash) VALUES (?,?,?,?,?,?)")
       .bind(event.id, email, sub && sub.status === "active" ? sub.id : null, token(), event.start_at, ipHash).run();
   }
-  // Asking for a new reminder is explicit, so it lifts an earlier "stop these reminders".
-  await db.prepare("DELETE FROM reminder_optouts WHERE email=?").bind(email).run();
   return { ok: true, subscribed: !!(sub && sub.status === "active") };
 }
 
@@ -70,7 +71,7 @@ export function reminderEmail(siteUrl, e, r, { subscribed }) {
     ${e.registration_url ? `<p>A reminder is not registration. If you have not registered with the organizer yet, do it now so they hold a spot for you.</p><p>${btn(`${siteUrl}/go/${e.id}?t=register`, "Register with the organizer")}</p>` : ""}
     <p style="font-size:14px;"><a href="${googleCalendarUrl(e, siteUrl)}" style="${linkStyle()}">Add to Google Calendar</a> &nbsp;·&nbsp; <a href="${page}/ics" style="${linkStyle()}">Apple or Outlook</a> &nbsp;·&nbsp; <a href="${page}" style="${linkStyle()}">Event page</a></p>
     ${subscribed ? `<p style="font-size:14px;margin:18px 0 0;color:#5B6B80;">After the event, <a href="${siteUrl}/cpe/attend?r=${r.token}" style="${linkStyle()}">add it to your CPE log</a> with the organizer's credit hours.</p>` : ""}
-    ${subscribed ? "" : `<div style="margin:22px 0 0;padding:14px 16px;background:#F4F7FB;border-radius:10px;"><p style="margin:0 0 6px;"><strong>Want the whole week?</strong> ${city.newsletter === "sunday" || e.city === "virtual" ? `The Watch ${esc(city.name)} goes out Sunday at 8 AM with every security event worth your time, plus the best online sessions with CPE.` : `The Watch ${esc(city.name)} is starting a Sunday email with every security event worth your time. Join now and you get the first issue.`}</p><p style="margin:0;"><a href="${siteUrl}/remind/join?t=${r.token}" style="${linkStyle()}font-weight:700;">Get the Sunday email</a></p></div>`}`;
+    ${subscribed ? "" : `<div style="margin:22px 0 0;padding:14px 16px;background:#F4F7FB;border-radius:10px;"><p style="margin:0 0 6px;"><strong>Want the whole week?</strong> ${e.city === "virtual" ? (liveNewsletterCities().length ? `The Watch sends a Sunday email for ${esc(cityListText(liveNewsletterCities()))} with every security event worth your time, plus the best online sessions with CPE.` : "The Watch is starting a Sunday email with every security event worth your time. Join now and you get the first issue.") : city.newsletter === "sunday" ? `The Watch ${esc(city.name)} goes out Sunday at 8 AM with every security event worth your time, plus the best online sessions with CPE.` : `The Watch ${esc(city.name)} is starting a Sunday email with every security event worth your time. Join now and you get the first issue.`}</p><p style="margin:0;"><a href="${siteUrl}/remind/join?t=${r.token}" style="${linkStyle()}font-weight:700;">Get the Sunday email</a></p></div>`}`;
   const footer = `<p style="max-width:560px;margin:12px auto 0;color:#5B6B80;font-size:12px;font-family:Helvetica,Arial,sans-serif;line-height:1.5;">You are getting this because this address asked for a reminder on bettersecurity.ai. <a href="${siteUrl}/remind/stop?t=${r.token}" style="color:#5B6B80;">Stop all reminders</a>.</p>`;
   const subject = `${when === fmtDateLong(e.start_at) ? "Reminder" : when}: ${e.title}`;
   return { subject, html: emailShell(`${when === "Today" || when === "Tomorrow" ? when : "Coming up"}: ${esc(e.title)}`, inner, e.city === "virtual" ? null : city) + footer };
@@ -82,6 +83,8 @@ export async function runReminders(env, { limit = 50 } = {}) {
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
   const { results } = await db.prepare(
     `SELECT r.* FROM reminders r JOIN events e ON e.id = r.event_id WHERE r.status = 'queued' ORDER BY e.start_at LIMIT 500`).all();
+  // A run that died between claiming a reminder and recording the send leaves it in 'sending'; put those back after 15 minutes.
+  await db.prepare("UPDATE reminders SET status='queued', note='requeued after an interrupted send' WHERE status='sending' AND (sent_at IS NULL OR sent_at < strftime('%Y-%m-%dT%H:%M:%fZ','now','-15 minutes'))").run();
   const now = Date.now();
   let sent = 0, skipped = 0, failed = 0;
   const cache = new Map();
@@ -98,7 +101,7 @@ export async function runReminders(env, { limit = 50 } = {}) {
     if (dueAt(e).getTime() > now) continue; // not yet
     const optout = await db.prepare("SELECT 1 FROM reminder_optouts WHERE email=?").bind(r.email).first();
     if (optout) { await db.prepare("UPDATE reminders SET status='cancelled', note='address opted out' WHERE id=? AND status='queued'").bind(r.id).run(); skipped++; continue; }
-    const claim = await db.prepare("UPDATE reminders SET status='sending' WHERE id=? AND status='queued'").bind(r.id).run();
+    const claim = await db.prepare("UPDATE reminders SET status='sending', sent_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND status='queued'").bind(r.id).run();
     if (!claim.meta || claim.meta.changes !== 1) continue; // another run took it
     const sub = await db.prepare("SELECT status FROM subscribers WHERE email=?").bind(r.email).first();
     const city = cityOf(e.city) && e.city !== "virtual" ? cityOf(e.city) : CITIES[DEFAULT_CITY];
@@ -109,7 +112,7 @@ export async function runReminders(env, { limit = 50 } = {}) {
       headers: { "List-Unsubscribe": `<${siteUrl}/remind/stop?t=${r.token}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
     });
     if (res.ok) { await db.prepare("UPDATE reminders SET status='sent', sent_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(r.id).run(); sent++; }
-    else { await db.prepare("UPDATE reminders SET status='queued', note='send failed, will retry' WHERE id=?").bind(r.id).run(); failed++; }
+    else { await db.prepare("UPDATE reminders SET status='queued', sent_at=NULL, note='send failed, will retry' WHERE id=?").bind(r.id).run(); failed++; }
   }
   return { sent, skipped, failed };
 }

@@ -13,7 +13,10 @@ export async function onRequestPost({ request, env }) {
   try {
     const city = CITIES[str(p.city, 30)] ? str(p.city, 30) : null; // from the city picker, when the form has one
     const row = await upsertSubscriber(env.DB, env, { email, source, request, city });
-    const res = json({ success: true, next: `/profile?t=${row.profile_token}` });
+    // Only a brand new subscriber is sent on to /profile. For an address already on the list the token stays private.
+    const res = row.isNew ? json({ success: true, next: `/profile?t=${row.profile_token}` })
+      : row.resubscribePending ? json({ success: true, message: "That address unsubscribed earlier, so we emailed it a link to confirm. Press the button in that email and you're back on the list." })
+      : json({ success: true, message: "You're already on the list. Your next issue arrives Sunday at 8 AM." });
     if (refCodeFromRequest(request)) res.headers.append("Set-Cookie", clearRefCookie()); // the referral is recorded (or did not apply); done with it
     return res;
   } catch (e) {

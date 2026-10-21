@@ -55,7 +55,7 @@ export function shareLineHtml(siteUrl, code, color = "#1B4A8A") {
 export function thankYouEmail(siteUrl, sub, n, level) {
   const city = CITIES[sub.city] || CITIES[DEFAULT_CITY];
   const url = shareUrl(siteUrl, sub.ref_code);
-  const hi = `<p>Hi${sub.first_name ? " " + sub.first_name : ""},</p>`;
+  const hi = `<p>Hi${sub.first_name ? " " + String(sub.first_name).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : ""},</p>`;
   const body = level >= 10
     ? `<p>Your link has now brought ${n === 10 ? "ten" : n} people to The Watch. A local calendar only works when people who care about the community pass it along, and you have done exactly that, ten times over. I wanted to thank you personally.</p>
        <p>If there is an event that should be on the calendar, an organizer I should meet, or something you want more of in the Sunday email, reply to this note. It comes straight to me.</p>`

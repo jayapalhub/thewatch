@@ -61,10 +61,10 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       ${sp.tagline ? html`<span class="sponsor-tagline">${sp.tagline}</span>` : ""}
     </div></aside>` : ""}
     <section class="band band-navy band-tight"><div class="wrap split-center">
-      ${city.slug === DEFAULT_CITY
+      ${city.newsletter === "sunday"
         ? html`<div><h2>Get the week in your inbox on Sunday.</h2><p>Everything above, curated down to what's worth your time, with a note from Jerome.</p></div>`
-        : html`<div><h2>A ${city.name} email is on the way.</h2><p>Subscribe now and you're on the first send. Until then you get the Sunday email, which includes the best virtual sessions each week.</p></div>`}
-      ${signupForm({ source: city.slug === DEFAULT_CITY ? "calendar" : `calendar:${city.slug}` })}
+        : html`<div><h2>A ${city.name} email is on the way.</h2><p>Subscribe now and you're on the first send, the week it launches.</p></div>`}
+      ${signupForm({ source: `calendar:${city.slug}` })}
     </div></section>`;
 
   const res = page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });

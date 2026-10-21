@@ -8,7 +8,17 @@ const SOON = 15;   // speakers in the "Speaking soon" box
 const PAST = 3;    // past events listed per speaker before "and N more"
 
 // /<city>/speakers and /virtual/speakers. c is a CITIES entry or VIRTUAL.
-export async function speakersPage(env, c) {
+export async function speakersPage(env, c, request = null, waitUntil = null) {
+  // The board is parsed from every event's speakers on each build, so keep a rendered copy at the edge for five minutes.
+  const cache = typeof caches !== "undefined" && request ? caches.default : null;
+  const key = cache ? new Request(new URL(request.url).origin + new URL(request.url).pathname) : null;
+  if (cache) { const hit = await cache.match(key).catch(() => null); if (hit) return hit; }
+  const res = await renderSpeakersPage(env, c);
+  if (cache && res.status === 200) { const p = cache.put(key, res.clone()).catch(() => {}); if (waitUntil) waitUntil(p); }
+  return res;
+}
+
+async function renderSpeakersPage(env, c) {
   const today = todayKey(c.timezone);
   const people = (await buildSpeakers(env.DB, { city: c.slug })).map((s) => {
     const upcoming = s.events.filter((e) => e.start_at.slice(0, 10) >= today).sort((a, b) => a.start_at.localeCompare(b.start_at));
@@ -19,8 +29,9 @@ export async function speakersPage(env, c) {
   const home = virtual ? "/virtual" : `/${c.slug}`;
   const where = virtual ? "online security sessions" : `security events in ${c.name}`;
   const soon = people.filter((p) => p.next).sort((a, b) => a.next.start_at.localeCompare(b.next.start_at) || bySurname(a, b));
-  const letters = [];
-  for (const p of people) { const l = surnameInitial(p.name); const g = letters[letters.length - 1]; if (g && g.l === l) g.items.push(p); else letters.push({ l, items: [p] }); }
+  const byLetter = new Map();
+  for (const p of people) { const l = surnameInitial(p.name); if (!byLetter.has(l)) byLetter.set(l, []); byLetter.get(l).push(p); }
+  const letters = [...byLetter.entries()].map(([l, items]) => ({ l, items })).sort((a, b) => (a.l === "#") - (b.l === "#") || a.l.localeCompare(b.l));
   const evLink = (e) => html`<a href="${eventPath(e)}">${e.title}</a>`;
 
   const item = (p) => html`<li class="dir-item spk-item">
