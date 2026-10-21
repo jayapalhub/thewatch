@@ -2,7 +2,7 @@ import { html, page } from "./_lib/html.js";
 import { shell, signupForm } from "./_lib/layout.js";
 import { upcomingEvents, eventRow, groupByDay, dayHeading } from "./_lib/events.js";
 import { addDays, todayKey } from "./_lib/dates.js";
-import { CITIES, cityOf } from "./_lib/constants.js";
+import { CITIES, cityOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
 
 // The root is a city chooser. A returning reader who has visited a calendar is sent straight back to it
 // (cookie watch_city) unless they ask to choose again with ?choose=1.
@@ -60,7 +60,7 @@ export async function onRequestGet({ request, env }) {
     </div>
   </section>
 
-  <section class="band band-navy">
+  ${SHOW_BS_EVENTS ? html`  <section class="band band-navy">
     <div class="wrap split">
       <div>
         <p class="kicker kicker-light">Better Security events</p>
@@ -73,13 +73,13 @@ export async function onRequestGet({ request, env }) {
         <div><h3>Padel Social 2027</h3><p>Thursday, 5:30 to 7:30 PM at Padel N9NE, Sorrento Valley. Courts, coaching for first timers, food and a DJ. $35 general admission.</p><a href="/events/padel-social-2027">Details and early interest</a></div>
       </div>
     </div>
-  </section>
+  </section>` : ""}
 
   ${picks.length ? html`<section class="band"><div class="wrap"><h2>Jerome's picks</h2><ul class="event-list">${picks.map(eventRow)}</ul></div></section>` : ""}
 
   <section class="band band-paper">
     <div class="wrap split">
-      <div><h2>For sponsors</h2><p>Reach the security community through the Sunday email, or put your team in a room with twenty of the right practitioners at a sponsored dinner. We don't sell lists; we build rooms.</p><a class="btn btn-outline" href="/sponsor">How sponsorship works</a></div>
+      <div><h2>For sponsors</h2><p>Reach the security community through the Sunday email, with a sponsor slot in front of practitioners who chose to read it. We don't sell lists.</p><a class="btn btn-outline" href="/sponsor">How sponsorship works</a></div>
       <div><h2>For organizers</h2><p>Submit your event once and it reaches subscribers, the calendar and the feed. Offer a subscriber discount if you like; we'll feature it.</p><a class="btn btn-outline" href="/submit">Submit an event</a></div>
     </div>
   </section>`;

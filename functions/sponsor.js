@@ -12,7 +12,7 @@ export async function onRequestGet({ env }) {
   <section class="band band-paper"><div class="wrap narrow">
     <div class="three-up">
       <div><h2>The Sunday email</h2><p>One sponsor slot per issue, placed between the personal note and the week's listings, written in plain language and clearly marked. Good for a field event you're running, a report you want read, or simply being the name security people see every Sunday.</p></div>
-      <div><h2>Events</h2><p>The Padel Social in March and the AI Security Conference later in 2027 each carry a handful of sponsor spots with logo placement, a welcome mention and an activation of your own at the event, where attendees choose to share their details with you directly.</p></div>
+      <div><h2>Events</h2><p>Better Security will run a small number of its own events for practitioners, each with a handful of sponsor spots. Details are being finalized; ask and we will tell you what is coming.</p></div>
       <div><h2>Dinners and roundtables</h2><p>Around twenty qualified practitioners on one topic, invited by hand from the subscriber base, one sponsor at the table, no pitch required. The most effective format we run and the one with the shortest guest list.</p></div>
     </div>
   </div></section>
@@ -33,7 +33,7 @@ export async function onRequestGet({ env }) {
         <label>Role <input name="role_title" maxlength="100" placeholder="Field marketing manager"></label>
       </div>
       <label>Work email <input type="email" name="email" required></label>
-      <label>Most interested in <select name="interest"><option value="newsletter">The Sunday email</option><option value="event">An event (Padel Social, AI Security Conference)</option><option value="dinner">A sponsored dinner or roundtable</option><option value="multiple">A combination</option></select></label>
+      <label>Most interested in <select name="interest"><option value="newsletter">The Sunday email</option><option value="event">An upcoming Better Security event</option><option value="dinner">A sponsored dinner or roundtable</option><option value="multiple">A combination</option></select></label>
       <label>Anything we should know <textarea name="message" rows="4" maxlength="3000" placeholder="Products, target roles, timing, budget range if you have one"></textarea></label>
       <label class="check"><input type="checkbox" name="subscribe" value="1" checked> Send me The Watch on Sundays too</label>
       <button class="btn btn-primary" type="submit">Request the sponsor deck</button>

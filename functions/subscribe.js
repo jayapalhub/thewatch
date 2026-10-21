@@ -7,7 +7,7 @@ export async function onRequestGet({ request }) {
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">Sundays at 5 PM</p>
     <h1>The week in San Diego security, in one email.</h1>
-    <p class="lede">A short note from Jerome, then the week day by day: chapter meetings, meetups, summits, vendor sessions and the occasional padel court. Which ones carry CPE, which ones cost money, and which ones are worth your evening.</p>
+    <p class="lede">A short note from Jerome, then the week day by day: chapter meetings, meetups, summits and vendor sessions. Which ones carry CPE, which ones cost money, and which ones are worth your evening.</p>
     ${signupForm({ source: src.replace(/[^a-z0-9_:-]/gi, "").slice(0, 40) || "subscribe_page" })}
   </div></section>
   <section class="band band-paper"><div class="wrap narrow three-up">

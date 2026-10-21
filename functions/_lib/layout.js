@@ -1,5 +1,5 @@
 import { html, raw } from "./html.js";
-import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf } from "./constants.js";
+import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS } from "./constants.js";
 
 export const SHIELD_PATH = "M12699.99 19504.82l-4476.78 -2847.86c-440.67,-280.35 -871.71,-817.92 -871.71,-1701.16l0 -6890.42 5348.49 -2170.18 5348.48 2170.18 0 6890.42c0,883.24 -431.04,1420.81 -871.71,1701.16l-4476.77 2847.86zm0 -2838.35l2953.65 -1878.91 0 -1261.73 -1771.64 -1083.78 1771.64 -1083.74 0 -1680.18 -2953.65 -1198.49 -2953.66 1198.49 0 5109.43 2953.66 1878.91z";
 
@@ -33,7 +33,7 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const nav = [
     ...Object.values(CITIES).map((x) => [`/${x.slug}`, x.name]),
     ["/virtual", "Virtual"],
-    ["/events", "Our events"],
+    ...(SHOW_BS_EVENTS ? [["/events", "Our events"]] : []),
     ["/submit", "Submit an event"],
     ["/sponsor", "Sponsor"],
     ["/about", "About"],
@@ -80,7 +80,7 @@ ${body}
   <div class="wrap footer-grid">
     <div class="footer-brand">
       ${mark(40)}
-      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${Object.values(CITIES).map((x) => x.name).join(" and ")}, plus the best online sessions, and run a few of our own.</p>
+      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${Object.values(CITIES).map((x) => x.name).join(" and ")}, plus the best online sessions.</p>
       ${signupForm({ source: "footer", compact: true, cta: "Subscribe" })}
     </div>
     <div class="footer-col">
@@ -94,8 +94,7 @@ ${body}
     </div>
     <div class="footer-col">
       <h3>Better Security</h3>
-      <a href="/events">Our events</a>
-      <a href="/events/padel-social-2027">Padel Social 2027</a>
+      ${SHOW_BS_EVENTS ? html`<a href="/events">Our events</a><a href="/events/padel-social-2027">Padel Social 2027</a>` : ""}
       <a href="/sponsor">Sponsor</a>
       <a href="/about">About</a>
       <a href="mailto:watch@bettersecurity.ai">watch@bettersecurity.ai</a>

@@ -4,7 +4,10 @@ import { interestForm } from "../_lib/forms.js";
 
 // Padel Social 2027. Registration button switches from the interest form to
 // Eventbrite when PADEL_EVENTBRITE_URL is set in the Pages environment.
-export async function onRequestGet({ env }) {
+import { SHOW_BS_EVENTS } from "../_lib/constants.js";
+import { notFound as _nf } from "../_lib/html.js";
+export async function onRequestGet(ctx) { if (!SHOW_BS_EVENTS) return _nf("Not yet"); return _onRequestGet(ctx); }
+async function _onRequestGet({ env }) {
   const eventbrite = env.PADEL_EVENTBRITE_URL || "";
   const { results: sponsors } = await env.DB.prepare("SELECT name, logo_url, website FROM organizations WHERE type='vendor' AND notes LIKE '%padel-sponsor%' ORDER BY name").all().catch(() => ({ results: [] }));
 

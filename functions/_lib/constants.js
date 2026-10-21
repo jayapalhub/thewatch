@@ -57,6 +57,9 @@ export const BS_EVENT_KEYS = {
   roundtables: "Executive roundtables",
 };
 
+// Better Security's own events (Padel Social, dinners, conference) stay off public pages until the ISACA details are final.
+export const SHOW_BS_EVENTS = false;
+
 export const CONSENT_VERSION = "2026-10";
 export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekly email and occasional notes about Better Security events. Unsubscribe any time with one click.";
 

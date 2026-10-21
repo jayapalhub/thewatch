@@ -1,7 +1,7 @@
 import { esc } from "./html.js";
 import { queryEvents, groupByDay, costLabel, cpeLabel } from "./events.js";
 import { fmtTimeRange, weekday, monthName, dayNum, addDays, parts } from "./dates.js";
-import { TOPICS, MAIL_ADDRESS, CITIES, DEFAULT_CITY } from "./constants.js";
+import { TOPICS, MAIL_ADDRESS, CITIES, DEFAULT_CITY, SHOW_BS_EVENTS } from "./constants.js";
 
 // Builds the email body for an issue. Inline styles only, because Beehiiv's
 // editor and email clients ignore stylesheets. Links go through /go so clicks count.
@@ -51,7 +51,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   const ws = parts(issue.week_start), we = parts(issue.week_end);
   const range = ws.mo === we.mo ? `${monthName(issue.week_start)} ${ws.d} to ${we.d}` : `${monthName(issue.week_start)} ${ws.d} to ${monthName(issue.week_end)} ${we.d}`;
   const days = groupByDay(events);
-  const totalBs = bs.filter((e) => !events.find((x) => x.id === e.id));
+  const totalBs = SHOW_BS_EVENTS ? bs.filter((e) => !events.find((x) => x.id === e.id)) : [];
 
   return `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:${INK};">
   <div style="font-size:13px;color:${MUTED};margin:0 0 14px;">The week of ${range} · ${events.length} event${events.length === 1 ? "" : "s"} in ${esc(city.name)} · <a href="${siteUrl}/${city.slug}/issues/${issue.week_start}" style="color:${MUTED};">Read online</a></div>

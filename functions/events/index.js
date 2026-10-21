@@ -2,7 +2,10 @@ import { html, page } from "../_lib/html.js";
 import { shell } from "../_lib/layout.js";
 import { interestForm } from "../_lib/forms.js";
 
-export async function onRequestGet() {
+import { SHOW_BS_EVENTS } from "../_lib/constants.js";
+import { notFound as _nf } from "../_lib/html.js";
+export async function onRequestGet(ctx) { if (!SHOW_BS_EVENTS) return _nf("Not yet"); return _onRequestGet(ctx); }
+async function _onRequestGet() {
   const body = html`
   <section class="hero hero-short">
     <div class="wrap narrow">
