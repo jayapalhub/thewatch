@@ -1,6 +1,7 @@
 // Share card images (Open Graph), 1200 by 630, rendered on the fly with workers-og and cached a day.
 import { ImageResponse } from "../_vendor/workers-og/index.js";
-import { esc } from "./html.js";
+// The card renderer parses its own HTML and decodes no entities, so text goes in raw; angle brackets become look alikes so they cannot open a tag.
+const esc = (v) => String(v ?? "").replace(/</g, "\u2039").replace(/>/g, "\u203a");
 import { fmtDateLong, fmtTimeRange } from "./dates.js";
 
 const NAVY = "#071426", INK = "#0E1B2E", MUTED = "#5B6B80", SHIELD = "#1B4A8A", ELECTRIC = "#1FB6F0", PAPER = "#F4F7FB";
