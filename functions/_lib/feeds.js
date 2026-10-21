@@ -111,6 +111,40 @@ export async function fetchText(url) {
   return await r.text();
 }
 
+
+// Aggregator pages (The Events Calendar sites such as Free Live CPE) list someone else's webinar.
+// Follow the event page to find the organizer's own registration link and the organizer name,
+// so the listing sends readers to Deloitte, not to the aggregator.
+const AGGREGATOR_HOSTS = ["www.freelivecpe.com", "freelivecpe.com"];
+export function parseAggregatorPage(html) {
+  const out = { registrationUrl: null, organizerName: null, organizerUrl: null };
+  const site = html.match(/tribe-block__event-website[\s\S]{0,400}?<a[^>]+href="([^"]+)"/i) || html.match(/tribe-events-event-url[\s\S]{0,300}?<a[^>]+href="([^"]+)"/i);
+  if (site) out.registrationUrl = decodeEntities(site[1]);
+  const org = html.match(/tribe-block__organizer__title[\s\S]{0,300}?<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i) || html.match(/tribe-organizer[\s\S]{0,200}?<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i);
+  if (org) { out.organizerUrl = decodeEntities(org[1]); out.organizerName = decodeEntities(org[2].replace(/<[^>]+>/g, "")); }
+  const web = html.match(/tribe-block__organizer__website[\s\S]{0,200}?<a[^>]+href="([^"]+)"/i);
+  if (web) out.organizerWebsite = decodeEntities(web[1]);
+  return out;
+}
+export async function enrichFromAggregator(db, it) {
+  let host = ""; try { host = new URL(it.url).hostname; } catch { return; }
+  if (!AGGREGATOR_HOSTS.includes(host)) return;
+  let page; try { page = parseAggregatorPage(await fetchText(it.url)); } catch { return; }
+  it.aggregatorUrl = it.url;
+  if (page.registrationUrl && /^https?:/.test(page.registrationUrl) && !AGGREGATOR_HOSTS.includes(new URL(page.registrationUrl).hostname)) it.url = page.registrationUrl;
+  if (page.organizerName) {
+    const name = page.organizerName.slice(0, 120);
+    const existing = await db.prepare("SELECT id FROM organizations WHERE lower(name)=lower(?) OR lower(short_name)=lower(?) OR slug=? LIMIT 1").bind(name, name, slugify(name)).first();
+    if (existing) it.organizationId = existing.id;
+    else {
+      const slug = slugify(name).slice(0, 80);
+      await db.prepare("INSERT INTO organizations (slug, name, type, website, default_city, notes) VALUES (?,?,?,?,?,?) ON CONFLICT(slug) DO NOTHING").bind(slug, name, "vendor", page.organizerWebsite || null, "virtual", `Created by the feed importer from an aggregator listing (${host}); check type`).run();
+      const row = await db.prepare("SELECT id FROM organizations WHERE slug=?").bind(slug).first();
+      if (row) it.organizationId = row.id;
+    }
+  }
+}
+
 export async function runSource(db, src, { now = new Date() } = {}) {
   const stats = { source_id: src.id, name: src.name, fetched: 0, added: 0, skipped: 0, error: null };
   let items = [];
@@ -135,11 +169,12 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     if (!it.title || !it.startUtc || !(it.url || "").startsWith("http")) { stats.skipped++; continue; }
     if (it.startUtc < now || it.startUtc > horizon) { stats.skipped++; continue; }
     stats.fetched++;
+    await enrichFromAggregator(db, it);
     const startLocal = utcToLocalIso(it.startUtc), endLocal = utcToLocalIso(it.endUtc);
     const day = startLocal.slice(0, 10);
     // Dedupe: feed uid, registration url, or same title on the same day (any status except rejected keeps it out)
-    const dup = await db.prepare(`SELECT id FROM events WHERE (feed_uid=? OR registration_url=? OR (lower(title)=lower(?) AND substr(start_at,1,10)=?)) AND status!='rejected' LIMIT 1`)
-      .bind(it.uid, it.url, it.title, day).first();
+    const dup = await db.prepare(`SELECT id FROM events WHERE (feed_uid=? OR registration_url=? OR registration_url=? OR (lower(title)=lower(?) AND substr(start_at,1,10)=?)) AND status!='rejected' LIMIT 1`)
+      .bind(it.uid, it.url, it.aggregatorUrl || it.url, it.title, day).first();
     if (dup) { stats.skipped++; continue; }
     let slug = `${slugify(it.title).slice(0, 80).replace(/-+$/, "")}-${day}`;
     const clash = await db.prepare("SELECT id FROM events WHERE slug=?").bind(slug).first();
@@ -148,18 +183,18 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     const online = src.kind === "brighttalk" ? true : it.online;
     const format = isSd ? (online ? "virtual" : "in_person") : "virtual";
     const cpe = src.cpe_default || it.cpeHint ? 1 : 0;
-    const notes = `Feed import ${now.toISOString().slice(0, 10)} from ${src.name}. Time taken from the feed (UTC ${it.startUtc.toISOString().slice(0, 16)}Z). Check the description for cost and CPE wording before publishing.`;
+    const notes = `Feed import ${now.toISOString().slice(0, 10)} from ${src.name}.${it.aggregatorUrl ? ` Registration link and organizer taken from the organizer's own page via ${it.aggregatorUrl}.` : ""} Time taken from the feed (UTC ${it.startUtc.toISOString().slice(0, 16)}Z). Check the description for cost and CPE wording before publishing.`;
     await db.prepare(`INSERT INTO events (slug, city, title, organization_id, venue_name, venue_address, start_at, end_at, start_utc, end_utc, timezone, format, platform, speakers,
         description_short, description_long, registration_url, cost_type, cost_min, cost_max, cpe_eligible, cpe_hours, cpe_body, topics, audience_level, also_virtual, is_better_security_event,
         status, source, source_url, reviewer_notes, feed_uid)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(slug, src.city, it.title.slice(0, 140), src.organization_id || null,
+      .bind(slug, src.city, it.title.slice(0, 140), it.organizationId || src.organization_id || null,
         isSd && !online ? (it.location || null) : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
         startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), TZ, format, online ? it.platform : null, it.speakers,
         firstSentence(it.summary, 200) || it.title, it.summary ? it.summary.slice(0, 4000) : null, it.url,
         src.kind === "brighttalk" ? "free" : "unknown", src.kind === "brighttalk" ? 0 : null, src.kind === "brighttalk" ? 0 : null,
         cpe, cpe && src.cpe_default ? 1 : null, cpe ? (src.cpe_body || "self_reported") : null, JSON.stringify(topics.length ? topics : ["threat_intel"]), "practitioner",
-        isSd && online ? 1 : 0, 0, "pending_review", "feed", src.url, notes, it.uid).run();
+        isSd && online ? 1 : 0, 0, "pending_review", "feed", it.aggregatorUrl || src.url, notes, it.uid).run();
     stats.added++;
   }
   await logRun(db, src, stats);
