@@ -1,6 +1,5 @@
 import { json, readForm, str, list } from "../_lib/html.js";
 import { TOPICS, SENIORITY } from "../_lib/constants.js";
-import { beehiivUpdate } from "../_lib/integrations.js";
 
 // Save the optional profile questions. Identified by the profile token only.
 export async function onRequestPost({ request, env, waitUntil }) {
@@ -19,8 +18,6 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const now = new Date().toISOString();
   await env.DB.prepare("UPDATE subscribers SET first_name=?, last_name=?, company=?, role_title=?, seniority=?, interests=?, linkedin_url=?, profile_completed_at=?, updated_at=? WHERE id=?")
     .bind(first || null, last || null, company || null, role || null, seniority, JSON.stringify(interests), linkedin || null, now, now, sub.id).run();
-  const bh = beehiivUpdate(env, sub.beehiiv_subscriber_id, { "First Name": first, "Last Name": last, Company: company, Role: role, Seniority: seniority || "", Interests: interests.join(", ") });
-  if (waitUntil) waitUntil(bh); else await bh;
   return json({ success: true, message: "Saved. Thanks for telling us a bit about yourself." });
 }
 export async function onRequest() { return json({ success: false, error: "method_not_allowed" }, 405); }

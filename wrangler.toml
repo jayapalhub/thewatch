@@ -12,11 +12,9 @@ database_name = "thewatch"
 database_id = "1239087e-c235-43d1-b760-bb5723e358b9"
 migrations_dir = "migrations"
 
-# Non-secret settings. Secrets (BEEHIIV_API_KEY, RESEND_API_KEY, ADMIN_TOKEN,
-# BEEHIIV_WEBHOOK_SECRET) are set in the Cloudflare dashboard, never here.
+# Non-secret settings. Secrets (RESEND_API_KEY, ADMIN_TOKEN) are set in the Cloudflare dashboard, never here.
 [vars]
 SITE_URL = "https://bettersecurity.ai"
-BEEHIIV_PUBLICATION_ID = "pub_dd357204-a389-41bc-9b1b-d0a99892a2f4"
 FROM_EMAIL = "The Watch San Diego <watch@bettersecurity.ai>"
 NOTIFY_EMAIL = "jerome.jayapal@bettersecurity.ai"
 # Cloudflare Access: set these after creating the Access application for /admin

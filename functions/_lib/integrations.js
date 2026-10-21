@@ -1,46 +1,4 @@
-// Beehiiv (newsletter list) and Resend (transactional email).
-// Reused from compass.bettersecurity.ai with custom fields added.
-// Keys come from env secrets and are never logged or returned to the browser.
-
-export async function beehiivSubscribe(env, { email, source, customFields = {}, sendWelcome = true }) {
-  if (!env.BEEHIIV_API_KEY) { console.error("beehiiv: BEEHIIV_API_KEY not set"); return { ok: false, skipped: true }; }
-  const pub = env.BEEHIIV_PUBLICATION_ID;
-  const body = {
-    email,
-    reactivate_existing: true,
-    send_welcome_email: !!sendWelcome,
-    utm_source: "thewatch",
-    utm_medium: source || "site",
-  };
-  const cf = Object.entries(customFields).filter(([, v]) => v != null && v !== "").map(([name, value]) => ({ name, value: String(value) }));
-  if (cf.length) body.custom_fields = cf;
-  try {
-    const resp = await fetch(`https://api.beehiiv.com/v2/publications/${pub}/subscriptions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env.BEEHIIV_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (!resp.ok) { console.error(`beehiiv: status ${resp.status}`); return { ok: false }; }
-    const j = await resp.json().catch(() => ({}));
-    return { ok: true, id: j && j.data && j.data.id };
-  } catch (e) { console.error("beehiiv: request failed", e && e.message); return { ok: false }; }
-}
-
-// Update custom fields on an existing subscription (used by the profile step).
-export async function beehiivUpdate(env, subscriptionId, customFields) {
-  if (!env.BEEHIIV_API_KEY || !subscriptionId) return { ok: false, skipped: true };
-  const pub = env.BEEHIIV_PUBLICATION_ID;
-  const cf = Object.entries(customFields).filter(([, v]) => v != null && v !== "").map(([name, value]) => ({ name, value: String(value) }));
-  try {
-    const resp = await fetch(`https://api.beehiiv.com/v2/publications/${pub}/subscriptions/${subscriptionId}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${env.BEEHIIV_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ custom_fields: cf }),
-    });
-    if (!resp.ok) { console.error(`beehiiv update: status ${resp.status}`); return { ok: false }; }
-    return { ok: true };
-  } catch (e) { console.error("beehiiv update failed", e && e.message); return { ok: false }; }
-}
+// Resend (transactional email and the newsletter). Keys come from env secrets and are never logged or returned to the browser.
 
 export async function sendEmail(env, { to, subject, html, replyTo, from, headers }) {
   if (!env.RESEND_API_KEY) { console.error("resend: RESEND_API_KEY not set"); return { ok: false, skipped: true }; }
