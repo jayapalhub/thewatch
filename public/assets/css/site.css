@@ -350,3 +350,4 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .dc-time { display: inline-block; min-width: 120px; color: var(--muted); font-size: .9rem; }
 .dc-org { color: var(--muted); font-size: .9rem; }
 .date-check-clear { margin: 14px 0 0; font-weight: 600; }
+@media (max-width: 560px) { .dc-time { display: block; min-width: 0; } }
