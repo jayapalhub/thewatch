@@ -26,7 +26,7 @@ export async function onRequestGet({ env }) {
         <p class="hero-stats"><span><strong>${eventCount?.n ?? 0}</strong> upcoming events</span><span><strong>${orgCount?.n ?? 0}</strong> organizers</span><span><strong>Sunday 5 PM</strong> every week</span></p>
       </div>
       <div class="hero-card">
-        <div class="hero-card-head"><span>${thisWeek.length ? "The next seven days" : "Coming up"}</span><a href="/sandiego">Full calendar</a></div>
+        <div class="hero-card-head"><span>${thisWeek.length ? "The next seven days" : "Coming up"}</span><a href="/sandiego">San Diego calendar</a> <span class="sep"></span> <a href="/sanjose">San Jose</a></div>
         ${preview.length ? html`${groupByDay(preview).map((g) => html`<div class="mini-day">${dayHeading(g.key)}<ul class="event-list">${g.events.map(eventRow)}</ul></div>`)}` : html`<p class="empty">The calendar is filling up. Check back soon or <a href="/submit">submit an event</a>.</p>`}
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { html, raw } from "./html.js";
-import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION } from "./constants.js";
+import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf } from "./constants.js";
 
 export const SHIELD_PATH = "M12699.99 19504.82l-4476.78 -2847.86c-440.67,-280.35 -871.71,-817.92 -871.71,-1701.16l0 -6890.42 5348.49 -2170.18 5348.48 2170.18 0 6890.42c0,883.24 -431.04,1420.81 -871.71,1701.16l-4476.77 2847.86zm0 -2838.35l2953.65 -1878.91 0 -1261.73 -1771.64 -1083.78 1771.64 -1083.74 0 -1680.18 -2953.65 -1198.49 -2953.66 1198.49 0 5109.43 2953.66 1878.91z";
 
@@ -23,10 +23,14 @@ export function signupForm({ source, compact = false, cta = "Get the Sunday emai
 }
 
 export function shell({ title, description, body, city = null, path = "/", wide = false, head = "" }) {
-  const fullTitle = title ? `${title} | The Watch San Diego` : "The Watch San Diego: cybersecurity events in San Diego";
-  const desc = description || "Every cybersecurity, AI security, privacy and audit event in San Diego County, in one calendar and one Sunday email. By Better Security.";
+  const c = cityOf(city) || CITIES[DEFAULT_CITY];
+  const isVirtual = c.slug === "virtual";
+  const brandTitle = c.title;
+  const fullTitle = title ? `${title} | ${brandTitle}` : `${brandTitle}: cybersecurity events in ${c.name}`;
+  const desc = description || `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`;
+  const calHome = isVirtual ? "/virtual" : `/${c.slug}`;
   const nav = [
-    ["/sandiego", "San Diego"],
+    ...Object.values(CITIES).map((x) => [`/${x.slug}`, x.name]),
     ["/virtual", "Virtual"],
     ["/events", "Our events"],
     ["/submit", "Submit an event"],
@@ -49,14 +53,14 @@ export function shell({ title, description, body, city = null, path = "/", wide 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/site.css?v=${ASSET_VERSION}">
-<link rel="alternate" type="text/calendar" title="The Watch San Diego calendar feed" href="/sandiego/feed.ics">
+<link rel="alternate" type="text/calendar" title="${brandTitle} calendar feed" href="${calHome}/feed.ics">
 ${raw(head)}
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header">
   <div class="wrap header-row">
-    <a class="brand" href="/" aria-label="Better Security home">${mark(34)}<span class="brand-text"><span class="brand-name">The Watch</span><span class="brand-city">San Diego</span></span></a>
+    <a class="brand" href="/" aria-label="Better Security home">${mark(34)}<span class="brand-text"><span class="brand-name">The Watch</span><span class="brand-city">${c.name}</span></span></a>
     <nav class="site-nav" aria-label="Main">
       ${nav.map(([href, label]) => html`<a href="${href}" ${path === href || (href !== "/" && path.startsWith(href + "/")) ? raw('aria-current="page"') : ""}>${label}</a>`)}
       <a class="btn btn-small btn-electric" href="/subscribe">Subscribe</a>
@@ -75,15 +79,14 @@ ${body}
   <div class="wrap footer-grid">
     <div class="footer-brand">
       ${mark(40)}
-      <p><strong>The Watch San Diego</strong> is published by Better Security, a San Diego events company. We cover every organizer's events and run a few of our own.</p>
+      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${Object.values(CITIES).map((x) => x.name).join(" and ")}, plus the best online sessions, and run a few of our own.</p>
       ${signupForm({ source: "footer", compact: true, cta: "Subscribe" })}
     </div>
     <div class="footer-col">
       <h3>Calendar</h3>
-      <a href="/sandiego">This week</a>
-      <a href="/sandiego?view=month">Month view</a>
+      ${Object.values(CITIES).map((x) => html`<a href="/${x.slug}">${x.name}</a>`)}
       <a href="/virtual">Virtual sessions and CPE</a>
-      <a href="/sandiego/feed.ics">Subscribe to the calendar feed</a>
+      <a href="${calHome}/feed.ics">Subscribe to the calendar feed</a>
       <a href="/submit">Submit an event</a>
     </div>
     <div class="footer-col">

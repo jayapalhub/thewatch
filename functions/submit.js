@@ -1,6 +1,6 @@
 import { html, page, raw } from "./_lib/html.js";
 import { shell } from "./_lib/layout.js";
-import { TOPICS } from "./_lib/constants.js";
+import { TOPICS, CITIES } from "./_lib/constants.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -28,7 +28,7 @@ export async function onRequestGet({ request, env }) {
           <label>End time <input type="time" name="end_time"></label>
         </div>
         <div class="row-2">
-          <label>Which calendar <select name="calendar"><option value="sandiego">San Diego (in person or local online)</option><option value="virtual">Virtual (online, open to anyone)</option></select></label>
+          <label>Which calendar <select name="calendar">${Object.values(CITIES).map((c) => html`<option value="${c.slug}">${c.name} (in person or local online)</option>`)}<option value="virtual">Virtual (online, open to anyone)</option></select></label>
           <label>Format <select name="format"><option value="in_person">In person</option><option value="virtual">Virtual</option><option value="hybrid">Hybrid</option></select></label>
           <label>Registration link <input type="url" name="registration_url" required placeholder="https://"></label>
         </div>

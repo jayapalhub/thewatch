@@ -144,7 +144,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     let slug = `${slugify(it.title).slice(0, 80).replace(/-+$/, "")}-${day}`;
     const clash = await db.prepare("SELECT id FROM events WHERE slug=?").bind(slug).first();
     if (clash) slug += "-" + Math.random().toString(36).slice(2, 6);
-    const isSd = src.city === "sandiego";
+    const isSd = src.city !== "virtual";
     const online = src.kind === "brighttalk" ? true : it.online;
     const format = isSd ? (online ? "virtual" : "in_person") : "virtual";
     const cpe = src.cpe_default || it.cpeHint ? 1 : 0;

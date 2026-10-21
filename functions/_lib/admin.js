@@ -1,5 +1,5 @@
 import { html, raw } from "./html.js";
-import { TOPICS, FORMATS, COST_TYPES, AUDIENCE, EVENT_STATUSES, ORG_TYPES, ASSET_VERSION } from "./constants.js";
+import { TOPICS, FORMATS, COST_TYPES, AUDIENCE, EVENT_STATUSES, ORG_TYPES, ASSET_VERSION, CITIES, DEFAULT_CITY, eventPath, orgPath } from "./constants.js";
 import { mark } from "./layout.js";
 
 export function adminShell({ title, body, path = "/admin", user }) {
@@ -11,7 +11,7 @@ export function adminShell({ title, body, path = "/admin", user }) {
 <body><div class="a-layout">
 <aside class="a-side"><a class="a-brand" href="/admin">${mark(28)}<span>The Watch admin</span></a>
 <nav>${nav.map(([h, l]) => html`<a href="${h}" ${path === h || (h !== "/admin" && path.startsWith(h)) ? raw('aria-current="page"') : ""}>${l}</a>`)}</nav>
-<div class="a-side-foot"><a href="/sandiego" target="_blank">View site</a><span>${user?.email || ""}</span></div></aside>
+<div class="a-side-foot"><a href="/" target="_blank">View site</a><span>${user?.email || ""}</span></div></aside>
 <main class="a-main"><h1>${title}</h1>${body}</main></div>
 <script src="/assets/js/admin.js?v=${ASSET_VERSION}" defer></script></body></html>`;
 }
@@ -33,7 +33,7 @@ export function eventForm(e, orgs, venues, { action, isNew = false } = {}) {
     </div>
     <div class="a-grid-3">
       <label>Organizer<select name="organization_id"><option value="">None</option>${orgs.map((o) => opt(o.id, o.name, e.organization_id))}</select></label>
-      <label>Calendar<select name="city">${opt("sandiego", "San Diego", e.city || "sandiego")}${opt("virtual", "Virtual (online, anywhere)", e.city || "sandiego")}</select></label>
+      <label>Calendar<select name="city">${Object.values(CITIES).map((c) => opt(c.slug, c.name, e.city || DEFAULT_CITY))}${opt("virtual", "Virtual (online, anywhere)", e.city || DEFAULT_CITY)}</select></label>
       <label>Status<select name="status">${EVENT_STATUSES.map((s) => opt(s, s.replace("_", " "), e.status || "pending_review"))}</select></label>
       <label>Source<select name="source">${["manual", "submission", "feed", "recurrence", "research"].map((s) => opt(s, s, e.source || "manual"))}</select></label>
     </div>
@@ -92,7 +92,7 @@ export function eventForm(e, orgs, venues, { action, isNew = false } = {}) {
         <button class="a-btn a-btn-good" name="action" value="publish">Save and publish</button>
         <button class="a-btn" name="action" value="reject">Reject</button>
         <button class="a-btn a-btn-danger" name="action" value="delete" data-confirm="Delete this event permanently?">Delete</button>
-        <a class="a-btn a-btn-link" href="/sandiego/events/${e.slug}" target="_blank">Preview</a>` : html`<button class="a-btn a-btn-good" name="action" value="publish">Save and publish</button>`}
+        <a class="a-btn a-btn-link" href="${eventPath(e)}" target="_blank">Preview</a>` : html`<button class="a-btn a-btn-good" name="action" value="publish">Save and publish</button>`}
     </div>
   </form>`;
 }
@@ -128,7 +128,7 @@ export function orgForm(o, { action, isNew = false } = {}) {
     </div>
     <label>Notes <small>(private; add "padel-sponsor" to show a vendor on the Padel page)</small><textarea name="notes" rows="3">${o.notes || ""}</textarea></label>
     <label class="a-check"><input type="checkbox" name="trusted" value="1" ${o.trusted ? raw("checked") : ""}> Trusted organizer (submissions flagged for light review)</label>
-    <div class="a-actions"><button class="a-btn a-btn-primary" name="action" value="save">Save</button>${!isNew ? html`<button class="a-btn a-btn-danger" name="action" value="delete" data-confirm="Delete this organizer? Events keep their rows but lose the link.">Delete</button><a class="a-btn a-btn-link" href="/sandiego/organizers/${o.slug}" target="_blank">Preview</a>` : ""}</div>
+    <div class="a-actions"><button class="a-btn a-btn-primary" name="action" value="save">Save</button>${!isNew ? html`<button class="a-btn a-btn-danger" name="action" value="delete" data-confirm="Delete this organizer? Events keep their rows but lose the link.">Delete</button><a class="a-btn a-btn-link" href="${orgPath(o.slug, o.default_city)}" target="_blank">Preview</a>` : ""}</div>
   </form>`;
 }
 

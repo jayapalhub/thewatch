@@ -3,12 +3,16 @@ import { shell, signupForm } from "../../_lib/layout.js";
 import { eventBySlug, eventTags, upcomingEvents, eventRow, eventJsonLd, costLabel } from "../../_lib/events.js";
 import { fmtDateLong, fmtTimeRange } from "../../_lib/dates.js";
 import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
-import { FORMATS, AUDIENCE } from "../../_lib/constants.js";
+import { FORMATS, AUDIENCE, cityOf, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
 import { toUtc } from "../../_lib/dates.js";
 
-export async function onRequestGet({ params, env }) {
+export async function onRequestGet({ params, env, request }) {
+  if (!cityOf(params.city)) return notFound("Calendar not found");
   const e = await eventBySlug(env.DB, params.slug);
   if (!e || !["published", "cancelled"].includes(e.status)) return notFound("Event not found");
+  // One canonical URL per event: redirect if reached under a different calendar path.
+  if (eventPath(e) !== `/${params.city}/events/${e.slug}`) return Response.redirect(new URL(eventPath(e), request.url).toString(), 301);
+  const city = cityOf(e.city);
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
   const more = e.org_slug ? (await upcomingEvents(env.DB, { org: e.org_slug, limit: 4 })).filter((x) => x.id !== e.id).slice(0, 3) : [];
   const where = e.format === "virtual" ? "Online" : [e.venue_display, e.venue_address_display].filter(Boolean).join(", ");
@@ -17,7 +21,7 @@ export async function onRequestGet({ params, env }) {
   const body = html`
   <article class="event-page">
     <div class="wrap narrow">
-      <p class="crumbs"><a href="${e.city === "virtual" ? "/virtual" : "/sandiego"}">${e.city === "virtual" ? "Virtual" : "Calendar"}</a> <span class="sep"></span> ${e.org_display ? html`<a href="/sandiego/organizers/${e.org_slug}">${e.org_display}</a>` : "Event"}</p>
+      <p class="crumbs"><a href="${calendarPath(e.city)}">${e.city === "virtual" ? "Virtual" : `${city.name} calendar`}</a> <span class="sep"></span> ${e.org_display ? html`<a href="${orgPath(e.org_slug, e.city)}">${e.org_display}</a>` : "Event"}</p>
       ${e.status === "cancelled" ? html`<p class="notice notice-warn">This event has been cancelled by the organizer.</p>` : ""}
       <h1>${e.title}</h1>
       <div class="tags">${eventTags(e)}</div>
@@ -38,7 +42,7 @@ export async function onRequestGet({ params, env }) {
           <div class="add-cal-menu">
             <a href="${googleCalendarUrl(e, siteUrl)}" target="_blank" rel="noopener">Google Calendar</a>
             <a href="${outlookUrl(e, siteUrl)}" target="_blank" rel="noopener">Outlook.com</a>
-            <a href="/sandiego/events/${e.slug}/ics">Apple, Outlook desktop (.ics)</a>
+            <a href="${eventPath(e)}/ics">Apple, Outlook desktop (.ics)</a>
           </div></details>
       </div>
       <div class="event-body">${(e.description_long || e.description_short || "").split(/\n{2,}/).map((p) => html`<p>${p}</p>`)}</div>
@@ -49,5 +53,5 @@ export async function onRequestGet({ params, env }) {
   <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Never miss one.</h2><p>The Sunday email has the whole week.</p></div>${signupForm({ source: "event:" + e.slug })}</div></section>
   ${eventJsonLd(e, siteUrl)}`;
 
-  return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)} in San Diego`, body, path: "/sandiego" }), 200, { "Cache-Control": "public, max-age=300" });
+  return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)}${e.city === "virtual" ? " online" : ` in ${city.name}`}`, body, city: e.city, path: calendarPath(e.city) }), 200, { "Cache-Control": "public, max-age=300" });
 }

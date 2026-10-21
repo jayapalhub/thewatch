@@ -1,3 +1,4 @@
+import { eventPath, cityOf } from "./constants.js";
 import { toUtc, icsStamp } from "./dates.js";
 
 function icsEscape(s) { return String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;"); }
@@ -10,7 +11,7 @@ function fold(line) { // RFC 5545 line folding at 75 octets (approximate by char
 export function eventToVevent(e, siteUrl) {
   const start = toUtc(e.start_at, e.timezone);
   const end = e.end_at ? toUtc(e.end_at, e.timezone) : new Date(start.getTime() + 2 * 3600 * 1000);
-  const url = `${siteUrl}/sandiego/events/${e.slug}`;
+  const url = `${siteUrl}${eventPath(e)}`;
   const loc = e.format === "virtual" ? "Online" : [e.venue_display, e.venue_address_display].filter(Boolean).join(", ");
   const desc = [e.description_short, e.registration_url ? `Register: ${e.registration_url}` : "", `Details: ${url}`].filter(Boolean).join("\n\n");
   return [
@@ -44,7 +45,7 @@ export function googleCalendarUrl(e, siteUrl) {
   const p = new URLSearchParams({
     action: "TEMPLATE", text: e.title,
     dates: `${icsStamp(start)}/${icsStamp(end)}`,
-    details: [e.description_short, e.registration_url ? `Register: ${e.registration_url}` : "", `Via The Watch San Diego: ${siteUrl}/sandiego/events/${e.slug}`].filter(Boolean).join("\n\n"),
+    details: [e.description_short, e.registration_url ? `Register: ${e.registration_url}` : "", `Via ${(cityOf(e.city) || {}).title || "The Watch"}: ${siteUrl}${eventPath(e)}`].filter(Boolean).join("\n\n"),
     location: loc,
   });
   return `https://calendar.google.com/calendar/render?${p}`;
@@ -57,7 +58,7 @@ export function outlookUrl(e, siteUrl) {
   const p = new URLSearchParams({
     path: "/calendar/action/compose", rru: "addevent", subject: e.title,
     startdt: start.toISOString(), enddt: end.toISOString(),
-    body: `${e.description_short || ""}\n\n${siteUrl}/sandiego/events/${e.slug}`, location: loc,
+    body: `${e.description_short || ""}\n\n${siteUrl}${eventPath(e)}`, location: loc,
   });
   return `https://outlook.live.com/calendar/0/deeplink/compose?${p}`;
 }

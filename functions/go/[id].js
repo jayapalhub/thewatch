@@ -1,3 +1,4 @@
+import { eventPath } from "../_lib/constants.js";
 import { eventById } from "../_lib/events.js";
 import { sha256 } from "../_lib/html.js";
 
@@ -12,7 +13,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
   const issue = parseInt(url.searchParams.get("i") || "", 10) || null;
   const e = Number.isFinite(id) ? await eventById(env.DB, id) : null;
   if (!e) return Response.redirect(`${env.SITE_URL || ""}/sandiego`, 302);
-  const target = t === "register" && e.registration_url ? e.registration_url : `${env.SITE_URL || ""}/sandiego/events/${e.slug}`;
+  const target = t === "register" && e.registration_url ? e.registration_url : `${env.SITE_URL || ""}${eventPath(e)}`;
   const ua = request.headers.get("user-agent") || "";
   const ref = request.headers.get("referer") || "";
   const log = (async () => {

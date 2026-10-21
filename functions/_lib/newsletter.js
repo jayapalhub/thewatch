@@ -79,7 +79,7 @@ export function renderIssueHtml(issue, data, siteUrl) {
   ${soon.length ? `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">Coming up, register early</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${soon.slice(0, 8).map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(monthName(e.start_at)).slice(0, 3)} ${dayNum(e.start_at)}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a>${e.org_display ? ` <span style="color:${MUTED};">· ${esc(e.org_display)}</span>` : ""}</td></tr>`).join("")}</table>` : ""}
   <div style="margin:26px 0 0;padding-top:14px;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};line-height:1.6;">
-    Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/sandiego" style="color:${SHIELD};">bettersecurity.ai/sandiego</a>.<br>
+    Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/${issue.city || "sandiego"}" style="color:${SHIELD};">bettersecurity.ai/${issue.city || "sandiego"}</a>.<br>
     The Watch San Diego is published by Better Security, ${esc(MAIL_ADDRESS)}.
   </div>
 </div>`;

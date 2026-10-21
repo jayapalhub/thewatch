@@ -1,7 +1,7 @@
 import { html, page, raw } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
 import { queryEvents, eventTags, costLabel } from "../_lib/events.js";
-import { TOPICS } from "../_lib/constants.js";
+import { TOPICS, CITIES, eventPath, orgPath } from "../_lib/constants.js";
 import { addDays, todayKey, nowLocalIso, toUtc } from "../_lib/dates.js";
 
 // Bodies shown as a grouped organizer filter. Slugs must match organizations.slug.
@@ -48,7 +48,7 @@ export async function onRequestGet({ request, env }) {
           <p class="cal-sub">Webinars, virtual summits and online chapter meetings worth your hour, with CPE hours noted where the organizer offers them. ${counts.total} sessions in the next 60 days${counts.cpe ? html`, ${counts.cpe} with CPE` : ""}.</p>
         </div>
         <div class="view-toggle city-toggle" role="tablist" aria-label="Calendar">
-          <a role="tab" aria-selected="false" href="/sandiego">San Diego</a>
+          ${Object.values(CITIES).map((c) => html`<a role="tab" aria-selected="false" href="/${c.slug}">${c.name}</a>`)}
           <a role="tab" aria-selected="true" href="/virtual">Virtual</a>
         </div>
       </div>
@@ -87,8 +87,8 @@ function virtualRow(e) {
   <li class="event-row virtual-row ${e.org_type === "vendor" ? "is-vendor" : ""} ${e.is_featured ? "is-featured" : ""}" data-start="${startUtc}" data-end="${endUtc}">
     <div class="event-time"><span class="v-date" data-tz-date>${startUtc.slice(0, 10)}</span><span class="v-time" data-tz-time>${startUtc.slice(11, 16)} UTC</span></div>
     <div class="event-main">
-      <h3 class="event-title"><a href="/sandiego/events/${e.slug}">${e.title}</a></h3>
-      <p class="event-meta">${e.org_display ? html`<a href="/sandiego/organizers/${e.org_slug}">${e.org_display}</a>` : ""}${e.platform && e.platform !== "other" ? html`<span class="sep"></span>${e.platform}` : ""}${e.speakers ? html`<span class="sep"></span>${e.speakers}` : ""}</p>
+      <h3 class="event-title"><a href="${eventPath(e)}">${e.title}</a></h3>
+      <p class="event-meta">${e.org_display ? html`<a href="${orgPath(e.org_slug, e.city)}">${e.org_display}</a>` : ""}${e.platform && e.platform !== "other" ? html`<span class="sep"></span>${e.platform}` : ""}${e.speakers ? html`<span class="sep"></span>${e.speakers}` : ""}</p>
       ${e.description_short ? html`<p class="event-blurb">${e.description_short}</p>` : ""}
       <div class="tags">${e.org_type === "vendor" ? html`<span class="tag tag-vendor">Vendor</span>` : ""}${eventTags(e, { showFormat: false })}</div>
     </div>

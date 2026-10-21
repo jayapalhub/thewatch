@@ -1,5 +1,5 @@
 import { html, raw, list } from "./html.js";
-import { TOPICS, FORMATS, COST_TYPES } from "./constants.js";
+import { TOPICS, FORMATS, COST_TYPES, eventPath, orgPath, calendarPath } from "./constants.js";
 import { fmtTimeRange, fmtDateLong, weekday, month3, dayNum, dateKey, todayKey, nowLocalIso } from "./dates.js";
 
 const SELECT = `
@@ -90,7 +90,7 @@ export function eventTags(e, { showFormat = true } = {}) {
   const cpe = cpeLabel(e); if (cpe) tags.push(html`<span class="tag tag-cpe" title="${e.cpe_body ? `Organizer reports ${e.cpe_body} credit` : "Organizer reports CPE credit"}">${cpe}</span>`);
   const cost = costLabel(e); if (cost && e.cost_type !== "unknown") tags.push(html`<span class="tag">${cost}</span>`);
   if (showFormat && e.format !== "in_person") tags.push(html`<span class="tag">${FORMATS[e.format] || e.format}</span>`);
-  e.topics.slice(0, 3).forEach((t) => { if (TOPICS[t]) tags.push(html`<a class="tag tag-topic" href="/sandiego?topic=${t}">${TOPICS[t]}</a>`); });
+  e.topics.slice(0, 3).forEach((t) => { if (TOPICS[t]) tags.push(html`<a class="tag tag-topic" href="${calendarPath(e.city)}?topic=${t}">${TOPICS[t]}</a>`); });
   return tags;
 }
 
@@ -101,8 +101,8 @@ export function eventRow(e) {
   <li class="event-row ${e.is_featured ? "is-featured" : ""} ${e.is_better_security_event ? "is-bs" : ""}">
     <div class="event-time">${fmtTimeRange(e.start_at, e.end_at) || "All day"}</div>
     <div class="event-main">
-      <h3 class="event-title"><a href="/sandiego/events/${e.slug}">${e.title}</a></h3>
-      <p class="event-meta">${e.org_display ? html`<a href="/sandiego/organizers/${e.org_slug}">${e.org_display}</a>` : ""}${where ? html`<span class="sep"></span>${where}` : ""}</p>
+      <h3 class="event-title"><a href="${eventPath(e)}">${e.title}</a></h3>
+      <p class="event-meta">${e.org_display ? html`<a href="${orgPath(e.org_slug, e.city)}">${e.org_display}</a>` : ""}${where ? html`<span class="sep"></span>${where}` : ""}</p>
       ${e.description_short ? html`<p class="event-blurb">${e.description_short}</p>` : ""}
       <div class="tags">${eventTags(e)}</div>
     </div>
@@ -135,7 +135,7 @@ export function eventJsonLd(e, siteUrl) {
     startDate: e.start_at, endDate: e.end_at || undefined,
     eventAttendanceMode: e.format === "virtual" ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
     description: e.description_short || undefined,
-    url: `${siteUrl}/sandiego/events/${e.slug}`,
+    url: `${siteUrl}${eventPath(e)}`,
     organizer: e.org_name ? { "@type": "Organization", name: e.org_name } : undefined,
     location: e.format === "virtual" ? { "@type": "VirtualLocation", url: e.registration_url || undefined } : { "@type": "Place", name: e.venue_display || undefined, address: e.venue_address_display || undefined },
   };
