@@ -335,6 +335,13 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .dir-cta { margin-top: 40px; padding: 24px; background: var(--paper); border-radius: 12px; }
 .dir-cta p:last-child { margin-bottom: 0; }
 @media (max-width: 560px) { .dir-when { white-space: normal; display: block; margin-top: 2px; } }
+.spk-past { margin: 6px 0 0; font-size: .92rem; overflow-wrap: anywhere; }
+.spk-past .dir-when { white-space: normal; }
+.spk-more, .spk-aff { color: var(--muted); font-size: .9rem; }
+.spk-jump { gap: 6px; }
+.spk-jump a { min-width: 34px; justify-content: center; padding: 5px 9px; }
+.spk-soon .dir-item { padding: 10px 0; }
+@media (max-width: 560px) { .spk-past .dir-when { display: inline; margin: 0; } }
 
 /* Organizer page: clash notice and date checker */
 .clash-box { margin: 28px 0; padding: 18px 20px; background: var(--warn-bg); border-radius: 12px; }

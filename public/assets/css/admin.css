@@ -73,3 +73,6 @@ h1 { font-size: 1.5rem; margin: 0 0 16px; } h2 { font-size: 1.1rem; margin: 24px
 
 .a-queue-item.has-clash { border-left: 4px solid #F5C77A; }
 .a-clash { display: block; margin: 6px 0; }
+.a-btn-small { padding: 4px 9px; font-size: 12px; }
+.a-inline input { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--mist); border-radius: 7px; }
+td .a-inline + .a-inline { margin-top: 4px; }
