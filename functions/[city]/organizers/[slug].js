@@ -15,7 +15,7 @@ export async function onRequestGet({ params, env }) {
   const past = merge(await queryEvents(env.DB, { city: city.slug, org: o.slug, to: nowLocalIso(), limit: 400 }), await queryEvents(env.DB, { city: "virtual", org: o.slug, to: nowLocalIso(), limit: 400 })).reverse().slice(0, 8);
   const body = html`
   <div class="wrap narrow org-page">
-    <p class="crumbs"><a href="/${city.slug}">${city.name} calendar</a> <span class="sep"></span> Organizer</p>
+    <p class="crumbs"><a href="/${city.slug}">${city.name} calendar</a> <span class="sep"></span> <a href="/${city.slug}/organizers">Organizers</a></p>
     <h1>${o.name}</h1>
     ${o.description ? html`<p class="lede">${o.description}</p>` : ""}
     <dl class="event-facts">

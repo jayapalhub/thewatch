@@ -311,3 +311,27 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .issue-list { list-style: none; padding: 0; margin: 0; } .issue-list li { padding: 14px 0; border-bottom: 1px solid var(--mist); }
 .issue-list a { text-decoration: none; color: var(--ink); display: block; } .issue-week { display: block; font-size: .85rem; color: var(--muted); } .issue-subject { font-family: var(--display); font-weight: 700; font-size: 1.15rem; } .issue-pre { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
 .issue-body { padding-top: 10px; } .issue-body table { width: 100%; }
+
+/* Organizer directory */
+.org-dir { padding: 36px 0 48px; }
+.org-dir h1 { font-size: clamp(1.9rem, 4.4vw, 2.8rem); }
+.dir-jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 28px; }
+.dir-jump a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--mist); border-radius: 999px; font-size: .85rem; font-weight: 600; text-decoration: none; color: var(--ink); }
+.dir-jump a:hover { border-color: var(--electric); color: var(--ink); }
+.dir-jump span { color: var(--muted); font-weight: 500; }
+.dir-group { margin: 0 0 34px; scroll-margin-top: 90px; }
+.dir-group h2 { margin-bottom: .2em; }
+.dir-blurb { color: var(--muted); font-size: .95rem; margin-bottom: 10px; }
+.dir-list { list-style: none; margin: 0; padding: 0; }
+.dir-item { padding: 14px 0; border-top: 1px solid var(--mist-soft); }
+.dir-item h3 { margin: 0 0 4px; font-size: 1.08rem; }
+.dir-item h3 a { color: var(--ink); text-decoration: none; }
+.dir-item h3 a:hover { color: var(--electric-deep); text-decoration: underline; }
+.dir-cadence { color: var(--muted); font-size: .9rem; margin: 0 0 6px; }
+.dir-next { margin: 0; font-size: .95rem; overflow-wrap: anywhere; }
+.dir-label { display: inline-block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); background: var(--deal-bg); padding: 2px 7px; border-radius: 5px; margin-right: 4px; }
+.dir-label-quiet { color: var(--muted); background: var(--mist-soft); }
+.dir-when { color: var(--muted); white-space: nowrap; }
+.dir-cta { margin-top: 40px; padding: 24px; background: var(--paper); border-radius: 12px; }
+.dir-cta p:last-child { margin-bottom: 0; }
+@media (max-width: 560px) { .dir-when { white-space: normal; display: block; margin-top: 2px; } }
