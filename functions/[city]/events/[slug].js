@@ -53,5 +53,5 @@ export async function onRequestGet({ params, env, request }) {
   <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Never miss one.</h2><p>The Sunday email has the whole week.</p></div>${signupForm({ source: "event:" + e.slug })}</div></section>
   ${eventJsonLd(e, siteUrl)}`;
 
-  return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)}${e.city === "virtual" ? " online" : ` in ${city.name}`}`, body, city: e.city, path: calendarPath(e.city) }), 200, { "Cache-Control": "public, max-age=300" });
+  return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)}${e.city === "virtual" ? " online" : ` in ${city.name}`}`, body, city: e.city, path: calendarPath(e.city), image: `/og/event/${e.slug}.png` }), 200, { "Cache-Control": "public, max-age=300" });
 }

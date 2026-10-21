@@ -22,7 +22,7 @@ export function signupForm({ source, compact = false, cta = "Get the Sunday emai
   </form>`;
 }
 
-export function shell({ title, description, body, city = null, path = "/", wide = false, head = "" }) {
+export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null }) {
   const c = cityOf(city) || CITIES[DEFAULT_CITY];
   const isVirtual = c.slug === "virtual";
   const atRoot = !city && path === "/";
@@ -48,7 +48,10 @@ export function shell({ title, description, body, city = null, path = "/", wide 
 <meta property="og:title" content="${fullTitle}">
 <meta property="og:description" content="${desc}">
 <meta property="og:type" content="website">
-<meta property="og:image" content="/assets/img/og.png">
+<meta property="og:image" content="https://bettersecurity.ai${image || (atRoot ? "/og/city/sandiego.png" : `/og/city/${c.slug}.png`)}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://bettersecurity.ai${image || (atRoot ? "/og/city/sandiego.png" : `/og/city/${c.slug}.png`)}">
 <link rel="icon" href="/assets/img/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
