@@ -25,6 +25,8 @@ export async function onRequestPost({ params, request, env, data, waitUntil }) {
   const action = String(p.action || "save");
   if (action === "delete") { await env.DB.prepare("DELETE FROM events WHERE id=?").bind(id).run(); return redirect("/admin/events?msg=Deleted"); }
   if (p.quick === "1") { // from the review queue: status only
+    if (action === "hold") { await env.DB.prepare("UPDATE events SET hold=1 WHERE id=?").bind(id).run(); return redirect(`/admin/review?msg=${encodeURIComponent("Held: " + before.title)}`); }
+    if (action === "release") { await env.DB.prepare("UPDATE events SET hold=0, auto_publish_at=datetime('now', '+24 hours') WHERE id=?").bind(id).run(); return redirect(`/admin/review?msg=${encodeURIComponent("Publishes in 24 hours: " + before.title)}`); }
     const status = action === "publish" ? "published" : action === "reject" ? "rejected" : null;
     if (!status) return redirect("/admin/review");
     await setStatus(env.DB, id, status);

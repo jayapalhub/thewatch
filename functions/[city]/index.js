@@ -1,10 +1,12 @@
+import { lazyAutoPublish } from "../_lib/autopublish.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay } from "../_lib/events.js";
 import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/constants.js";
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
 
-export async function onRequestGet({ request, env, params }) {
+export async function onRequestGet({ request, env, params, waitUntil }) {
+  lazyAutoPublish(env.DB, waitUntil);
   const city = CITIES[params.city];
   if (!city) return notFound("Calendar not found");
   const url = new URL(request.url);

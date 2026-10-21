@@ -2,6 +2,7 @@
 // Everything lands as status='pending_review' with source='feed'; nothing publishes itself.
 import { slugify } from "./html.js";
 import { toUtc, TZ } from "./dates.js";
+import { autoPublishAt } from "./autopublish.js";
 
 const WINDOW_DAYS = 90;
 
@@ -183,18 +184,18 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     const online = src.kind === "brighttalk" ? true : it.online;
     const format = isSd ? (online ? "virtual" : "in_person") : "virtual";
     const cpe = src.cpe_default || it.cpeHint ? 1 : 0;
-    const notes = `Feed import ${now.toISOString().slice(0, 10)} from ${src.name}.${it.aggregatorUrl ? ` Registration link and organizer taken from the organizer's own page via ${it.aggregatorUrl}.` : ""} Time taken from the feed (UTC ${it.startUtc.toISOString().slice(0, 16)}Z). Check the description for cost and CPE wording before publishing.`;
+    const notes = `Feed import ${now.toISOString().slice(0, 10)} from ${src.name}.${it.aggregatorUrl ? ` Registration link and organizer taken from the organizer's own page via ${it.aggregatorUrl}.` : ""} Time taken from the feed (UTC ${it.startUtc.toISOString().slice(0, 16)}Z). Publishes automatically in 24 hours unless held or rejected.`;
     await db.prepare(`INSERT INTO events (slug, city, title, organization_id, venue_name, venue_address, start_at, end_at, start_utc, end_utc, timezone, format, platform, speakers,
         description_short, description_long, registration_url, cost_type, cost_min, cost_max, cpe_eligible, cpe_hours, cpe_body, topics, audience_level, also_virtual, is_better_security_event,
-        status, source, source_url, reviewer_notes, feed_uid)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+        status, source, source_url, reviewer_notes, feed_uid, auto_publish_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(slug, src.city, it.title.slice(0, 140), it.organizationId || src.organization_id || null,
         isSd && !online ? (it.location || null) : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
         startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), TZ, format, online ? it.platform : null, it.speakers,
         firstSentence(it.summary, 200) || it.title, it.summary ? it.summary.slice(0, 4000) : null, it.url,
         src.kind === "brighttalk" ? "free" : "unknown", src.kind === "brighttalk" ? 0 : null, src.kind === "brighttalk" ? 0 : null,
         cpe, cpe && src.cpe_default ? 1 : null, cpe ? (src.cpe_body || "self_reported") : null, JSON.stringify(topics.length ? topics : ["threat_intel"]), "practitioner",
-        isSd && online ? 1 : 0, 0, "pending_review", "feed", it.aggregatorUrl || src.url, notes, it.uid).run();
+        isSd && online ? 1 : 0, 0, "pending_review", "feed", it.aggregatorUrl || src.url, notes, it.uid, autoPublishAt()).run();
     stats.added++;
   }
   await logRun(db, src, stats);
