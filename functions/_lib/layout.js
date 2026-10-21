@@ -95,6 +95,7 @@ ${body}
       <a href="/?choose=1">Change city</a>
       <a href="${calHome}/feed.ics">Subscribe to the calendar feed</a>
       ${isVirtual ? "" : html`<a href="${calHome}/organizers">Organizers in ${c.name}</a>`}
+      ${isVirtual ? "" : html`<a href="${calHome}/jobs">Security jobs in ${c.name}</a>`}
       ${isVirtual ? "" : html`<a href="${calHome}/issues">Past issues</a>`}
       <a href="/submit">Submit an event</a>
     </div>

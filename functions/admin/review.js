@@ -7,8 +7,9 @@ export async function onRequestGet({ request, env, data }) {
   const msg = new URL(request.url).searchParams.get("msg");
   const { results } = await env.DB.prepare(`SELECT e.*, o.name org_name, o.trusted FROM events e LEFT JOIN organizations o ON o.id=e.organization_id WHERE e.status IN ('pending_review','draft') ORDER BY e.hold DESC, COALESCE(e.auto_publish_at, '9999') ASC, e.created_at DESC`).all();
   const clashes = await findClashes(env.DB, results);
+  const jobsWaiting = await env.DB.prepare("SELECT COUNT(*) n FROM jobs WHERE status='pending_review' AND (hold=1 OR auto_publish_at IS NULL)").first().catch(() => ({ n: 0 }));
   const held = results.filter((e) => e.hold || !e.auto_publish_at).length;
-  const body = html`${flash(msg)}
+  const body = html`${flash(msg)}${jobsWaiting.n ? html`<p class="a-warn">${jobsWaiting.n} job post${jobsWaiting.n === 1 ? " is" : "s are"} waiting in <a href="/admin/jobs">Jobs</a>.</p>` : ""}
   <p class="a-muted">Rows publish themselves when their timer runs out unless you hold or reject them. ${held ? html`<strong>${held}</strong> need a decision from you; the rest are a courtesy preview.` : "Nothing is waiting on you."} </p>
   ${results.length ? html`<ul class="a-queue">${results.map((e) => html`
     <li class="a-queue-item ${clashes.has(e.id) ? "has-clash " : ""}${e.reviewer_notes && /duplicate/i.test(e.reviewer_notes) ? "is-dup" : ""}">

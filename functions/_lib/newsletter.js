@@ -1,5 +1,6 @@
 import { esc } from "./html.js";
 import { emailSponsor, clickUrl, absUrl } from "./sponsors.js";
+import { liveJobs, pickJobsFor, jobsEmailBlock } from "./jobs.js";
 import { queryEvents, groupByDay, costLabel, cpeLabel } from "./events.js";
 import { fmtTimeRange, weekday, monthName, dayNum, addDays, parts } from "./dates.js";
 import { TOPICS, MAIL_ADDRESS, CITIES, DEFAULT_CITY, SHOW_BS_EVENTS } from "./constants.js";
@@ -22,7 +23,8 @@ export async function loadIssueData(db, issue) {
     .sort((a, b) => (a.org_type === "vendor") - (b.org_type === "vendor") || (a.cost_type !== "free") - (b.cost_type !== "free") || a.start_at.localeCompare(b.start_at))
     .slice(0, 5);
   const sponsor = issue.sponsor_name ? null : await emailSponsor(db, issue);
-  return { events, soon, bs, featured, virt, sponsor };
+  const jobs = await liveJobs(db, issue.city || "sandiego", { limit: 60 });
+  return { events, soon, bs, featured, virt, sponsor, jobs };
 }
 
 function go(siteUrl, e, t, issueId) { return `${siteUrl}/go/${e.id}?t=${t}&i=${issueId || ""}`; }
@@ -49,6 +51,11 @@ function dayBlock(key, evs, siteUrl, issueId) {
 // Profile nudge, filled in per subscriber at send time (see personalize in dispatch.js): only people who have not
 // answered the three profile questions see it. The archive and anyone who has answered get nothing in its place.
 export const PROFILE_NUDGE = "{{PROFILE_NUDGE}}";
+// Hiring this week: three roles per subscriber, matched to their seniority, filled at send time like the nudge.
+export const JOBS_SLOT = "{{JOBS}}";
+export function jobsBlock(siteUrl, city, jobs, seniority, issueId) {
+  return jobsEmailBlock(siteUrl, city, pickJobsFor(jobs || [], seniority, 3), (jobs || []).length, issueId, { INK, MUTED, SHIELD, MIST, esc });
+}
 export function profileNudgeHtml(siteUrl, token) {
   return `<div style="margin:26px 0 0;padding:14px 16px;background:${PAPER};border-radius:10px;font-size:14px;line-height:1.55;">
     <div style="font-weight:800;color:${INK};margin-bottom:4px;">Two quick questions</div>
@@ -92,6 +99,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
     ${days.length ? days.map((g) => dayBlock(g.key, g.events, siteUrl, issue.id)).join("") : `<tr><td style="padding:12px 0;color:${MUTED};">A quiet week. Use it to plan the next one below.</td></tr>`}
   </table>
+  ${data.jobs && data.jobs.length ? JOBS_SLOT : ""}
   ${totalBs.length ? `<div style="background:${NAVY};color:#fff;border-radius:10px;padding:16px 18px;margin:22px 0 0;">
     <div style="font-size:11px;font-weight:700;color:${ELECTRIC};margin-bottom:6px;">From Better Security</div>
     ${totalBs.map((e) => `<div style="margin:0 0 8px;"><a href="${go(siteUrl, e, "page", issue.id)}" style="color:#fff;font-weight:700;text-decoration:none;font-size:15px;">${esc(e.title)}</a><div style="color:rgba(255,255,255,.75);font-size:13px;">${esc(weekday(e.start_at))}, ${esc(monthName(e.start_at))} ${dayNum(e.start_at)}${e.venue_display ? " · " + esc(e.venue_display) : ""}${costLabel(e) && e.cost_type !== "unknown" ? " · " + esc(costLabel(e)) : ""}</div></div>`).join("")}

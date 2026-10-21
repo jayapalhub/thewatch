@@ -60,7 +60,7 @@ export const TOPICS = {
 export const FORMATS = { in_person: "In person", virtual: "Virtual", hybrid: "Hybrid" };
 export const COST_TYPES = { free: "Free", paid: "Paid", members_free: "Free for members", donation: "Donation", unknown: "Cost not listed" };
 export const AUDIENCE = { open: "Open to all", early_career: "Early career", practitioner: "Practitioners", senior: "Senior" };
-export const ORG_TYPES = ["chapter", "meetup", "conference", "vendor", "university", "government", "community", "media"];
+export const ORG_TYPES = ["chapter", "meetup", "conference", "vendor", "university", "government", "community", "media", "employer"];
 export const EVENT_STATUSES = ["draft", "pending_review", "published", "cancelled", "rejected"];
 export const SENIORITY = { student: "Student", early_career: "Early career", practitioner: "Practitioner", manager: "Manager", director: "Director or VP", executive: "Executive" };
 
@@ -85,4 +85,4 @@ export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekl
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 
 // Bump on any CSS or JS change so browsers fetch the new file.
-export const ASSET_VERSION = "2026-10-21o";
+export const ASSET_VERSION = "2026-10-21p";

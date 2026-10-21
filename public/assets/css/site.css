@@ -419,3 +419,21 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .band-navy .signup-city, .hero .signup-city { color: var(--white); }
 .lede-note { color: var(--muted); font-weight: 600; margin-top: -4px; }
 .hero .lede-note { color: #A9B8CC; }
+
+/* Jobs */
+.jobs-lede { max-width: 70ch; color: var(--ink); margin: 0 0 16px; }
+.jobs-wrap { padding: 20px 20px 36px; }
+.jobs-count { color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+.job-list { list-style: none; margin: 0; padding: 0; }
+.job-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 16px 0; border-top: 1px solid var(--mist-soft); }
+.job-row.is-featured { background: linear-gradient(90deg, rgba(31,182,240,.08), transparent 70%); border-radius: 10px; padding-left: 12px; margin-left: -12px; }
+.job-flag { display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); margin-bottom: 2px; }
+.job-title { margin: 0 0 4px; font-size: 1.12rem; }
+.job-title a { color: var(--ink); text-decoration: none; }
+.job-title a:hover { color: var(--electric-deep); text-decoration: underline; }
+.job-meta { margin: 0 0 4px; color: var(--muted); font-size: .95rem; }
+.job-by { margin: 0 0 6px; font-size: .92rem; font-weight: 600; }
+.job-when { color: var(--muted); font-size: .8rem; font-weight: 500; margin-left: 4px; }
+.jobs-empty { padding: 28px 0; font-size: 1.05rem; }
+.jobs-fine { margin-top: 22px; color: var(--muted); font-size: .85rem; }
+@media (max-width: 560px) { .job-row { grid-template-columns: 1fr; } .job-apply { justify-self: start; } }

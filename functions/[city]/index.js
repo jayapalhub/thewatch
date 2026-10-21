@@ -1,6 +1,7 @@
 import { lazyAutoPublish } from "../_lib/autopublish.js";
 import { lazyNewsletterTick } from "../_lib/dispatch.js";
 import { lazyReminders } from "../_lib/reminders.js";
+import { lazyJobs } from "../_lib/jobs.js";
 import { pageSponsor, clickUrl } from "../_lib/sponsors.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
@@ -12,6 +13,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
   lazyAutoPublish(env.DB, waitUntil);
   lazyNewsletterTick(env, waitUntil);
   lazyReminders(env, waitUntil);
+  lazyJobs(env.DB, waitUntil);
   const city = CITIES[params.city];
   if (!city) return notFound("Calendar not found");
   const url = new URL(request.url);

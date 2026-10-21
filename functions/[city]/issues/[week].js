@@ -10,7 +10,7 @@ export async function onRequestGet({ params, env }) {
   const issue = await env.DB.prepare("SELECT * FROM issues WHERE city=? AND week_start=? AND status='sent'").bind(city.slug, params.week).first();
   if (!issue || !issue.generated_html) return notFound("Issue not found");
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
-  const inner = issue.generated_html.replace(/\{\{PROFILE_NUDGE\}\}/g, "").replace(/\{\{UNSUB\}\}/g, `${siteUrl}/subscribe?src=archive`).replace(/<a href="[^"]*\/subscribe\?src=archive"[^>]*>Unsubscribe<\/a> in one click\./g, `<a href="${siteUrl}/subscribe?src=archive" style="color:#1B4A8A;">Subscribe</a> to get the next one.`);
+  const inner = issue.generated_html.replace(/\{\{PROFILE_NUDGE\}\}/g, "").replace(/\{\{JOBS\}\}/g, "").replace(/\{\{UNSUB\}\}/g, `${siteUrl}/subscribe?src=archive`).replace(/<a href="[^"]*\/subscribe\?src=archive"[^>]*>Unsubscribe<\/a> in one click\./g, `<a href="${siteUrl}/subscribe?src=archive" style="color:#1B4A8A;">Subscribe</a> to get the next one.`);
   const title = issue.subject || `Week of ${monthName(issue.week_start)} ${parts(issue.week_start).d}`;
   const body = html`
   <section class="hero hero-short"><div class="wrap narrow">
