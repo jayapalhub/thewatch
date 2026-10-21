@@ -1,4 +1,5 @@
 import { lazyAutoPublish } from "../_lib/autopublish.js";
+import { lazyNewsletterTick } from "../_lib/dispatch.js";
 import { html, page, raw } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
 import { queryEvents, eventTags, costLabel } from "../_lib/events.js";
@@ -21,6 +22,7 @@ export const BODIES = [
 
 export async function onRequestGet({ request, env, waitUntil }) {
   lazyAutoPublish(env.DB, waitUntil);
+  lazyNewsletterTick(env, waitUntil);
   const u = new URL(request.url); const q = u.searchParams;
   const f = {
     topic: TOPICS[q.get("topic")] ? q.get("topic") : "",

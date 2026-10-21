@@ -1,4 +1,5 @@
 import { lazyAutoPublish } from "../_lib/autopublish.js";
+import { lazyNewsletterTick } from "../_lib/dispatch.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay } from "../_lib/events.js";
@@ -7,6 +8,7 @@ import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, mo
 
 export async function onRequestGet({ request, env, params, waitUntil }) {
   lazyAutoPublish(env.DB, waitUntil);
+  lazyNewsletterTick(env, waitUntil);
   const city = CITIES[params.city];
   if (!city) return notFound("Calendar not found");
   const url = new URL(request.url);

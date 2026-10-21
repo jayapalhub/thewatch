@@ -1,7 +1,7 @@
 import { esc } from "./html.js";
 import { queryEvents, groupByDay, costLabel, cpeLabel } from "./events.js";
 import { fmtTimeRange, weekday, monthName, dayNum, addDays, parts } from "./dates.js";
-import { TOPICS, MAIL_ADDRESS } from "./constants.js";
+import { TOPICS, MAIL_ADDRESS, CITIES, DEFAULT_CITY } from "./constants.js";
 
 // Builds the email body for an issue. Inline styles only, because Beehiiv's
 // editor and email clients ignore stylesheets. Links go through /go so clicks count.
@@ -44,7 +44,8 @@ function dayBlock(key, evs, siteUrl, issueId) {
   <tr><td><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${evs.map((e) => eventLine(e, siteUrl, issueId)).join("")}</table></td></tr>`;
 }
 
-export function renderIssueHtml(issue, data, siteUrl) {
+export function renderIssueHtml(issue, data, siteUrl, city = null) {
+  city = city || CITIES[issue.city] || CITIES[DEFAULT_CITY];
   const { events, soon, bs, featured } = data;
   const note = (issue.personal_note || "").trim().split(/\n{2,}/).filter(Boolean).map((p) => `<p style="margin:0 0 12px;font-size:16px;line-height:1.6;">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
   const ws = parts(issue.week_start), we = parts(issue.week_end);
@@ -53,7 +54,7 @@ export function renderIssueHtml(issue, data, siteUrl) {
   const totalBs = bs.filter((e) => !events.find((x) => x.id === e.id));
 
   return `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:${INK};">
-  <div style="font-size:13px;color:${MUTED};margin:0 0 14px;">The week of ${range} · ${events.length} event${events.length === 1 ? "" : "s"} in San Diego</div>
+  <div style="font-size:13px;color:${MUTED};margin:0 0 14px;">The week of ${range} · ${events.length} event${events.length === 1 ? "" : "s"} in ${esc(city.name)}</div>
   ${note ? `<div style="margin:0 0 18px;">${note}</div>` : ""}
   ${featured.length ? `<div style="background:${PAPER};border-left:4px solid ${ELECTRIC};padding:12px 16px;border-radius:8px;margin:0 0 18px;">
     <div style="font-weight:800;font-size:13px;color:${SHIELD};margin-bottom:4px;">Worth your evening</div>
@@ -74,13 +75,14 @@ export function renderIssueHtml(issue, data, siteUrl) {
     ${totalBs.map((e) => `<div style="margin:0 0 8px;"><a href="${go(siteUrl, e, "page", issue.id)}" style="color:#fff;font-weight:700;text-decoration:none;font-size:15px;">${esc(e.title)}</a><div style="color:rgba(255,255,255,.75);font-size:13px;">${esc(weekday(e.start_at))}, ${esc(monthName(e.start_at))} ${dayNum(e.start_at)}${e.venue_display ? " · " + esc(e.venue_display) : ""}${costLabel(e) && e.cost_type !== "unknown" ? " · " + esc(costLabel(e)) : ""}</div></div>`).join("")}
   </div>` : ""}
   ${data.virt && data.virt.length ? `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">CPE from your desk</div>
-  <div style="font-size:13px;color:${MUTED};margin:0 0 6px;">Live online sessions this week with credit hours, times in Pacific. <a href="${siteUrl}/virtual" style="color:${SHIELD};">See all virtual sessions</a>.</div>
+  <div style="font-size:13px;color:${MUTED};margin:0 0 6px;">Live online sessions this week with credit hours, times in ${city.timezone === "America/Los_Angeles" ? "Pacific" : "local time"}. <a href="${siteUrl}/virtual" style="color:${SHIELD};">See all virtual sessions</a>.</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${data.virt.map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(weekday(e.start_at)).slice(0, 3)} ${esc(fmtTimeRange(e.start_at, e.end_at))}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a> <span style="color:${MUTED};">· ${esc(e.org_display)}${cpeLabel(e) ? " · " + esc(cpeLabel(e)) : ""}${e.org_type === "vendor" ? " · Vendor" : ""}</span></td></tr>`).join("")}</table>` : ""}
   ${soon.length ? `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">Coming up, register early</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${soon.slice(0, 8).map((e) => `<tr><td style="padding:6px 0;border-bottom:1px solid ${MIST};font-size:14px;"><span style="color:${MUTED};">${esc(monthName(e.start_at)).slice(0, 3)} ${dayNum(e.start_at)}</span> &nbsp;<a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a>${e.org_display ? ` <span style="color:${MUTED};">· ${esc(e.org_display)}</span>` : ""}</td></tr>`).join("")}</table>` : ""}
   <div style="margin:26px 0 0;padding-top:14px;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};line-height:1.6;">
     Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/${issue.city || "sandiego"}" style="color:${SHIELD};">bettersecurity.ai/${issue.city || "sandiego"}</a>.<br>
-    The Watch San Diego is published by Better Security, ${esc(MAIL_ADDRESS)}.
+    ${esc(city.title)} is published by Better Security, ${esc(MAIL_ADDRESS)}.<br>
+    You are getting this because you subscribed at bettersecurity.ai. <a href="{{UNSUB}}" style="color:${MUTED};">Unsubscribe</a> in one click.
   </div>
 </div>`;
 }
@@ -93,7 +95,8 @@ export function suggestSubjects(data, issue) {
   const orgs = Array.from(new Set(events.map((e) => e.org_display).filter(Boolean))).slice(0, 3);
   if (orgs.length) out.push(`This week: ${orgs.join(", ")}${n > orgs.length ? " and more" : ""}`);
   const cpe = events.filter((e) => e.cpe_eligible).length;
-  out.push(cpe ? `${n} San Diego security events this week, ${cpe} with CPE` : `${n} San Diego security events this week`);
+  const cityName = (CITIES[issue.city] || CITIES[DEFAULT_CITY]).name;
+  out.push(cpe ? `${n} ${cityName} security events this week, ${cpe} with CPE` : `${n} ${cityName} security events this week`);
   const ws = parts(issue.week_start);
   out.push(`The Watch: week of ${monthName(issue.week_start)} ${ws.d}`);
   return out;
