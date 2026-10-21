@@ -56,6 +56,15 @@
     }); });
   }
 
+  // Copy buttons (subscriber discount codes)
+  document.querySelectorAll('[data-copy]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var v = b.getAttribute('data-copy'), done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1800); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(done, function () {});
+      else { var t = document.createElement('textarea'); t.value = v; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); done(); } catch (e) {} t.remove(); }
+    });
+  });
+
   // Close the add-to-calendar menu when clicking elsewhere
   document.addEventListener('click', function (e) {
     document.querySelectorAll('details.add-cal[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });

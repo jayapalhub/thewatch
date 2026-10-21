@@ -30,7 +30,7 @@ function eventLine(e, siteUrl, issueId) {
   const bits = [];
   const cost = costLabel(e); if (cost && e.cost_type !== "unknown") bits.push(cost);
   const cpe = cpeLabel(e); if (cpe) bits.push(cpe);
-  if (e.discount_code) bits.push(`Subscriber code <b>${esc(e.discount_code)}</b>`);
+  if (e.discount_code) bits.push(`Subscriber code <b>${esc(e.discount_code)}</b>${e.discount_text ? ` (${esc(e.discount_text.length > 90 ? e.discount_text.slice(0, 87).replace(/\s+\S*$/, "") + "…" : e.discount_text)})` : ""}`);
   return `<tr><td style="padding:8px 0 10px;border-bottom:1px solid ${MIST};">
     <a href="${go(siteUrl, e, "page", issueId)}" style="color:${INK};font-weight:700;text-decoration:none;font-size:15px;">${esc(e.title)}</a>${e.is_better_security_event ? ` <span style="background:${ELECTRIC};color:${NAVY};font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;">Better Security</span>` : ""}
     <div style="color:${MUTED};font-size:13px;margin-top:2px;">${esc(meta)}${bits.length ? ` · ${bits.join(" · ")}` : ""}</div>

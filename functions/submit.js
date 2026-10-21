@@ -57,6 +57,7 @@ export async function onRequestGet({ request, env }) {
         </fieldset>
         <label>Who is it for? <select name="audience_level"><option value="open">Open to all</option><option value="early_career">Students and early career</option><option value="practitioner">Practitioners</option><option value="senior">Senior leaders</option></select></label>
         <label>Subscriber discount <span class="hint">Optional. A code for Watch subscribers gets your event featured.</span><input name="discount_code" maxlength="40" placeholder="WATCH20"></label>
+        <label>Discount terms <span class="hint">Optional. What the code gets them, for example 20% off general admission through Nov 1.</span><input name="discount_text" maxlength="200"></label>
       </fieldset>
       <fieldset>
         <legend>About you</legend>

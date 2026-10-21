@@ -87,6 +87,7 @@ export function eventTags(e, { showFormat = true } = {}) {
   const tags = [];
   if (e.is_better_security_event) tags.push(html`<span class="tag tag-bs">Better Security</span>`);
   if (e.is_featured) tags.push(html`<span class="tag tag-pick">Jerome's pick</span>`);
+  if (e.discount_code && e.status !== "cancelled") tags.push(html`<span class="tag tag-deal" title="Subscriber discount code on the event page">Subscriber discount</span>`);
   const cpe = cpeLabel(e); if (cpe) tags.push(html`<span class="tag tag-cpe" title="${e.cpe_body ? `Organizer reports ${e.cpe_body} credit` : "Organizer reports CPE credit"}">${cpe}</span>`);
   const cost = costLabel(e); if (cost && e.cost_type !== "unknown") tags.push(html`<span class="tag">${cost}</span>`);
   if (showFormat && e.format !== "in_person") tags.push(html`<span class="tag">${FORMATS[e.format] || e.format}</span>`);

@@ -60,11 +60,11 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const dup = await env.DB.prepare("SELECT id, title FROM events WHERE (registration_url=? OR (title=? AND start_at LIKE ?)) AND status!='rejected' LIMIT 1").bind(regUrl, title, date + "%").first();
 
   const r = await env.DB.prepare(`INSERT INTO events (slug, city, title, organization_id, venue_name, venue_address, start_at, end_at, format, description_short, description_long, registration_url,
-      cost_type, cost_min, cost_max, cost_notes, cpe_eligible, cpe_hours, cpe_body, topics, audience_level, discount_code, status, source, source_url, submitted_by_name, submitted_by_email, reviewer_notes, start_utc, end_utc, also_virtual, auto_publish_at, hold)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      cost_type, cost_min, cost_max, cost_notes, cpe_eligible, cpe_hours, cpe_body, topics, audience_level, discount_code, discount_text, status, source, source_url, submitted_by_name, submitted_by_email, reviewer_notes, start_utc, end_utc, also_virtual, auto_publish_at, hold)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(slug, city, title, orgId, str(p.venue_name, 120) || null, str(p.venue_address, 200) || null, startAt, endAt, format, short, str(p.description_long, 4000) || null, regUrl,
       costType, num(p.cost_min), num(p.cost_max), str(p.cost_notes, 200) || null, str(p.cpe_eligible) === "1" ? 1 : 0, num(p.cpe_hours), str(p.cpe_body, 20) || null,
-      JSON.stringify(topics), audience, str(p.discount_code, 40) || null, "pending_review", "submission", regUrl, byName, byEmail,
+      JSON.stringify(topics), audience, str(p.discount_code, 40) || null, str(p.discount_code, 40) ? str(p.discount_text, 200) || null : null, "pending_review", "submission", regUrl, byName, byEmail,
       dup ? `Possible duplicate of event #${dup.id} (${dup.title})` : null, startUtc, endUtc, city !== "virtual" && format !== "in_person" ? 1 : 0,
       trustedOrg && !dup ? autoPublishAt() : null, trustedOrg && !dup ? 0 : 1).run();
   const id = r.meta.last_row_id;

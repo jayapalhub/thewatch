@@ -40,7 +40,10 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
         ${e.platform && e.platform !== "other" ? html`<div><dt>Platform</dt><dd>${e.platform}</dd></div>` : ""}
         ${e.speakers ? html`<div><dt>Speakers</dt><dd>${e.speakers}</dd></div>` : ""}
       </dl>
-      ${e.discount_code ? html`<p class="notice notice-deal"><strong>Subscriber discount:</strong> ${e.discount_text || "Use this code when you register."} <code>${e.discount_code}</code></p>` : ""}
+      ${e.discount_code && e.status !== "cancelled" ? html`<div class="deal">
+        <div class="deal-main"><span class="deal-label">Subscriber discount</span><p class="deal-terms">${e.discount_text || "Use this code when you register with the organizer."}</p></div>
+        <div class="deal-code"><code data-code>${e.discount_code}</code><button type="button" class="btn btn-small btn-outline" data-copy="${e.discount_code}">Copy</button></div>
+      </div>` : ""}
       <div class="cta-row">
         ${e.registration_url && e.status !== "cancelled" ? html`<a class="btn btn-primary" href="/go/${e.id}?t=register" rel="noopener">Register with the organizer</a>` : ""}
         ${e.recording_url ? html`<a class="btn btn-outline" href="${e.recording_url}" rel="noopener" target="_blank">Watch the recording</a>` : ""}
