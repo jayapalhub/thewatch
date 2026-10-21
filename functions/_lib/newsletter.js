@@ -51,6 +51,38 @@ function dayBlock(key, evs, siteUrl, issueId) {
 // Profile nudge, filled in per subscriber at send time (see personalize in dispatch.js): only people who have not
 // answered the three profile questions see it. The archive and anyone who has answered get nothing in its place.
 export const PROFILE_NUDGE = "{{PROFILE_NUDGE}}";
+// Picked for you: up to three events from this issue that match the subscriber's interests, filled per subscriber
+// at send time. Ranked by topic overlap, then free before paid, then soonest. No interests, no block.
+export const PICKS_SLOT = "{{PICKS}}";
+const FREEISH = new Set(["free", "members_free", "donation"]);
+export function parseInterests(v) {
+  let list = v; if (typeof v === "string") { try { list = JSON.parse(v || "[]"); } catch { list = []; } }
+  return Array.isArray(list) ? list.filter((k) => TOPICS[k]) : [];
+}
+export function picksFor(events, interests, n = 3) {
+  const want = new Set(parseInterests(interests));
+  if (!want.size) return [];
+  return (events || [])
+    .map((e) => ({ e, score: (e.topics || []).filter((t) => want.has(t)).length }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || (FREEISH.has(a.e.cost_type) ? 0 : 1) - (FREEISH.has(b.e.cost_type) ? 0 : 1) || a.e.start_at.localeCompare(b.e.start_at))
+    .slice(0, n).map((x) => x.e);
+}
+export function picksBlock(siteUrl, events, interests, issueId) {
+  const picks = picksFor(events, interests);
+  if (!picks.length) return "";
+  const labels = parseInterests(interests).map((k) => TOPICS[k]);
+  const rows = picks.map((e) => {
+    const meta = [`${weekday(e.start_at).slice(0, 3)} ${monthName(e.start_at).slice(0, 3)} ${dayNum(e.start_at)}`, fmtTimeRange(e.start_at, e.end_at), e.org_display, costLabel(e) && e.cost_type !== "unknown" ? costLabel(e) : ""].filter(Boolean).join(" · ");
+    return `<div style="margin:8px 0 0;"><a href="${go(siteUrl, e, "page", issueId)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a><div style="font-size:13px;color:${MUTED};">${esc(meta)}</div></div>`;
+  }).join("");
+  return `<div style="border:1px solid ${MIST};border-radius:10px;padding:12px 16px;margin:0 0 18px;">
+    <div style="font-weight:800;font-size:13px;color:${SHIELD};">Picked for you</div>
+    <div style="font-size:12px;color:${MUTED};margin-top:2px;">From this week, based on what you told us you want more of: ${esc(labels.join(", "))}.</div>
+    ${rows}
+  </div>`;
+}
+
 // Hiring this week: three roles per subscriber, matched to their seniority, filled at send time like the nudge.
 export const JOBS_SLOT = "{{JOBS}}";
 export function jobsBlock(siteUrl, city, jobs, seniority, issueId) {
@@ -85,6 +117,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   return `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:${INK};">
   <div style="font-size:13px;color:${MUTED};margin:0 0 14px;">The week of ${range} · ${events.length} event${events.length === 1 ? "" : "s"} in ${esc(city.name)} · <a href="${siteUrl}/${city.slug}/issues/${issue.week_start}" style="color:${MUTED};">Read online</a></div>
   ${note ? `<div style="margin:0 0 18px;">${note}</div>` : ""}
+  ${events.length ? PICKS_SLOT : ""}
   ${featured.length ? `<div style="background:${PAPER};border-left:4px solid ${ELECTRIC};padding:12px 16px;border-radius:8px;margin:0 0 18px;">
     <div style="font-weight:800;font-size:13px;color:${SHIELD};margin-bottom:4px;">Worth your evening</div>
     ${featured.map((e) => `<div style="margin:6px 0;"><a href="${go(siteUrl, e, "page", issue.id)}" style="color:${INK};font-weight:700;text-decoration:none;">${esc(e.title)}</a> <span style="color:${MUTED};font-size:13px;">${esc(weekday(e.start_at))} ${esc(fmtTimeRange(e.start_at, e.end_at))}${e.org_display ? " · " + esc(e.org_display) : ""}</span></div>`).join("")}

@@ -1,7 +1,8 @@
 // Newsletter dispatch: one issue per city per week, previewed Saturday 8 AM local to Jerome,
 // sent Sunday 8 AM local to that city's subscribers through Resend, with no human step required.
 import { CITIES, MAIL_ADDRESS } from "./constants.js";
-import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobsBlock } from "./newsletter.js";
+import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobsBlock, picksBlock, parseInterests } from "./newsletter.js";
+import { TOPICS } from "./constants.js";
 import { mondayOf, addDays } from "./dates.js";
 
 export const SEND_HOUR = 8;           // local time, Sunday
@@ -52,7 +53,17 @@ export async function buildIssue(env, issue, city) {
 function personalize(html, siteUrl, sub, ctx = {}) {
   const nudge = sub.profile_token && !sub.profile_completed_at ? profileNudgeHtml(siteUrl, sub.profile_token) : "";
   const jobs = html.includes("{{JOBS}}") && ctx.city ? jobsBlock(siteUrl, ctx.city, ctx.jobs, sub.seniority, ctx.issueId) : "";
-  return html.replace(/\{\{UNSUB\}\}/g, `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`).replace(/\{\{PROFILE_NUDGE\}\}/g, nudge).replace(/\{\{JOBS\}\}/g, jobs);
+  const picks = html.includes("{{PICKS}}") ? picksBlock(siteUrl, ctx.events, sub.interests, ctx.issueId) : "";
+  return html.replace(/\{\{UNSUB\}\}/g, `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`).replace(/\{\{PROFILE_NUDGE\}\}/g, nudge).replace(/\{\{JOBS\}\}/g, jobs).replace(/\{\{PICKS\}\}/g, picks);
+}
+
+// For previews: how many subscribers in a city have interests, and the most common ones (used as the sample).
+export async function interestSample(db, citySlug) {
+  const { results } = await db.prepare("SELECT interests FROM subscribers WHERE status='active' AND city=? AND interests IS NOT NULL AND interests NOT IN ('', '[]')").bind(citySlug).all();
+  const counts = {}; let withInterests = 0;
+  for (const r of results) { const list = parseInterests(r.interests); if (list.length) withInterests++; for (const k of list) counts[k] = (counts[k] || 0) + 1; }
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k);
+  return { withInterests, top, labels: top.map((k) => TOPICS[k]) };
 }
 
 // Saturday: the preview to Jerome.
@@ -60,12 +71,16 @@ export async function sendPreview(env, issue, city) {
   const { data, subject, html, siteUrl } = await buildIssue(env, issue, city);
   const { n } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=?").bind(city.slug).first();
   const { n: noProfile } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=? AND profile_completed_at IS NULL").bind(city.slug).first();
+  const sample = await interestSample(env.DB, city.slug);
+  const picksNote = !data.events.length ? "" : sample.withInterests
+    ? ` Picked for you under the note goes to the ${sample.withInterests} subscriber${sample.withInterests === 1 ? "" : "s"} who chose interests, each matched to their own; this preview uses the most common: ${sample.labels.join(" and ")}.`
+    : " Picked for you is not in this issue yet because no subscriber has chosen interests.";
   const banner = `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto 18px;padding:12px 16px;border:2px solid #1FB6F0;border-radius:10px;font-size:14px;line-height:1.5;color:#0E1B2E;">
     <strong>Preview for ${city.name}.</strong> This goes to ${n} subscriber${n === 1 ? "" : "s"} on Sunday at ${SEND_HOUR}:00 AM ${city.name} time with the subject line <em>${subject.replace(/</g, "&lt;")}</em>.<br>
     To change the note, subject or picks, edit it at <a href="${siteUrl}/admin/issues/${issue.id}">${siteUrl}/admin/issues/${issue.id}</a> any time before then. To stop it, press Cancel this send on that page. If you do nothing, it goes out as shown.<br>
-    ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}. The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.${data.jobs && data.jobs.length ? ` Hiring this week shows three of the ${data.jobs.length} live roles, matched to each subscriber's level; this preview shows the default pick.` : ""}</div>`;
+    ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}.${picksNote} The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.${data.jobs && data.jobs.length ? ` Hiring this week shows three of the ${data.jobs.length} live roles, matched to each subscriber's level; this preview shows the default pick.` : ""}</div>`;
   const to = env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai";
-  await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview" }, { jobs: data.jobs, city, issueId: issue.id }) });
+  await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) });
   await env.DB.prepare("UPDATE issues SET subject=COALESCE(subject, ?), preview_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(subject, issue.id).run();
   return { to, subject, subscribers: n };
 }
@@ -74,11 +89,11 @@ export async function sendPreview(env, issue, city) {
 export async function dispatchIssue(env, issue, city) {
   if (issue.status === "cancelled" || issue.status === "sent") return { skipped: issue.status };
   const { data, subject, html, siteUrl } = await buildIssue(env, issue, city);
-  const ctx = { jobs: data.jobs, city, issueId: issue.id };
+  const ctx = { jobs: data.jobs, events: data.events, city, issueId: issue.id };
   if (issue.status !== "sending") await env.DB.prepare("UPDATE issues SET status='sending', subject=?, dispatched_at=COALESCE(dispatched_at, datetime('now')), generated_html=?, updated_at=datetime('now') WHERE id=?").bind(subject, html, issue.id).run();
   let lastId = issue.last_sent_subscriber_id || 0, sent = 0, batches = 0;
   while (batches < MAX_BATCHES_PER_RUN) {
-    const { results } = await env.DB.prepare("SELECT id, email, unsub_token, profile_token, profile_completed_at, seniority FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
+    const { results } = await env.DB.prepare("SELECT id, email, unsub_token, profile_token, profile_completed_at, seniority, interests FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
     if (!results.length) {
       await env.DB.prepare("UPDATE issues SET status='sent', completed_at=datetime('now'), sent_count=sent_count+?, last_sent_subscriber_id=?, updated_at=datetime('now') WHERE id=?").bind(sent, lastId, issue.id).run();
       return { done: true, sent };

@@ -1,9 +1,9 @@
 import { html, page, raw, redirect, readForm, str, notFound, list } from "../../_lib/html.js";
 import { adminShell, flash } from "../../_lib/admin.js";
-import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobsBlock } from "../../_lib/newsletter.js";
+import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobsBlock, picksBlock } from "../../_lib/newsletter.js";
 import { fmtDateShort, fmtTimeRange } from "../../_lib/dates.js";
 import { CITIES, DEFAULT_CITY } from "../../_lib/constants.js";
-import { sendPreview, dispatchIssue, SEND_HOUR } from "../../_lib/dispatch.js";
+import { sendPreview, dispatchIssue, SEND_HOUR, interestSample } from "../../_lib/dispatch.js";
 
 export async function onRequestGet({ params, request, env, data }) {
   const issue = await env.DB.prepare("SELECT * FROM issues WHERE id=?").bind(params.id).first();
@@ -11,7 +11,8 @@ export async function onRequestGet({ params, request, env, data }) {
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
   const city = CITIES[issue.city] || CITIES[DEFAULT_CITY];
   const d = await loadIssueData(env.DB, issue);
-  const htmlOut = renderIssueHtml(issue, d, siteUrl, city).replace(/\{\{UNSUB\}\}/g, siteUrl + "/unsubscribe?t=preview").replace(/\{\{PROFILE_NUDGE\}\}/g, profileNudgeHtml(siteUrl, "preview")).replace(/\{\{JOBS\}\}/g, jobsBlock(siteUrl, city, d.jobs, null, issue.id)); // nudge: only people without a profile; jobs: matched per subscriber
+  const sample = await interestSample(env.DB, city.slug);
+  const htmlOut = renderIssueHtml(issue, d, siteUrl, city).replace(/\{\{PICKS\}\}/g, picksBlock(siteUrl, d.events, sample.top, issue.id)).replace(/\{\{UNSUB\}\}/g, siteUrl + "/unsubscribe?t=preview").replace(/\{\{PROFILE_NUDGE\}\}/g, profileNudgeHtml(siteUrl, "preview")).replace(/\{\{JOBS\}\}/g, jobsBlock(siteUrl, city, d.jobs, null, issue.id)); // nudge: only people without a profile; jobs: matched per subscriber
   const { n: subCount } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=?").bind(city.slug).first();
   const subjects = suggestSubjects(d, issue);
   const sc = issue.sponsor_name ? await env.DB.prepare("SELECT COUNT(*) n FROM link_clicks WHERE issue_id=? AND target='sponsor'").bind(issue.id).first() : null;
