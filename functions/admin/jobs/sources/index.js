@@ -46,7 +46,7 @@ export async function onRequestGet({ request, env, data }) {
     </div>
     <div class="a-grid-2">
       <label>Board details <small>(Workday: tenant, host, site from the URL tenant.host.myworkdayjobs.com/site. Greenhouse or Ashby: the board name. Lever or SmartRecruiters: the company name. Eightfold: the careers host and the company domain it passes to its API. Radancy: the careers host.)</small><input name="config" required maxlength="300" placeholder='icwgroup, wd5, ICW  or  sonyinteractiveentertainmentglobal  or  careers.qualcomm.com, qualcomm.com'></label>
-      <label>Location must include <small>(comma separated; any one is enough)</small><input name="location_terms" required maxlength="200" placeholder="San Diego, Carlsbad, Poway"></label>
+      <label>Location must include <small>(comma separated; any one is enough)</small><input name="location_terms" required maxlength="600" placeholder="San Diego, Carlsbad, Poway"></label>
     </div>
     <div class="a-grid-2">
       <label>Search text <small>(Workday only; the city name keeps big boards focused)</small><input name="search_text" maxlength="60" placeholder="security San Jose"></label>
@@ -79,7 +79,7 @@ export async function onRequestPost({ request, env }) {
   if (action === "toggle" && id) { await db.prepare("UPDATE job_sources SET active = CASE active WHEN 1 THEN 0 ELSE 1 END WHERE id=?").bind(id).run(); return back("Updated."); }
   if (action === "delete" && id) { await db.prepare("DELETE FROM job_sources WHERE id=?").bind(id).run(); return back("Removed."); }
   if (action === "add") {
-    const kind = SOURCE_KINDS[str(p.kind)] ? str(p.kind) : null, name = str(p.employer_name, 120), terms = str(p.location_terms, 200), city = CITIES[str(p.city, 30)] ? str(p.city, 30) : null;
+    const kind = SOURCE_KINDS[str(p.kind)] ? str(p.kind) : null, name = str(p.employer_name, 120), terms = str(p.location_terms, 600), city = CITIES[str(p.city, 30)] ? str(p.city, 30) : null;
     const cfg = kind && parseConfig(kind, str(p.config, 300));
     if (!kind || !name || !terms || !city || !cfg) return back("Employer, city, board details and location words are all required.");
     const orgId = await ensureEmployerOrg(db, name, city || DEFAULT_CITY);
