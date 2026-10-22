@@ -177,12 +177,14 @@ export async function runSource(db, src, { now = new Date() } = {}) {
   }
   const horizon = new Date(now.getTime() + WINDOW_DAYS * 86400000);
   let topics = []; try { topics = JSON.parse(src.topics || "[]"); } catch {}
-  // Whole-word keyword filter for mixed feeds ("AI" must not match "detail")
-  const kw = (src.keywords || "").split(",").map((k) => k.trim()).filter(Boolean)
+  // Whole-word keyword filter for mixed feeds ("AI" must not match "detail"). A list that starts with "title:" is
+  // matched against the title only, for feeds whose descriptions mention everything (Free Live CPE).
+  const titleOnly = /^\s*title:/i.test(src.keywords || "");
+  const kw = String(src.keywords || "").replace(/^\s*title:/i, "").split(",").map((k) => k.trim()).filter(Boolean)
     .map((k) => new RegExp(`(^|[^a-z0-9])${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`, "i"));
   for (const it of items) {
     if (kw.length) {
-      const hay = `${it.title} ${it.summary || ""}`;
+      const hay = titleOnly ? String(it.title || "") : `${it.title} ${it.summary || ""}`;
       if (!kw.some((re) => re.test(hay))) { stats.skipped++; continue; }
     }
     if (!it.title || !it.startUtc || !(it.url || "").startsWith("http")) { stats.skipped++; continue; }
