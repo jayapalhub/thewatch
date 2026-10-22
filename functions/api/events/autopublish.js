@@ -6,6 +6,7 @@ import { runJobMaintenance } from "../../_lib/jobs.js";
 import { runReferralThanks } from "../../_lib/referrals.js";
 import { runAllJobSources } from "../../_lib/job-sources.js";
 import { runLinkedInSchedule } from "../../_lib/linkedin.js";
+import { runMondayDigest } from "../../_lib/digest.js";
 
 // POST /api/events/autopublish: publish every pending row whose hold has passed.
 // Auth: Cloudflare Access session (from the admin) or Authorization: Bearer ADMIN_TOKEN (cron worker).
@@ -18,6 +19,7 @@ export async function onRequestPost(context) {
   const referrals = await runReferralThanks(context.env).catch((e) => ({ error: e && e.message }));
   const boards = await runAllJobSources(context.env.DB, { max: 4 }).catch((e) => [{ error: e && e.message }]); // one Workday board an hour, or a few of the cheaper API boards; each board is read about weekly
   const linkedin = await runLinkedInSchedule(context.env).catch((e) => ({ error: e && e.message })); // Monday and Thursday page posts
-  return json({ success: true, ...r, reminders, jobs, referrals, boards, linkedin });
+  const digest = await runMondayDigest(context.env).catch((e) => ({ error: e && e.message })); // Monday numbers to Jerome, once a week
+  return json({ success: true, ...r, reminders, jobs, referrals, boards, linkedin, digest });
 }
 export async function onRequest() { return json({ success: false, error: "method_not_allowed" }, 405); }
