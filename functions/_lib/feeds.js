@@ -213,6 +213,8 @@ export async function runSource(db, src, { now = new Date() } = {}) {
       if (!kw.some((re) => re.test(hay))) { stats.skipped++; continue; }
     }
     if (!it.title || !it.startUtc || !(it.url || "").startsWith("http")) { stats.skipped++; continue; }
+    // English calendar: sessions titled in Japanese, Chinese, Korean, Cyrillic, Arabic, Hebrew or Thai are skipped.
+    if (/[Ѐ-ӿ֐-ۿ฀-๿぀-ヿ㐀-鿿가-힯]/.test(it.title)) { stats.skipped++; continue; }
     if (it.startUtc < now || it.startUtc > horizon) { stats.skipped++; continue; }
     stats.fetched++;
     await enrichFromAggregator(db, it);
