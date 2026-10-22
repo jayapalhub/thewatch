@@ -3,7 +3,7 @@ import { adminShell, flash } from "../../_lib/admin.js";
 import { runAllSources } from "../../_lib/feeds.js";
 import { CITIES } from "../../_lib/constants.js";
 
-const KINDS = { brighttalk: "BrightTALK channel feed", ical: "iCal / ICS feed" };
+const KINDS = { brighttalk: "BrightTALK channel feed", ical: "iCal / ICS feed", sans: "SANS webcasts (sans.org/api/algolia)" };
 
 export async function onRequestGet({ request, env, data }) {
   const msg = new URL(request.url).searchParams.get("msg");

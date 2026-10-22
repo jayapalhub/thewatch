@@ -59,7 +59,7 @@ export async function onRequestPost({ request, env }) {
     const expiry = defaultExpiry(from) > until ? defaultExpiry(from) : until; // the listing outlives the pin by the usual 30 days
     if (jobId) {
       // A pending role that Jerome is pinning is a role he has approved: publish it with the pin.
-      await db.prepare("UPDATE jobs SET featured_until=?, status=CASE WHEN status IN ('pending_review','draft') THEN 'published' ELSE status END, published_at=COALESCE(published_at, strftime('%Y-%m-%dT%H:%M:%fZ','now')), expires_at=CASE WHEN expires_at IS NULL OR expires_at < ? THEN ? ELSE expires_at END, hold=0, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
+      await db.prepare("UPDATE jobs SET featured_until=?, status=CASE WHEN status IN ('pending_review','draft','closed','expired') THEN 'published' ELSE status END, published_at=COALESCE(published_at, strftime('%Y-%m-%dT%H:%M:%fZ','now')), expires_at=CASE WHEN expires_at IS NULL OR expires_at < ? THEN ? ELSE expires_at END, hold=0, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?")
         .bind(until, expiry, expiry, jobId).run();
     } else {
       const emp = await findEmployer(db, f.employer);

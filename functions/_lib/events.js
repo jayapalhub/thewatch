@@ -4,7 +4,7 @@ import { TOPICS, FORMATS, COST_TYPES, eventPath, orgPath, calendarPath, SHOW_BS_
 import { fmtTimeRange, fmtDateLong, weekday, month3, dayNum, dateKey, todayKey, nowLocalIso } from "./dates.js";
 
 const SELECT = `
-  SELECT e.*, o.name AS org_name, o.slug AS org_slug, o.short_name AS org_short, o.type AS org_type,
+  SELECT e.*, o.name AS org_name, o.slug AS org_slug, o.short_name AS org_short, o.type AS org_type, o.website AS org_website,
          v.name AS v_name, v.address_line AS v_address, v.neighborhood AS v_neighborhood, v.city AS v_city
   FROM events e
   LEFT JOIN organizations o ON o.id = e.organization_id

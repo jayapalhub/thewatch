@@ -33,7 +33,7 @@ const th = (v, right = false) => `<th style="padding:4px 8px;text-align:${right 
 
 // One HTML block, used by the email and the admin home page.
 export function renderNumbers(n, { siteUrl = "https://bettersecurity.ai" } = {}) {
-  const row = (c) => { const s = n.subs[c.slug] || {}, e = n.events[c.slug] || {}, j = n.jobs[c.slug] || {}; return `<tr>${td(c.name)}${td(`${s.active || 0} (+${s.added || 0}, −${s.gone || 0})`, true)}${td(`${e.published || 0} / ${e.upcoming || 0}`, true)}${td(e.held || 0, true)}${td(`${j.published || 0} / ${j.live || 0}`, true)}${td(j.closed || 0, true)}</tr>`; };
+  const row = (c) => { const s = n.subs[c.slug] || {}, e = n.events[c.slug] || {}, j = n.jobs[c.slug] || {}; return `<tr>${td(c.name)}${td(`${s.active || 0} (${s.added || 0} new, ${s.gone || 0} left)`, true)}${td(`${e.published || 0} / ${e.upcoming || 0}`, true)}${td(e.held || 0, true)}${td(`${j.published || 0} / ${j.live || 0}`, true)}${td(j.closed || 0, true)}</tr>`; };
   const virt = n.events.virtual ? `<tr>${td("Virtual")}${td("", true)}${td(`${n.events.virtual.published || 0} / ${n.events.virtual.upcoming || 0}`, true)}${td(n.events.virtual.held || 0, true)}${td("", true)}${td("", true)}</tr>` : "";
   const issues = n.issues.length ? n.issues.map((i) => `<li>${esc((CITIES[i.city] || {}).name || i.city)} issue ${i.issue_number || ""}, week of ${esc(i.week_start)}: ${i.status === "sent" ? `sent to ${i.sent_count}` : esc(i.status)}${i.send_error ? `, error: ${esc(i.send_error)}` : ""}${i.subject ? `, "${esc(i.subject)}"` : ""}</li>`).join("") : "<li>No issue went out this week.</li>";
   const clicks = n.clicks.length ? n.clicks.map((c) => `${esc(c.target || "other")} ${c.n}`).join(", ") : "none";
@@ -41,7 +41,7 @@ export function renderNumbers(n, { siteUrl = "https://bettersecurity.ai" } = {})
   const jobsTop = n.topJobs.length ? `<ul style="margin:6px 0 0;padding-left:18px;">${n.topJobs.map((j) => `<li>${esc(j.title)}, ${esc(j.employer_name)} (${esc((CITIES[j.city] || {}).name || j.city)}): ${j.apply_clicks} apply clicks in total</li>`).join("")}</ul>` : "";
   const trouble = [...n.boardsBad.map((b) => `Board ${esc(b.employer_name)} (${esc((CITIES[b.city] || {}).name || b.city)}): ${esc(b.last_status)}`), ...n.feedsBad.map((f) => `Feed ${esc(f.name)}: ${esc(f.last_status)}`)];
   const li = n.linkedin.length ? n.linkedin.map((p) => `${esc((CITIES[p.city] || {}).name || p.city)} ${p.kind} ${p.status}`).join(", ") : "nothing (page not connected, or nothing to post)";
-  return `<table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr>${th("City")}${th("Subscribers (new, left)", true)}${th("Events published / upcoming", true)}${th("Held", true)}${th("Roles published / live", true)}${th("Closed", true)}</tr></thead><tbody>${n.cities.map(row).join("")}${virt}</tbody></table>
+  return `<table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr>${th("City")}${th("Subscribers (new, left this week)", true)}${th("Events published / upcoming", true)}${th("Held", true)}${th("Roles published / live", true)}${th("Closed", true)}</tr></thead><tbody>${n.cities.map(row).join("")}${virt}</tbody></table>
   <h3 style="margin:18px 0 6px;font-size:15px;">Sunday email</h3><ul style="margin:0;padding-left:18px;">${issues}</ul>
   <h3 style="margin:18px 0 6px;font-size:15px;">Clicks this week</h3><p style="margin:0;">${clicks}.</p>${top}${jobsTop}
   <h3 style="margin:18px 0 6px;font-size:15px;">LinkedIn page</h3><p style="margin:0;">${li}.</p>

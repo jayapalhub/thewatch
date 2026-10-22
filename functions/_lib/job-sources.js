@@ -7,8 +7,8 @@ import { cleanJobUrl, JOB_DAYS } from "./jobs.js";
 import { slugify } from "./html.js";
 
 // What counts as one of our roles. Title must match SECURITY_RE and must not match NOT_OURS_RE.
-const SECURITY_RE = /\b(security|cyber|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
-const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|event security|workplace security|set watch|security guard|patrol|security officer|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
+const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
+const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems )security officer|physical security|corporate security|regional security|global security|event security|workplace security|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
 export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", successfactors: "SuccessFactors" };
 
@@ -103,6 +103,7 @@ async function workdayStillOpen(cfg, url, fetcher) {
 }
 export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
   const j = await fetcher(`https://boards-api.greenhouse.io/v1/boards/${cfg.board}/jobs?content=true`);
+  if (!j || !Array.isArray(j.jobs)) throw new Error("unexpected response from Greenhouse");
   return (j.jobs || []).filter((x) => isOurRole(x.title)).map((x) => {
     const loc = (x.location && x.location.name) || (x.offices || []).map((o) => o.name).join("; ");
     return { key: String(x.id), title: x.title, url: x.absolute_url, location: loc, posted_at: (x.updated_at || "").slice(0, 10) || null, salary_text: payText(x.content), remote: inferRemote(loc) };
@@ -110,7 +111,8 @@ export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
 }
 export async function pullLever(cfg, _search, fetcher = getJson) {
   const j = await fetcher(`https://api.lever.co/v0/postings/${cfg.company}?mode=json`);
-  return (Array.isArray(j) ? j : []).filter((x) => isOurRole(x.text)).map((x) => {
+  if (!Array.isArray(j)) throw new Error("unexpected response from Lever");
+  return j.filter((x) => isOurRole(x.text)).map((x) => {
     const c = x.categories || {}; const loc = Array.from(new Set([c.location, ...(c.allLocations || [])].filter(Boolean))).join("; ");
     const wp = (x.workplaceType || "").toLowerCase();
     const title = String(x.text || "").replace(/\s*\((?:R|REQ|JR)?[-\s]?\d{3,}\)\s*$/i, "").trim(); // "(R5824)" requisition codes
@@ -119,6 +121,7 @@ export async function pullLever(cfg, _search, fetcher = getJson) {
 }
 export async function pullAshby(cfg, _search, fetcher = getJson) {
   const j = await fetcher(`https://api.ashbyhq.com/posting-api/job-board/${cfg.board}?includeCompensation=true`);
+  if (!j || !Array.isArray(j.jobs)) throw new Error("unexpected response from Ashby");
   return (j.jobs || []).filter((x) => isOurRole(x.title)).map((x) => {
     const loc = [x.location, ...(x.secondaryLocations || []).map((l) => l.location)].filter(Boolean).join("; ");
     const comp = x.compensation && x.compensation.compensationTierSummary;
@@ -132,7 +135,8 @@ export async function pullEightfold(cfg, searchText, fetcher = getJson, terms = 
   for (let start = 0; start < 60; start += 10) {
     const q = new URLSearchParams({ domain: cfg.company, query: searchText || "security", location: loc, start: String(start), num: "10", sort_by: "relevance", filter_distance: "50" });
     const j = await fetcher(`https://${cfg.host}/api/pcsx/search?${q}`, { headers: { Referer: `https://${cfg.host}/careers` } });
-    const ps = (j && j.data && j.data.positions) || [];
+    if (!j || !j.data || !Array.isArray(j.data.positions)) throw new Error("unexpected response from Eightfold");
+    const ps = j.data.positions;
     out.push(...ps);
     if (!ps.length || out.length >= ((j.data && j.data.count) || 0)) break;
   }
@@ -145,7 +149,8 @@ export async function pullEightfold(cfg, searchText, fetcher = getJson, terms = 
 export async function pullSmartRecruiters(cfg, searchText, fetcher = getJson) {
   const q = new URLSearchParams({ q: searchText || "security", limit: "100" });
   const j = await fetcher(`https://api.smartrecruiters.com/v1/companies/${cfg.company}/postings?${q}`);
-  return (j.content || []).filter((x) => isOurRole(x.name)).map((x) => {
+  if (!j || !Array.isArray(j.content)) throw new Error("unexpected response from SmartRecruiters");
+  return j.content.filter((x) => isOurRole(x.name)).map((x) => {
     const l = x.location || {}; const loc = [l.city, l.region, l.country].filter(Boolean).join(", ");
     return { key: String(x.id), title: x.name, url: `https://jobs.smartrecruiters.com/${cfg.company}/${x.id}`, location: loc, posted_at: (x.releasedDate || "").slice(0, 10) || null, salary_text: null, remote: l.remote ? "remote" : inferRemote(loc) };
   });
@@ -159,7 +164,8 @@ export async function pullRadancy(cfg, searchText, fetcher = getJson) {
   for (let page = 1; page <= 5; page++) {
     const q = new URLSearchParams({ ActiveFacetID: "0", CurrentPage: String(page), RecordsPerPage: "100", Distance: "50", RadiusUnitType: "0", Keywords: searchText || "security", Location: "", ShowRadius: "False", IsPagination: page > 1 ? "True" : "False", SearchResultsModuleName: "Search Results", SearchFiltersModuleName: "Search Filters", SortCriteria: "0", SortDirection: "0", SearchType: "5", ResultsType: "0" });
     const j = await fetcher(`https://${cfg.host}/search-jobs/results?${q}`, { headers: { "X-Requested-With": "XMLHttpRequest", Referer: `https://${cfg.host}/search-jobs` } });
-    const html = (j && j.results) || "";
+    if (!j || typeof j.results !== "string") throw new Error("unexpected response from Radancy");
+    const html = j.results;
     let added = 0;
     const re = /<a\b([^>]*?)href="([^"]*\/job\/[^"]*)"([^>]*)>([\s\S]*?)<\/a>/gi; let m;
     while ((m = re.exec(html))) {
@@ -186,7 +192,8 @@ export async function pullPhenom(cfg, searchText, fetcher = getJson) {
   for (let from = 0; from < 300; from += 50) {
     const body = { lang: `${lang}_${country}`, deviceType: "desktop", country, pageName: "search-results", ddoKey: "refineSearch", sortBy: "", subsearch: "", from, jobs: true, counts: true, all_fields: ["category", "country", "state", "city", "type"], size: 50, clearAll: false, jdsource: "facets", isSliderEnable: false, pageId: "page12", siteType: "external", keywords: searchText || "security", global: true, selected_fields: cfg.state ? { state: [cfg.state] } : {}, locationData: {} };
     const j = await fetcher(`https://${cfg.host}/widgets`, { method: "POST", headers: { "Content-Type": "application/json", Referer: `https://${cfg.host}/${path}/search-results` }, body: JSON.stringify(body) });
-    const rs = (j && j.refineSearch) || {}; const jobs = (rs.data && rs.data.jobs) || [];
+    if (!j || !j.refineSearch) throw new Error("unexpected response from Phenom");
+    const rs = j.refineSearch; const jobs = (rs.data && rs.data.jobs) || [];
     for (const x of jobs) {
       const id = String(x.jobId || x.reqId || ""); if (!id || seen.has(id)) continue; seen.add(id);
       if (!isOurRole(x.title)) continue;
@@ -205,7 +212,8 @@ export async function pullIcims(cfg, searchText, fetcher = getJson) {
   for (let page = 1; page <= 2; page++) {
     const q = new URLSearchParams({ keywords: searchText || "security", page: String(page), limit: "100", sortBy: "relevance", descending: "false", internal: "false" });
     const j = await fetcher(`https://${cfg.host}/api/jobs?${q}`, { headers: { Referer: `https://${cfg.host}/careers-home/jobs` } });
-    const jobs = (j && j.jobs) || [];
+    if (!j || !Array.isArray(j.jobs)) throw new Error("unexpected response from iCIMS");
+    const jobs = j.jobs;
     for (const row of jobs) {
       const x = row.data || row; const id = String(x.req_id || x.slug || ""); if (!id || seen.has(id)) continue; seen.add(id);
       if (!isOurRole(x.title)) continue;
@@ -235,7 +243,8 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   const body = (pageNumber) => JSON.stringify({ locale: "en_US", pageNumber, sortBy: "", keywords: searchText || "security", location: "", facetFilters: {}, brand: "", skills: [], categoryId: 0, alertId: "", rcmCandidateId: "" });
   // Newer sites: JSON. A classic site answers this with an HTML page (or 404), which is the cue to fall back.
   let json = null;
-  try { json = await fetcher(`${base}/services/recruiting/v1/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: body(0) }); } catch { json = null; }
+  try { json = await fetcher(`${base}/services/recruiting/v1/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: body(0) }); }
+  catch (e) { if (!/HTTP 40[45]|JSON|Unexpected token/i.test(String(e && e.message))) throw e; json = null; } // a classic site answers 404 or HTML; anything else is a real error
   if (json && Array.isArray(json.jobSearchResult)) {
     let page = 0, got = json;
     while (got && Array.isArray(got.jobSearchResult) && got.jobSearchResult.length) {
@@ -251,6 +260,7 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   // Classic Career Site Builder: HTML rows, 25 a page by startrow.
   for (let start = 0; start < 250; start += 25) {
     const html = await fetcher(`${base}/search/?q=${encodeURIComponent(searchText || "security")}&sortColumn=referencedate&sortDirection=desc&startrow=${start}`, { text: true });
+    if (start === 0 && !/class="data-row"|jobTitle-link|searchResultsShell|No jobs found|no results/i.test(String(html))) throw new Error("unexpected page from SuccessFactors (no job table)");
     const rows = String(html).split(/<tr[^>]*class="data-row"/i).slice(1);
     for (const row of rows) {
       const a = /<a[^>]*href="([^"]+)"[^>]*class="jobTitle-link"[^>]*>([\s\S]*?)<\/a>/i.exec(row) || /<a[^>]*class="jobTitle-link"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(row);

@@ -164,12 +164,37 @@ export async function enrichFromAggregator(db, it) {
   }
 }
 
+// ---------- SANS webcasts ----------
+// sans.org/webcasts is an Algolia index behind the site's own proxy. One POST returns the upcoming webcasts with UTC
+// times, speakers, the CPE count and a description; every one is free and online. The feed row's url is the proxy.
+export async function fetchSans(url, now = new Date()) {
+  const body = { requests: [{ indexName: "webinar_single_startDateTimestamp_asc", params: { hitsPerPage: 100, page: 0, query: "", numericFilters: [`endDateTimestamp>=${Math.floor(now.getTime() / 1000)}`] } }] };
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "User-Agent": "TheWatchFeedBot/1.0 (+https://bettersecurity.ai)", Referer: "https://www.sans.org/webcasts/" }, body: JSON.stringify(body), cf: { cacheTtl: 0 } });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const j = await r.json();
+  return parseSans(j);
+}
+export function parseSans(j) {
+  const hits = (j && j.results && j.results[0] && j.results[0].hits) || [];
+  const out = [];
+  for (const h of hits) {
+    if (!h.utcStartDate || !h.utcStartTime || !h.title) continue;
+    const startUtc = new Date(`${h.utcStartDate}T${h.utcStartTime}Z`);
+    const endUtc = h.utcEndDate && h.utcEndTime ? new Date(`${h.utcEndDate}T${h.utcEndTime}Z`) : new Date(startUtc.getTime() + 3600000);
+    if (isNaN(startUtc)) continue;
+    const speakers = Array.isArray(h.speakers) ? h.speakers.map((sp) => (typeof sp === "string" ? sp : sp && (sp.name || sp.title))).filter(Boolean).join("; ") : null;
+    out.push({ uid: `sans:${h.webcastId || h.uid || h.objectID}`, title: String(h.title).trim(), startUtc, endUtc, url: /^https?:/.test(h.url || "") ? h.url : `https://www.sans.org${h.url || ""}`,
+      summary: String(h.description || "").trim(), speakers: speakers ? speakers.slice(0, 300) : null, platform: "SANS", cpeHint: parseFloat(h.cpesGiven) > 0 ? 1 : null, cpeHours: parseFloat(h.cpesGiven) || null, online: true });
+  }
+  return out;
+}
+
 export async function runSource(db, src, { now = new Date() } = {}) {
   const stats = { source_id: src.id, name: src.name, fetched: 0, added: 0, skipped: 0, error: null };
   let items = [];
   try {
-    const text = await fetchText(src.url);
-    items = src.kind === "brighttalk" ? parseBrightTalk(text) : parseIcal(text, src.timezone || TZ);
+    if (src.kind === "sans") items = await fetchSans(src.url, now);
+    else { const text = await fetchText(src.url); items = src.kind === "brighttalk" ? parseBrightTalk(text) : parseIcal(text, src.timezone || TZ); }
   } catch (e) {
     stats.error = String(e && e.message || e);
     await logRun(db, src, stats);
@@ -203,7 +228,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     const clash = await db.prepare("SELECT id FROM events WHERE slug=?").bind(slug).first();
     if (clash) slug += "-" + Math.random().toString(36).slice(2, 6);
     const isSd = src.city !== "virtual";
-    const online = src.kind === "brighttalk" ? true : it.online;
+    const online = src.kind === "brighttalk" || src.kind === "sans" ? true : it.online;
     const format = isSd ? (online ? "virtual" : "in_person") : "virtual";
     const cpe = src.cpe_default || it.cpeHint ? 1 : 0;
     const notes = `Feed import ${now.toISOString().slice(0, 10)} from ${src.name}.${it.aggregatorUrl ? ` Registration link and organizer taken from the organizer's own page via ${it.aggregatorUrl}.` : ""} Time taken from the feed (UTC ${it.startUtc.toISOString().slice(0, 16)}Z). Publishes automatically in 24 hours unless held or rejected.`;
@@ -215,8 +240,8 @@ export async function runSource(db, src, { now = new Date() } = {}) {
         isSd && !online ? (it.location || "See the organizer's page for the venue") : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
         startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), tz, format, online ? it.platform : null, it.speakers,
         firstSentence(it.summary, 200) || it.title, it.summary ? plainText(it.summary).slice(0, 4000) : null, it.url,
-        src.kind === "brighttalk" ? "free" : "unknown", src.kind === "brighttalk" ? 0 : null, src.kind === "brighttalk" ? 0 : null,
-        cpe, cpe && src.cpe_default ? 1 : null, cpe ? (src.cpe_body || "self_reported") : null, JSON.stringify(topics.length ? topics : ["threat_intel"]), "practitioner",
+        src.kind === "brighttalk" || src.kind === "sans" ? "free" : "unknown", src.kind === "brighttalk" || src.kind === "sans" ? 0 : null, src.kind === "brighttalk" || src.kind === "sans" ? 0 : null,
+        cpe, it.cpeHours || (cpe && src.cpe_default ? 1 : null), cpe ? (src.cpe_body || "self_reported") : null, JSON.stringify(topics.length ? topics : ["threat_intel"]), "practitioner",
         isSd && online ? 1 : 0, 0, "pending_review", "feed", it.aggregatorUrl || src.url, notes, it.uid, autoPublishAt()).run();
     stats.added++;
   }

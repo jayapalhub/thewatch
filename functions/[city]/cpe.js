@@ -10,7 +10,7 @@ const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
 const BODIES = [
   { key: "ISACA", name: "ISACA (CISA, CISM, CRISC, CGEIT, CDPSE)", rule: "20 hours a year at minimum and 120 over each three year cycle, reported each January." },
   { key: "ISC2", name: "ISC2 (CISSP, CCSP, SSCP)", rule: "120 hours over each three year cycle for the CISSP, with 40 a year suggested; group A credits for security topics." },
-  { key: "IIA", name: "IIA (CIA, CRMA)", rule: "40 hours a year for practising CIAs, reported by December 31." },
+  { key: "IIA", name: "IIA (CIA, CRMA)", rule: "40 hours a year for practicing CIAs, reported by December 31." },
   { key: "IAPP", name: "IAPP (CIPP, CIPM, CIPT, AIGP)", rule: "20 hours over each two year term, with privacy and AI governance sessions counting directly." },
 ];
 
@@ -33,7 +33,7 @@ export async function onRequestGet({ params, env }) {
   const orgs = [...byOrg.values()].sort((a, b) => (a.type === "vendor") - (b.type === "vendor") || b.count - a.count);
   const quarterEnd = addDays(today, 90);
   const faq = [
-    { q: `How many CPE hours can I earn in ${city.name} this quarter?`, a: `${hours ? `About ${Math.round(hours)} hours across ${cpeEvents.length} CPE eligible events` : `The calendar lists every CPE eligible event`} in ${city.region} between now and ${monthName(quarterEnd)} ${quarterEnd.slice(8, 10).replace(/^0/, "")}, ${inPerson.length} of them in person, plus ${n(virtual.length, "online session", "online sessions")} with CPE in the next 30 days.` },
+    { q: `How many CPE hours can I earn in ${city.name} this quarter?`, a: cpeEvents.length ? `About ${Math.round(hours)} hours across ${n(cpeEvents.length, "CPE eligible event", "CPE eligible events")} in ${city.region} between now and ${monthName(quarterEnd)} ${quarterEnd.slice(8, 10).replace(/^0/, "")}, ${inPerson.length} of them in person, plus ${n(virtual.length, "online session", "online sessions")} with CPE in the next 30 days.` : `The ${city.name} calendar is new; as chapters post their dates the CPE eligible ones appear here, and ${n(virtual.length, "online session", "online sessions")} with CPE are on the virtual calendar for the next 30 days.` },
     { q: "Do chapter meetings count toward CISA, CISSP or CIA renewal?", a: "Yes. ISACA, ISC2, IIA and IAPP all accept chapter meetings, conferences and educational webinars that cover their domains; the organizer states the hours and you self report them to your certification body with the event details as evidence." },
     { q: "Which events are free?", a: free.length ? `${free.length} of the coming CPE events in ${city.name} are free or free for members, listed below, and most online sessions are free.` : `Free CPE sessions appear on the calendar as organizers post them; most online sessions are free.` },
     { q: "How do I keep track of the hours?", a: "Subscribers to The Watch get a private CPE log: mark an event attended from the email or the event page and the hours, date and organizer are recorded, with a CSV export for your renewal." },
