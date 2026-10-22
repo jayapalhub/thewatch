@@ -1,7 +1,18 @@
+import { fmtUtcLocal } from "../../../_lib/dates.js";
 import { html, page, raw, readForm, redirect, str } from "../../../_lib/html.js";
 import { adminShell, flash } from "../../../_lib/admin.js";
 import { CITIES, DEFAULT_CITY } from "../../../_lib/constants.js";
 import { SOURCE_KINDS, runAllJobSources, ensureEmployerOrg } from "../../../_lib/job-sources.js";
+
+// The public address of a board, for a quick look at what the sweep reads.
+function boardUrl(s) {
+  let c = {}; try { c = JSON.parse(s.config || "{}"); } catch { return ""; }
+  if (s.kind === "workday" && c.tenant && c.host && c.site) return `https://${c.tenant}.${c.host}.myworkdayjobs.com/${c.site}`;
+  if (s.kind === "greenhouse" && c.board) return `https://boards.greenhouse.io/${c.board}`;
+  if (s.kind === "lever" && c.company) return `https://jobs.lever.co/${c.company}`;
+  if (s.kind === "ashby" && c.board) return `https://jobs.ashbyhq.com/${c.board}`;
+  return "";
+}
 
 // Admin > Jobs > Sources: the employer boards the Thursday sweep reads. Roles it finds publish in 24 hours unless held.
 export async function onRequestGet({ request, env, data }) {
@@ -14,10 +25,10 @@ export async function onRequestGet({ request, env, data }) {
   ${sources.map((s) => html`<tr class="${s.active ? "" : "a-dim"}">
     <td><strong>${s.employer_name}</strong>${s.notes ? html`<br><small class="a-muted">${s.notes}</small>` : ""}</td>
     <td>${(CITIES[s.city] || {}).name || s.city}</td>
-    <td>${SOURCE_KINDS[s.kind] || s.kind}<br><small class="a-muted">${s.config}</small></td>
+    <td>${SOURCE_KINDS[s.kind] || s.kind}<br><small>${boardUrl(s) ? html`<a href="${boardUrl(s)}" target="_blank" rel="noopener">${boardUrl(s).replace(/^https:\/\//, "")}</a>` : html`<span class="a-muted">${s.config}</span>`}</small></td>
     <td><small>${s.location_terms}</small></td>
     <td>${s.live} / ${s.pending}</td>
-    <td><small>${s.last_run_at ? html`${s.last_run_at}<br>${s.last_status || ""}` : html`<span class="a-muted">never</span>`}</small></td>
+    <td><small>${s.last_run_at ? html`${fmtUtcLocal(s.last_run_at)}<br>${s.last_status || ""}` : html`<span class="a-muted">never</span>`}</small></td>
     <td><form method="post" class="a-inline"><input type="hidden" name="id" value="${s.id}">
       <button class="a-btn a-btn-small" name="action" value="run_one">Run</button>
       <button class="a-btn a-btn-small" name="action" value="toggle">${s.active ? "Pause" : "Resume"}</button>
