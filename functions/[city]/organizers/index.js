@@ -76,6 +76,12 @@ export async function onRequestGet({ params, env }) {
       <p>Submit your next event and your organization gets a page here once it is approved.</p>
       <p><a class="btn btn-primary" href="/submit">Submit an event</a></p>
     </div>
+    <div class="dir-cta">
+      <h2>Put the ${city.name} calendar on your site</h2>
+      <p>One line of HTML shows the next six events in ${city.name} on your chapter or meetup page, with CPE hours, prices and links to each organizer's registration. It updates itself and never sets a cookie.</p>
+      <pre class="embed-code"><code>&lt;script src="https://bettersecurity.ai/embed/${city.slug}.js" async&gt;&lt;/script&gt;</code></pre>
+      <p class="dir-desc">Add <code>?n=10</code> to the address for ten events. <a href="/embed/${city.slug}" target="_blank" rel="noopener">See what it looks like</a>.</p>
+    </div>
   </div>`;
 
   return page(

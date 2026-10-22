@@ -483,3 +483,5 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .cpe-remove { background: none; border: 0; padding: 6px 4px; font: inherit; font-size: .85rem; color: #B42318; cursor: pointer; text-decoration: underline; }
 
 .cpe-free .dir-item small { color: var(--muted); }
+.embed-code { background: var(--navy); color: #fff; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: .9rem; }
+.dir-cta + .dir-cta { margin-top: 18px; }

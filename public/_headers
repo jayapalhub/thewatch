@@ -5,3 +5,5 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=()
 /assets/*
   Cache-Control: public, max-age=86400
+/embed/*
+  ! X-Frame-Options
