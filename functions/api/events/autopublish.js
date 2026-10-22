@@ -16,7 +16,7 @@ export async function onRequestPost(context) {
   const reminders = await runReminders(context.env).catch((e) => ({ error: e && e.message }));
   const jobs = await runJobMaintenance(context.env.DB).catch((e) => ({ error: e && e.message }));
   const referrals = await runReferralThanks(context.env).catch((e) => ({ error: e && e.message }));
-  const boards = await runAllJobSources(context.env.DB, { max: 1 }).catch((e) => [{ error: e && e.message }]); // one employer board an hour, each about weekly
+  const boards = await runAllJobSources(context.env.DB, { max: 4 }).catch((e) => [{ error: e && e.message }]); // one Workday board an hour, or a few of the cheaper API boards; each board is read about weekly
   const linkedin = await runLinkedInSchedule(context.env).catch((e) => ({ error: e && e.message })); // Monday and Thursday page posts
   return json({ success: true, ...r, reminders, jobs, referrals, boards, linkedin });
 }

@@ -276,13 +276,22 @@ async function finish(db, src, run) {
 // One board per call by default: a Worker invocation can only make a few dozen outbound requests, so the hourly cron
 // takes the board that has waited longest (never run first, then anything older than six days). Hundreds of boards
 // across many cities spread themselves over the week this way.
-export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true } = {}) {
+const REQUEST_COST = { workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
+export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40 } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-6 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
     : "SELECT * FROM job_sources WHERE active=1 ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?";
   const { results } = await db.prepare(sql).bind(...(onlyId ? [onlyId] : [max])).all();
   const out = [];
-  for (const src of results) out.push(await runJobSource(db, src, { fetcher }));
+  // Subrequest budget per invocation: a Workday board can take forty fetches, the API boards a handful, so an hour
+  // that lands on cheap boards reads several of them instead of leaving the slot half used.
+  let spent = 0;
+  for (const src of results) {
+    const cost = REQUEST_COST[src.kind] || 8;
+    if (out.length && spent + cost > budget) break;
+    out.push(await runJobSource(db, src, { fetcher }));
+    spent += cost;
+  }
   return out;
 }
 
