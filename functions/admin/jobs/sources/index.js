@@ -35,7 +35,7 @@ export async function onRequestGet({ request, env, data }) {
       <label>Location must include <small>(comma separated; any one is enough)</small><input name="location_terms" required maxlength="200" placeholder="San Diego, Carlsbad, Poway"></label>
     </div>
     <div class="a-grid-2">
-      <label>Search text <small>(Workday only)</small><input name="search_text" value="security" maxlength="60"></label>
+      <label>Search text <small>(Workday only; the city name keeps big boards focused)</small><input name="search_text" maxlength="60" placeholder="security San Jose"></label>
       <label>Notes<input name="notes" maxlength="300"></label>
     </div>
     <button class="a-btn a-btn-primary">Add board</button>
@@ -68,7 +68,7 @@ export async function onRequestPost({ request, env }) {
     if (!kind || !name || !terms || !city || !cfg) return back("Employer, city, board details and location words are all required.");
     const orgId = await ensureEmployerOrg(db, name);
     await db.prepare("INSERT INTO job_sources (city, organization_id, employer_name, kind, config, location_terms, search_text, notes) VALUES (?,?,?,?,?,?,?,?)")
-      .bind(city, orgId, name, kind, JSON.stringify(cfg), terms, str(p.search_text, 60) || "security", str(p.notes, 300) || null).run();
+      .bind(city, orgId, name, kind, JSON.stringify(cfg), terms, str(p.search_text, 60) || `security ${terms.split(",")[0].trim()}`, str(p.notes, 300) || null).run();
     return back(`Added ${name}. Press Run on its row to read it now; otherwise the hourly job gets to it.`);
   }
   return back("Unknown action.");

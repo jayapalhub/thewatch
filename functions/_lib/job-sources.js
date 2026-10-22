@@ -67,15 +67,17 @@ async function getJson(url, init = {}) {
 // ---------- adapters: each returns [{ key, title, url, location, posted_at (YYYY-MM-DD or null), salary_text, remote }] ----------
 const WORKDAY_MAX_DETAILS = 25; // detail fetches per run; a Worker invocation has a small subrequest budget
 
-export async function pullWorkday(cfg, searchText, fetcher = getJson) {
+export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []) {
   const base = `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com`;
   const out = [];
   let details = 0;
-  for (let offset = 0; offset < 200 && details < WORKDAY_MAX_DETAILS; offset += 20) {
+  for (let offset = 0; offset < 300 && details < WORKDAY_MAX_DETAILS; offset += 20) {
     const page = await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
     const list = page.jobPostings || [];
     for (const p of list) {
       if (!isOurRole(p.title)) continue;
+      // A single named location that is not in this city needs no detail fetch; "3 Locations" has to be opened to know.
+      if (terms.length && p.locationsText && !/\d+ Locations/i.test(p.locationsText) && !inCity(p.locationsText, terms)) continue;
       if (details++ >= WORKDAY_MAX_DETAILS) { out.partial = true; break; }
       let info = {};
       try { info = (await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}${p.externalPath}`)).jobPostingInfo || {}; } catch { continue; }
@@ -127,7 +129,7 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
   const adapter = ADAPTERS[src.kind];
   if (!adapter) { run.error = `unknown kind ${src.kind}`; return finish(db, src, run); }
   let items;
-  try { items = await adapter(cfg, src.search_text || "security", fetcher); } catch (e) { run.error = String(e && e.message || e).slice(0, 200); return finish(db, src, run); }
+  try { items = await adapter(cfg, src.search_text || "security", fetcher, parseTerms(src.location_terms)); } catch (e) { run.error = String(e && e.message || e).slice(0, 200); return finish(db, src, run); }
   const terms = parseTerms(src.location_terms);
   const seen = new Set();
   for (const it of items) {
