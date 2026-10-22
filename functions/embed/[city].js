@@ -28,7 +28,7 @@ export async function onRequestGet({ params, env, request }) {
 <div class="w"><div class="h"><b>Security events in ${esc(city.name)}</b><a href="${esc(siteUrl)}/${esc(slug)}?utm_source=embed" target="_top">Full calendar</a></div>
 ${rows ? `<ul>${rows}</ul>` : `<p class="e">${esc(city.empty)}</p>`}
 <div class="f">From <a href="${esc(siteUrl)}/${esc(slug)}?utm_source=embed" target="_top">The Watch</a>, with CPE hours, prices and registration links. <a href="${esc(siteUrl)}/subscribe?city=${esc(slug)}&src=embed" target="_top">Get the Sunday email</a>.</div></div>
-<script>try{parent.postMessage({watchEmbedHeight:document.documentElement.scrollHeight},"*")}catch(e){}</script></body></html>`;
+<script>(function(){function send(){try{parent.postMessage({watchEmbedHeight:document.body.scrollHeight+2},"*")}catch(e){}}send();window.addEventListener("load",send);setTimeout(send,400);setTimeout(send,1500);})()</script></body></html>`;
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=600", "Content-Security-Policy": "frame-ancestors *" } });
 }
 function db(env) { return env.DB; }
