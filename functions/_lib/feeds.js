@@ -115,7 +115,8 @@ export function parseIcal(text, defaultTz = TZ) {
       title: icsUnescape(props.SUMMARY?.value || "").trim(),
       startUtc: ds.utc, endUtc, url, summary: desc, speakers: null, location,
       platform: /zoom/i.test(location + " " + url) ? "Zoom" : /teams/i.test(location) ? "Teams" : "other",
-      online: !location || titleSaysOnline || /online|virtual|zoom|webinar|teams|webex|https?:/i.test(location),
+      // No LOCATION line (Meetup leaves it out for in person events too) means in person unless the text says online.
+      online: location ? (titleSaysOnline || /online|virtual|zoom|webinar|teams|webex|https?:/i.test(location)) : (titleSaysOnline || /\b(online event|virtual event|zoom|webinar|join online|livestream)\b/i.test(desc.slice(0, 400))),
       cpeHint: /\bCPE\b/.test(desc) ? 1 : null,
     });
   }
@@ -208,7 +209,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
         status, source, source_url, reviewer_notes, feed_uid, auto_publish_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(slug, src.city, it.title.slice(0, 140), it.organizationId || src.organization_id || null,
-        isSd && !online ? (it.location || null) : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
+        isSd && !online ? (it.location || "See the organizer's page for the venue") : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
         startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), tz, format, online ? it.platform : null, it.speakers,
         firstSentence(it.summary, 200) || it.title, it.summary ? plainText(it.summary).slice(0, 4000) : null, it.url,
         src.kind === "brighttalk" ? "free" : "unknown", src.kind === "brighttalk" ? 0 : null, src.kind === "brighttalk" ? 0 : null,
