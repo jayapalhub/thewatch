@@ -35,6 +35,8 @@ export async function ensureIssue(db, city, weekStart) {
 }
 
 export function fromFor(city) { return `The Watch ${city.name} <watch@bettersecurity.ai>`; }
+// Replies to the Sunday email go to Jerome, the same address the site's other emails use.
+export function replyToFor(env) { return env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai"; }
 
 async function resend(env, path, body) {
   const r = await fetch(`https://api.resend.com${path}`, { method: "POST", headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -89,7 +91,7 @@ export async function sendPreview(env, issue, city) {
     const c = await env.DB.prepare("UPDATE issues SET preview_sent_at=datetime('now') WHERE id=? AND preview_sent_at IS NULL").bind(issue.id).run();
     if (!c.meta || c.meta.changes !== 1) return { skipped: "preview already sent" };
   }
-  try { await resend(env, "/emails", { from: fromFor(city), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", ref_code: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) }); }
+  try { await resend(env, "/emails", { from: fromFor(city), reply_to: replyToFor(env), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", ref_code: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) }); }
   catch (e) { if (!issue.force_preview) await env.DB.prepare("UPDATE issues SET preview_sent_at=NULL WHERE id=?").bind(issue.id).run(); throw e; }
   await env.DB.prepare("UPDATE issues SET subject=COALESCE(subject, ?), preview_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(subject, issue.id).run();
   return { to, subject, subscribers: n };
@@ -131,7 +133,7 @@ export async function dispatchIssue(env, issue, city) {
     const claim = await db.prepare("UPDATE issues SET last_sent_subscriber_id=?, sent_count=sent_count+?, updated_at=datetime('now') WHERE id=? AND status='sending' AND COALESCE(last_sent_subscriber_id,0)=?").bind(nextId, results.length, issue.id, lastId).run();
     if (!claim.meta || claim.meta.changes !== 1) return { done: false, sent, yielded: true }; // another run has it, or it was cancelled
     const emails = results.map((s) => ({
-      from: fromFor(city), to: s.email, subject, html: personalize(html, siteUrl, s, ctx),
+      from: fromFor(city), reply_to: replyToFor(env), to: s.email, subject, html: personalize(html, siteUrl, s, ctx),
       headers: { "List-Unsubscribe": `<${siteUrl}/unsubscribe?t=${s.unsub_token}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
       tags: [{ name: "issue", value: String(issue.id) }, { name: "city", value: city.slug }],
     }));
