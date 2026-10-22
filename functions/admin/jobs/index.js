@@ -1,7 +1,7 @@
 import { html, page, raw, readForm, redirect, str } from "../../_lib/html.js";
 import { adminShell, flash } from "../../_lib/admin.js";
 import { CITIES } from "../../_lib/constants.js";
-import { todayKey } from "../../_lib/dates.js";
+import { todayKey, fmtUtcLocal } from "../../_lib/dates.js";
 import { JOB_STATUSES, hydrateJob, isFeatured, defaultExpiry } from "../../_lib/jobs.js";
 
 export async function onRequestGet({ request, env, data }) {
@@ -27,7 +27,7 @@ export async function onRequestGet({ request, env, data }) {
   ${jobs.map((j) => html`<tr>
     <td><a href="/admin/jobs/${j.id}"><strong>${j.title}</strong></a>${isFeatured(j, today) ? html` <span class="a-pill a-pill-good">featured</span>` : ""}<br><small class="a-muted">${j.employer} &middot; ${(CITIES[j.city] || {}).name || j.city}${j.location ? ` · ${j.location}` : ""} &middot; ${j.source}</small>${j.reviewer_notes ? html`<br><small class="a-warn">${j.reviewer_notes}</small>` : ""}</td>
     <td><small>${j.posted_by_name ? html`${j.posted_by_name}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind ? html`<br><span class="a-muted">${j.posted_by_kind}</span>` : ""}` : html`<span class="a-muted">none</span>`}</small></td>
-    <td><span class="a-pill ${j.status === "published" ? "a-pill-good" : j.hold || (j.status === "pending_review" && !j.auto_publish_at) ? "a-pill-warn" : ""}">${j.status === "pending_review" ? (j.hold || !j.auto_publish_at ? "held, needs you" : `auto publishes ${String(j.auto_publish_at).slice(0, 16)} UTC`) : j.status === "published" ? `live until ${j.expires_at || "?"}` : j.status}</span></td>
+    <td><span class="a-pill ${j.status === "published" ? "a-pill-good" : j.hold || (j.status === "pending_review" && !j.auto_publish_at) ? "a-pill-warn" : ""}">${j.status === "pending_review" ? (j.hold || !j.auto_publish_at ? "held, needs you" : `auto publishes ${fmtUtcLocal(j.auto_publish_at)}`) : j.status === "published" ? `live until ${j.expires_at || "?"}` : j.status}</span></td>
     <td>${j.apply_clicks}</td>
     <td><form method="post" class="a-inline"><input type="hidden" name="id" value="${j.id}">
       ${j.status !== "published" ? html`<button class="a-btn a-btn-good" name="action" value="publish">Publish now</button>` : html`<button class="a-btn" name="action" value="close">Close</button>`}

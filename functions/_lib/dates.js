@@ -110,3 +110,12 @@ export function zoneLabel(tz = TZ) {
   try { return new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "longGeneric" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName").value; }
   catch { return "local time"; }
 }
+
+// "Thu Oct 22, 12:14 AM Pacific" for a UTC datetime as SQLite stores it ("2026-10-22 07:14:05" or ISO). Admin pages only.
+export function fmtUtcLocal(s, tz = TZ) {
+  if (!s) return "";
+  const iso = String(s).replace(" ", "T").replace(/(\.\d+)?Z?$/, "Z");
+  const d = new Date(iso); if (isNaN(d)) return String(s);
+  const f = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  return `${f.format(d)} ${zoneLabel(tz)}`;
+}

@@ -25,12 +25,11 @@ export async function onRequestGet({ env, data }) {
     <a class="a-card" href="/admin/people?interest=1"><span class="a-num">${interest.n}</span>event interest sign ups</a>
     <a class="a-card" href="/admin/issues"><span class="a-num">${clicks.n}</span>link clicks this week</a>
   </div>
-  <h2>Sunday checklist</h2>
+  <h2>The weekend runs itself</h2>
   <ol class="a-steps">
-    <li><a href="/admin/review">Clear the review queue</a> (approve, edit or reject anything pending).</li>
-    <li><a href="/admin/issues/new?week=${nextMonday}">Open next week's issue</a>, pick one or two featured events, write the note.</li>
-    <li>Copy the rendered issue into a new Beehiiv post, check it on your phone, schedule for Sunday 5:00 PM.</li>
-    <li>Mark the issue as pasted so clicks are attributed correctly.</li>
+    <li>Saturday 7:10 AM: the note, subject and picks for each city's issue are drafted into the database if you have not written them.</li>
+    <li>Saturday 8 AM: the preview lands in your inbox. <a href="/admin/issues/new?week=${nextMonday}">Open next week's issue</a> any time to change the note, picks or subject, or to cancel the send.</li>
+    <li>Sunday 8 AM local: each city's email goes out on its own. Events and jobs publish themselves 24 hours after they appear unless you <a href="/admin/review">hold or reject</a> them; the review queue says how many need you.</li>
   </ol>
   <h2>Published events by day (next two weeks)</h2>
   ${thin.length ? html`<table class="a-table"><thead><tr><th>Date</th><th>Events</th></tr></thead><tbody>${thin.map((r) => html`<tr><td>${r.d}</td><td>${r.n}</td></tr>`)}</tbody></table>` : html`<p class="a-muted">Nothing published yet. Seed the research backlog or add events.</p>`}
