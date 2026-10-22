@@ -107,6 +107,37 @@ export async function composeJobsPost(db, citySlug, siteUrl, weekStart) {
   return { text: lines.join("\n"), link, count: n };
 }
 
+// The launch kit for a city: a one time "The Watch <city> is live" post for the Better Security page, a subscribe
+// line for anywhere, and a short paragraph to send a chapter leader who asks what The Watch is. Built from live
+// counts so the numbers are right on the day Jerome pastes them. Nothing here posts itself.
+export async function composeLaunchKit(db, citySlug, siteUrl) {
+  const city = CITIES[citySlug]; if (!city) return null;
+  const today = todayKey(city.timezone);
+  const events = (await queryEvents(db, { city: citySlug, from: `${today}T00:00`, to: `${addDays(today, 70)}T00:00`, limit: 200 })).filter((e) => SHOW_BS_EVENTS || !e.is_better_security_event);
+  const jobs = await liveJobs(db, citySlug, { limit: 200 });
+  const orgs = new Set(events.map((e) => e.org_display).filter(Boolean));
+  const n = events.length, j = jobs.length;
+  const subscribe = trackUrl(siteUrl, `/subscribe`, "launch").replace("/subscribe?", `/subscribe?city=${citySlug}&`);
+  const calendar = trackUrl(siteUrl, `/${citySlug}`, "launch");
+  const sunday = city.newsletter === "sunday" ? `A free email every Sunday at 8 AM lists the week ahead, with a short note on which ones are worth your evening.` : `A free Sunday email for ${city.name} starts soon.`;
+  const post = [
+    `The Watch ${city.name} is live.`,
+    "",
+    `Every cybersecurity, AI security, privacy and audit event in ${city.region}, in one calendar: chapter meetings, meetups, summits and vendor sessions, with CPE hours, prices and the organizer's own registration link. ${n ? `${n} event${n === 1 ? " is" : "s are"} on it for the next ten weeks${orgs.size ? ` from ${orgs.size} organizer${orgs.size === 1 ? "" : "s"}` : ""}.` : ""}`,
+    ...(j ? ["", `There is also a jobs board: ${j} local security, GRC and privacy role${j === 1 ? "" : "s"}, each linked to the employer's own posting, no aggregators.`] : []),
+    "",
+    sunday,
+    "",
+    `Calendar: ${calendar}`,
+    `Sunday email: ${subscribe}`,
+    "",
+    `Organizers: submit an event at ${siteUrl}/submit and it appears once approved. Published by Better Security.`,
+  ].join("\n");
+  const line = `The Watch ${city.name}: every security event in ${city.region} in one calendar, and a free Sunday email with the week ahead. ${subscribe}`;
+  const organizer = `The Watch is a free calendar of cybersecurity, AI security, privacy and audit events for ${city.region} at ${siteUrl}/${citySlug}, published by Better Security. Each event lists the date, venue, CPE hours and price and links to the organizer's own registration page, and a Sunday email sends the week ahead to local subscribers. Your chapter's meetings are listed from your public calendar; if you would like us to pull from a feed, feature a session, or correct anything, reply to this note or submit at ${siteUrl}/submit. There is no charge and no catch; the aim is to get more people in the room at the events that are already happening.`;
+  return { post, line, organizer, events: n, jobs: j, organizers: orgs.size };
+}
+
 // Publish one post as the organization. Returns { urn } or throws.
 export async function publishAsOrg(auth, text, link) {
   const body = {

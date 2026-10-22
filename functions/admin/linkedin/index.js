@@ -2,7 +2,7 @@ import { html, page, raw, readForm, redirect, str } from "../../_lib/html.js";
 import { adminShell, flash } from "../../_lib/admin.js";
 import { CITIES } from "../../_lib/constants.js";
 import { fmtUtcLocal, mondayOf, todayKey } from "../../_lib/dates.js";
-import { getAuth, tokenState, clientId, clientSecret, redirectUri, authorizeUrl, queuePost, sendQueued, previewPosts, runLinkedInSchedule } from "../../_lib/linkedin.js";
+import { getAuth, tokenState, clientId, clientSecret, redirectUri, authorizeUrl, queuePost, sendQueued, previewPosts, runLinkedInSchedule, composeLaunchKit } from "../../_lib/linkedin.js";
 
 // Admin > LinkedIn: connect the Better Security page once, see what Monday and Thursday will post, post now, pause.
 export async function onRequestGet({ request, env, data }) {
@@ -13,6 +13,8 @@ export async function onRequestGet({ request, env, data }) {
   const haveApp = !!(clientId(env, auth) && clientSecret(env, auth));
   const previews = await previewPosts(db, env);
   const { results: log } = await db.prepare("SELECT * FROM linkedin_posts ORDER BY id DESC LIMIT 40").all().catch(() => ({ results: [] }));
+  const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
+  const kits = []; for (const c of Object.values(CITIES)) { const k = await composeLaunchKit(db, c.slug, siteUrl); if (k) kits.push({ city: c, ...k }); }
   const stateLine = state === "ok" ? html`<span class="a-pill a-pill-good">Connected</span> until ${fmtUtcLocal(auth.token_expires_at)}${auth.connected_by ? html` by ${auth.connected_by}` : ""}`
     : state === "expiring" ? html`<span class="a-pill a-pill-warn">Expires ${fmtUtcLocal(auth.token_expires_at)}</span> press Reconnect this week`
     : state === "expired" ? html`<span class="a-pill a-pill-warn">Expired</span> press Reconnect`
@@ -44,6 +46,16 @@ export async function onRequestGet({ request, env, data }) {
       <form method="post" class="a-inline"><input type="hidden" name="city" value="${p.city.slug}"><input type="hidden" name="kind" value="${p.kind}"><input type="hidden" name="week_start" value="${p.week_start}"><button class="a-btn a-btn-primary" name="action" value="post_now" data-confirm="Post this to the Better Security LinkedIn page now?">Post now</button></form>` : ""}</div>
     ${p.post ? html`<textarea id="li-post-${i}" rows="9" readonly style="width:100%;font:inherit;font-size:14px;">${p.post.text}</textarea>` : html`<p class="a-muted">Nothing to post: no ${p.kind === "events" ? "published events that week" : "live roles"} in ${p.city.name}.</p>`}
   </div>`)}
+  <h2>Launch kit, one per city</h2>
+  <p class="a-muted">For pasting by hand: a one time "is live" post for the Better Security page, a subscribe line for anywhere (an email signature, a chapter newsletter, a comment), and a short paragraph for a chapter leader who asks what The Watch is. Counts are live, so paste on the day you post. Nothing here posts itself.</p>
+  ${kits.map((k, i) => html`<details class="a-card"><summary><strong>${k.city.name}</strong> <span class="a-muted">${k.events} events in the next ten weeks from ${k.organizers} organizers, ${k.jobs} live roles</span></summary>
+    <div class="a-preview-bar"><strong>Launch post</strong> <button class="a-btn" type="button" data-copy-text="li-kit-post-${i}" data-copy-label="Copy post">Copy post</button></div>
+    <textarea id="li-kit-post-${i}" rows="11" readonly style="width:100%;font:inherit;font-size:14px;">${k.post}</textarea>
+    <div class="a-preview-bar"><strong>Subscribe line</strong> <button class="a-btn" type="button" data-copy-text="li-kit-line-${i}" data-copy-label="Copy line">Copy line</button></div>
+    <textarea id="li-kit-line-${i}" rows="2" readonly style="width:100%;font:inherit;font-size:14px;">${k.line}</textarea>
+    <div class="a-preview-bar"><strong>For an organizer who asks</strong> <button class="a-btn" type="button" data-copy-text="li-kit-org-${i}" data-copy-label="Copy paragraph">Copy paragraph</button></div>
+    <textarea id="li-kit-org-${i}" rows="5" readonly style="width:100%;font:inherit;font-size:14px;">${k.organizer}</textarea>
+  </details>`)}
   <h2>Post log</h2>
   ${log.length ? html`<table class="a-table"><thead><tr><th>When</th><th>City</th><th>Post</th><th>Week</th><th>Status</th></tr></thead><tbody>
   ${log.map((r) => html`<tr><td class="a-nowrap">${fmtUtcLocal(r.posted_at || r.created_at)}</td><td>${(CITIES[r.city] || {}).name || r.city}</td><td>${r.kind}</td><td>${r.week_start}</td><td><span class="a-pill ${r.status === "posted" ? "a-pill-good" : r.status === "failed" ? "a-pill-warn" : ""}">${r.status}</span>${r.error ? html` <small class="a-muted">${r.error}</small>` : ""}</td></tr>`)}
