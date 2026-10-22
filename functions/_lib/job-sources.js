@@ -8,11 +8,11 @@ import { slugify } from "./html.js";
 
 // What counts as one of our roles. Title must match SECURITY_RE and must not match NOT_OURS_RE.
 const SECURITY_RE = /\b(security|cyber|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
-const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|workplace security|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
+const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|event security|workplace security|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
 export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby" };
 
-const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)/;
+const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 
 export function isOurRole(title) {
@@ -56,7 +56,7 @@ export function inferRemote(locationText) {
   if (/^remote/.test(l)) return "remote";
   return "onsite";
 }
-function payText(html) { const m = strip(html).match(PAY_RE); return m ? m[0].replace(/\s+/g, " ").replace(/\$\s/g, "$") : null; }
+function payText(html) { const m = strip(html).match(PAY_RE); if (!m) return null; let s = m[0].replace(/\s+/g, " ").replace(/\$\s/g, "$"); if (!s.includes("$")) s = s.replace(/([\d,.]+)\s*USD/g, "$$$1"); return s; }
 
 async function getJson(url, init = {}) {
   const r = await fetch(url, { ...init, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 } });
