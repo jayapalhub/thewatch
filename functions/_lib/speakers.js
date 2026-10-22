@@ -17,7 +17,7 @@ const SUFFIX_RE = /(?:,?\s+(?:Ph\.?D\.?|CISSP|CISA|CISM|CRISC|CGEIT|CCSP|CIPP(?:
 // An affiliation that looks like contact details is never shown: email, web address, handle path or phone number.
 const CONTACTISH = /@|:\/\/|www\.|\/|\d[\d\s().-]{6,}\d/;
 const PARTICLES = new Set(["de", "da", "das", "dos", "do", "del", "della", "di", "du", "van", "von", "der", "den", "la", "le", "bin", "al", "el", "y", "e", "ter", "ten"]);
-const NOT_A_PERSON = /\b(team|teams|experts?|leaders|speakers|announced|collaborators|members|membership|staff|panel|group|labs?|security|research|inc|llc|ltd|company|university|institute|agency|department|office|committee|vp|svp|evp|ceo|cto|ciso|cio|cfo|coo|cso|president|director|manager|engineer|officer|head|lead|senior|sr|principal|analyst|consultant|founder|partner|chief|specialist|architect|marketing|product|sales|intelligence|incident|response|consulting|solutions|systems|networks|technologies|partners|services|global|federal|cloud|software|association|chapter|foundation|council|the|tbd|tba)\b/i;
+const NOT_A_PERSON = /\b(team|teams|experts?|leaders|speakers|announced|collaborators|members|membership|staff|panel|group|labs?|security|research|inc|llc|ltd|company|university|institute|agency|department|office|committee|vp|svp|evp|ceo|cto|ciso|cio|cfo|coo|cso|president|director|manager|engineer|officer|senior|sr|principal|analyst|consultant|founder|partner|chief|specialist|architect|marketing|product|sales|intelligence|incident|response|consulting|solutions|systems|networks|technologies|partners|services|global|federal|cloud|software|association|chapter|foundation|council|the|tbd|tba)\b|\bhead of\b|\blead (?:engineer|architect|analyst|developer|consultant|auditor)\b/i;
 
 // Split on a separator only at parenthesis depth 0.
 function splitTop(s, seps) {
@@ -44,8 +44,11 @@ export function looksLikePerson(name) {
     if (/^\p{Ll}'\p{Lu}/u.test(w)) continue;                       // d'Eon
     if (!/^\p{Lu}/u.test(w)) return false;                          // "leaders from EY", "industry collaborators"
     if (!/\./.test(w) && w.length > 2 && w === w.toUpperCase() && /\p{L}{3}/u.test(w)) return false; // CISSP, IBM (two capitals pass as initials: VJ)
-    const rest = w.replace(/^(Mc|Mac|O'|D'|De|Di|Da|La|Le|Van|Von)(?=\p{Lu})/u, "");
-    if (/\p{Ll}\p{Lu}/u.test(rest)) return false;                  // LevelBlue, SpiderLabs
+    const rest = w.replace(/^(Mc|Mac|Fitz|O'|D'|De|Di|Da|La|Le|Van|Von)(?=\p{Lu})/u, "");
+    // An internal capital is a brand (LevelBlue, SpiderLabs, CrowdStrike) unless the lowercase run before it is short,
+    // which is how names like JoAnne, LaToya and DeShawn are written.
+    const camel = /^(\p{Lu}\p{Ll}+)(\p{Lu}\p{Ll}+)$/u.exec(rest);
+    if (/\p{Ll}\p{Lu}/u.test(rest) && !(camel && camel[1].length <= 3)) return false;
   }
   return true;
 }
@@ -103,7 +106,9 @@ export function resolveKey(key, overrides) {
 // raw: true also returns hidden names and the unresolved variants, for the admin.
 export async function buildSpeakers(db, { city = null, raw = false } = {}) {
   const where = ["e.status = 'published'", "e.speakers IS NOT NULL", "trim(e.speakers) != ''"]; const args = [];
-  if (city) { where.push("e.city = ?"); args.push(city); }
+  // The virtual board also carries a city's online sessions that are flagged also_virtual, like the virtual calendar does.
+  if (city === "virtual") where.push("(e.city = 'virtual' OR (e.also_virtual = 1 AND e.format IN ('virtual','hybrid')))");
+  else if (city) { where.push("e.city = ?"); args.push(city); }
   if (!SHOW_BS_EVENTS) where.push("COALESCE(e.is_better_security_event, 0) = 0 AND COALESCE(o.slug, '') != 'better-security'");
   const { results: events } = await db.prepare(`SELECT e.id, e.slug, e.title, e.city, e.start_at, e.end_at, e.speakers, COALESCE(o.short_name, o.name) AS org_display
     FROM events e LEFT JOIN organizations o ON o.id = e.organization_id WHERE ${where.join(" AND ")} ORDER BY e.start_at DESC`).bind(...args).all();

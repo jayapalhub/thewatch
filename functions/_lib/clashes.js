@@ -10,6 +10,20 @@ function minutes(iso) {
   const m = /T(\d{2}):(\d{2})/.exec(iso || "");
   return m ? +m[1] * 60 + +m[2] : null;
 }
+// Minutes since an arbitrary epoch for a wall clock ISO string, so two evenings either side of midnight compare correctly.
+function absMinutes(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso || "");
+  return m ? Math.round(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000) : null;
+}
+// Two events clash when they start within CLASH_MINUTES of each other, or when their times overlap at all
+// (a 1 PM to 5 PM workshop still clashes with a 4 PM talk). An event with no end time counts as two hours long.
+export function clashes(a, b) {
+  const as = absMinutes(a.start_at), bs = absMinutes(b.start_at);
+  if (as == null || bs == null) return false;
+  if (Math.abs(as - bs) <= CLASH_MINUTES) return true;
+  const ae = absMinutes(a.end_at) ?? as + 120, be = absMinutes(b.end_at) ?? bs + 120;
+  return as < be && bs < ae;
+}
 
 // For each event in `events` (rows with id, city, start_at), returns Map(event id => [published events that clash]).
 // Events with no time of day (date only) are left alone, since we cannot tell whether they overlap.
@@ -17,7 +31,9 @@ export async function findClashes(db, events) {
   const out = new Map();
   const targets = events.filter((e) => e && e.city && e.city !== "virtual" && e.format !== "virtual" && e.start_at && minutes(e.start_at) != null);
   if (!targets.length) return out;
-  const keys = [...new Set(targets.map((e) => `${e.city}|${e.start_at.slice(0, 10)}`))];
+  // Look at the day itself and its neighbours, so an event that runs past midnight or starts just after it is seen.
+  const dayOf = (iso, d) => { const t = new Date(iso.slice(0, 10) + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() + d); return t.toISOString().slice(0, 10); };
+  const keys = [...new Set(targets.flatMap((e) => [-1, 0, 1].map((d) => `${e.city}|${dayOf(e.start_at, d)}`)))];
   // One query per batch of city/day pairs. D1 caps bound parameters, so keep batches modest.
   const others = [];
   for (let i = 0; i < keys.length; i += 40) {
@@ -32,9 +48,7 @@ export async function findClashes(db, events) {
     others.push(...results);
   }
   for (const e of targets) {
-    const day = e.start_at.slice(0, 10), m = minutes(e.start_at);
-    const hits = others.filter((o) => o.id !== e.id && o.city === e.city && o.start_at.slice(0, 10) === day
-      && minutes(o.start_at) != null && Math.abs(minutes(o.start_at) - m) < CLASH_MINUTES);
+    const hits = others.filter((o) => o.id !== e.id && o.city === e.city && clashes(e, o));
     if (hits.length) out.set(e.id, hits.sort((a, b) => (a.start_at < b.start_at ? -1 : 1)));
   }
   return out;
