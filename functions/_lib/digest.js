@@ -23,8 +23,10 @@ export async function weeklyNumbers(db) {
   const feedsBad = await all(`SELECT name, last_status FROM feed_sources WHERE active=1 AND last_status IS NOT NULL AND last_status NOT LIKE 'ok%' ORDER BY id`);
   const linkedin = await all(`SELECT city, kind, status FROM linkedin_posts WHERE created_at >= ${since} ORDER BY id`);
   const sponsors = await all(`SELECT COUNT(*) n FROM sponsor_inquiries WHERE created_at >= ${since}`);
+  // Delivery: permanent bounces and spam complaints reported by Resend this week (table from migration 0021).
+  const delivery = (await all(`SELECT SUM(action='bounced') bounced, SUM(action='unsubscribed') complaints, SUM(action='logged' AND type='email.bounced') soft FROM email_events WHERE created_at >= ${since}`).catch(() => []))[0] || {};
   const by = (rows) => Object.fromEntries(rows.map((r) => [r.city, r]));
-  return { cities, subs: by(subs), issues, clicks, topEvents, topJobs, events: by(events), jobs: by(jobs), boardsBad, feedsBad, linkedin, sponsorInquiries: (sponsors[0] || {}).n || 0 };
+  return { cities, subs: by(subs), issues, clicks, topEvents, topJobs, events: by(events), jobs: by(jobs), boardsBad, feedsBad, linkedin, sponsorInquiries: (sponsors[0] || {}).n || 0, delivery: { bounced: delivery.bounced || 0, complaints: delivery.complaints || 0, soft: delivery.soft || 0 } };
 }
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
@@ -43,6 +45,7 @@ export function renderNumbers(n, { siteUrl = "https://bettersecurity.ai" } = {})
   const li = n.linkedin.length ? n.linkedin.map((p) => `${esc((CITIES[p.city] || {}).name || p.city)} ${p.kind} ${p.status}`).join(", ") : "nothing (page not connected, or nothing to post)";
   return `<table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr>${th("City")}${th("Subscribers (new, left this week)", true)}${th("Events published / upcoming", true)}${th("Held", true)}${th("Roles published / live", true)}${th("Closed", true)}</tr></thead><tbody>${n.cities.map(row).join("")}${virt}</tbody></table>
   <h3 style="margin:18px 0 6px;font-size:15px;">Sunday email</h3><ul style="margin:0;padding-left:18px;">${issues}</ul>
+  <p style="margin:6px 0 0;">Delivery: ${(() => { const d = n.delivery || {}; return d.bounced || d.complaints || d.soft ? `${d.bounced || 0} address${d.bounced === 1 ? "" : "es"} bounced for good and ${d.complaints || 0} marked the email as spam this week${d.soft ? `, with ${d.soft} temporary bounce${d.soft === 1 ? "" : "s"} that will be retried` : ""}.` : "no bounces or spam complaints this week."; })()}</p>
   <h3 style="margin:18px 0 6px;font-size:15px;">Clicks this week</h3><p style="margin:0;">${clicks}.</p>${top}${jobsTop}
   <h3 style="margin:18px 0 6px;font-size:15px;">LinkedIn page</h3><p style="margin:0;">${li}.</p>
   <h3 style="margin:18px 0 6px;font-size:15px;">Needs a look</h3>${trouble.length ? `<ul style="margin:0;padding-left:18px;">${trouble.map((t) => `<li>${t}</li>`).join("")}</ul>` : `<p style="margin:0;">Every board and feed read cleanly.</p>`}${n.sponsorInquiries ? `<p style="margin:8px 0 0;">${n.sponsorInquiries} new sponsor inquir${n.sponsorInquiries === 1 ? "y" : "ies"} at <a href="${siteUrl}/admin/sponsors">${siteUrl}/admin/sponsors</a>.</p>` : ""}
