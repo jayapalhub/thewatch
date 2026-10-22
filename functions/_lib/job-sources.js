@@ -244,7 +244,7 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   // Newer sites: JSON. A classic site answers this with an HTML page (or 404), which is the cue to fall back.
   let json = null;
   try { json = await fetcher(`${base}/services/recruiting/v1/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: body(0) }); }
-  catch (e) { if (!/HTTP 40[45]|JSON|Unexpected token/i.test(String(e && e.message))) throw e; json = null; } // a classic site answers 404 or HTML; anything else is a real error
+  catch (e) { if (!/HTTP 40[1345]|JSON|Unexpected token/i.test(String(e && e.message))) throw e; json = null; } // a classic site answers 401, 403, 404 or HTML; anything else is a real error
   if (json && Array.isArray(json.jobSearchResult)) {
     let page = 0, got = json;
     while (got && Array.isArray(got.jobSearchResult) && got.jobSearchResult.length) {
@@ -257,11 +257,12 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
     }
     return out;
   }
-  // Classic Career Site Builder: HTML rows, 25 a page by startrow.
-  for (let start = 0; start < 250; start += 25) {
+  // Classic Career Site Builder: HTML rows by startrow; the page size varies by site (10 or 25), so step by what came back.
+  for (let start = 0; start < 250;) {
     const html = await fetcher(`${base}/search/?q=${encodeURIComponent(searchText || "security")}&sortColumn=referencedate&sortDirection=desc&startrow=${start}`, { text: true });
     if (start === 0 && !/class="data-row"|jobTitle-link|searchResultsShell|No jobs found|no results/i.test(String(html))) throw new Error("unexpected page from SuccessFactors (no job table)");
     const rows = String(html).split(/<tr[^>]*class="data-row"/i).slice(1);
+    const before = seen.size;
     for (const row of rows) {
       const a = /<a[^>]*href="([^"]+)"[^>]*class="jobTitle-link"[^>]*>([\s\S]*?)<\/a>/i.exec(row) || /<a[^>]*class="jobTitle-link"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(row);
       if (!a) continue;
@@ -271,7 +272,9 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
       const date = ((/<span class="jobDate[^"]*">\s*([^<]+)<\/span>/i.exec(row) || [])[1] || "").trim();
       push(id, title, href.startsWith("http") ? href : `https://${cfg.host}${href}`, loc, sfDate(date));
     }
-    if (rows.length < 25) break;
+    if (!rows.length || seen.size === before) break; // nothing new: the site ignored startrow or the list ended
+    start += rows.length;
+    if (!/startrow=(\d+)/i.test(String(html)) && rows.length < 25) break; // no pager on the page: a single page of results
   }
   return out;
 }
