@@ -332,6 +332,7 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .dir-next { margin: 0; font-size: .95rem; overflow-wrap: anywhere; }
 .dir-label { display: inline-block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); background: var(--deal-bg); padding: 2px 7px; border-radius: 5px; margin-right: 4px; }
 .dir-label-quiet { color: var(--muted); background: var(--mist-soft); }
+.dir-desc { margin: 2px 0 4px; color: var(--muted); font-size: .95rem; }
 .dir-when { color: var(--muted); white-space: nowrap; }
 .dir-cta { margin-top: 40px; padding: 24px; background: var(--paper); border-radius: 12px; }
 .dir-cta p:last-child { margin-bottom: 0; }

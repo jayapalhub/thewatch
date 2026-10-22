@@ -62,6 +62,7 @@ export async function onRequestGet({ params, env }) {
           const e = next.get(o.slug);
           return html`<li class="dir-item">
             <h3><a href="${orgPath(o.slug, city.slug)}">${o.name}</a></h3>
+            ${o.description ? html`<p class="dir-desc">${o.description}</p>` : ""}
             ${o.usual_cadence_text ? html`<p class="dir-cadence">${o.usual_cadence_text}</p>` : ""}
             <p class="dir-next">${e
               ? html`<span class="dir-label">Next</span> <a href="${eventPath(e)}">${e.title}</a> <span class="dir-when">${fmtDateLong(e.start_at)}${fmtTimeRange(e.start_at, e.end_at) ? `, ${fmtTimeRange(e.start_at, e.end_at)}` : ""}</span>`
