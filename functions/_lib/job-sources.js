@@ -10,7 +10,7 @@ import { slugify } from "./html.js";
 const SECURITY_RE = /\b(security|cyber|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|event security|workplace security|set watch|security guard|patrol|security officer|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -174,7 +174,48 @@ export async function pullRadancy(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-const ADAPTERS = { workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy };
+// Phenom career sites (careers.pacificlife.com, careers.firstam.com, jobs.danaher.com and many others): config { host, path }
+// where path is the locale prefix in the site's URLs ("us/en", "global/en"). The site's own search widget answers JSON;
+// keyword search is fuzzy, so titles are filtered here and location_terms do the geography.
+export async function pullPhenom(cfg, searchText, fetcher = getJson) {
+  const path = String(cfg.path || "us/en").replace(/^\/|\/$/g, "");
+  const [country = "us", lang = "en"] = path.split("/");
+  const out = []; const seen = new Set();
+  for (let from = 0; from < 200; from += 50) {
+    const body = { lang: `${lang}_${country}`, deviceType: "desktop", country, pageName: "search-results", ddoKey: "refineSearch", sortBy: "", subsearch: "", from, jobs: true, counts: true, all_fields: ["category", "country", "state", "city", "type"], size: 50, clearAll: false, jdsource: "facets", isSliderEnable: false, pageId: "page12", siteType: "external", keywords: searchText || "security", global: true, selected_fields: {}, locationData: {} };
+    const j = await fetcher(`https://${cfg.host}/widgets`, { method: "POST", headers: { "Content-Type": "application/json", Referer: `https://${cfg.host}/${path}/search-results` }, body: JSON.stringify(body) });
+    const rs = (j && j.refineSearch) || {}; const jobs = (rs.data && rs.data.jobs) || [];
+    for (const x of jobs) {
+      const id = String(x.jobId || x.reqId || ""); if (!id || seen.has(id)) continue; seen.add(id);
+      if (!isOurRole(x.title)) continue;
+      const loc = Array.isArray(x.multi_location) && x.multi_location.length > 1 ? x.multi_location.join("; ") : (x.location || x.cityStateCountry || x.cityState || "");
+      out.push({ key: id, title: x.title, url: `https://${cfg.host}/${path}/job/${id}`, location: loc, posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.postedDate || "") ? x.postedDate.slice(0, 10) : null, salary_text: payText(x.descriptionTeaser), remote: String(x.checkRemote) === "true" ? (loc ? "hybrid" : "remote") : inferRemote(loc) });
+    }
+    if (jobs.length < 50 || from + 50 >= (rs.totalHits || 0)) break;
+  }
+  return out;
+}
+// iCIMS career portals of the newer kind (careers.rivian.com/careers-home, jobs.uci.edu/careers-home): config { host }.
+// The portal's /api/jobs answers JSON, 100 a page, relevance sorted; the older careers-<name>.icims.com pages are HTML
+// and are not read here.
+export async function pullIcims(cfg, searchText, fetcher = getJson) {
+  const out = []; const seen = new Set();
+  for (let page = 1; page <= 2; page++) {
+    const q = new URLSearchParams({ keywords: searchText || "security", page: String(page), limit: "100", sortBy: "relevance", descending: "false", internal: "false" });
+    const j = await fetcher(`https://${cfg.host}/api/jobs?${q}`, { headers: { Referer: `https://${cfg.host}/careers-home/jobs` } });
+    const jobs = (j && j.jobs) || [];
+    for (const row of jobs) {
+      const x = row.data || row; const id = String(x.req_id || x.slug || ""); if (!id || seen.has(id)) continue; seen.add(id);
+      if (!isOurRole(x.title)) continue;
+      const loc = x.full_location || x.short_location || [x.city, x.state].filter(Boolean).join(", ");
+      const canonical = x.meta_data && x.meta_data.canonical_url ? String(x.meta_data.canonical_url).split("?")[0] : `https://${cfg.host}/jobs/${id}`;
+      out.push({ key: id, title: x.title, url: canonical, location: loc, posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.posted_date || "") ? x.posted_date.slice(0, 10) : null, salary_text: payText(x.description), remote: inferRemote(loc) });
+    }
+    if (jobs.length < 100) break;
+  }
+  return out;
+}
+const ADAPTERS = { workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {

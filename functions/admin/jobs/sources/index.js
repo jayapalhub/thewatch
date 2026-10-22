@@ -14,6 +14,8 @@ function boardUrl(s) {
   if (s.kind === "eightfold" && c.host) return `https://${c.host}/careers`;
   if (s.kind === "radancy" && c.host) return `https://${c.host}/search-jobs`;
   if (s.kind === "smartrecruiters" && c.company) return `https://careers.smartrecruiters.com/${c.company}`;
+  if (s.kind === "phenom" && c.host) return `https://${c.host}/${c.path || "us/en"}/search-results`;
+  if (s.kind === "icims" && c.host) return `https://${c.host}/careers-home/jobs`;
   return "";
 }
 
@@ -45,7 +47,7 @@ export async function onRequestGet({ request, env, data }) {
       <label>Board<select name="kind">${Object.entries(SOURCE_KINDS).map(([k, v]) => html`<option value="${k}">${v}</option>`)}</select></label>
     </div>
     <div class="a-grid-2">
-      <label>Board details <small>(Workday: tenant, host, site from the URL tenant.host.myworkdayjobs.com/site. Greenhouse or Ashby: the board name. Lever or SmartRecruiters: the company name. Eightfold: the careers host and the company domain it passes to its API. Radancy: the careers host.)</small><input name="config" required maxlength="300" placeholder='icwgroup, wd5, ICW  or  sonyinteractiveentertainmentglobal  or  careers.qualcomm.com, qualcomm.com'></label>
+      <label>Board details <small>(Workday: tenant, host, site from the URL tenant.host.myworkdayjobs.com/site. Greenhouse or Ashby: the board name. Lever or SmartRecruiters: the company name. Eightfold: the careers host and the company domain it passes to its API. Radancy: the careers host. Phenom: the careers host and the locale path from its URLs, such as us/en. iCIMS: the careers host of a careers-home portal.)</small><input name="config" required maxlength="300" placeholder='icwgroup, wd5, ICW  or  sonyinteractiveentertainmentglobal  or  careers.qualcomm.com, qualcomm.com'></label>
       <label>Location must include <small>(comma separated; any one is enough)</small><input name="location_terms" required maxlength="600" placeholder="San Diego, Carlsbad, Poway"></label>
     </div>
     <div class="a-grid-2">
@@ -62,6 +64,8 @@ function parseConfig(kind, text) {
   if (kind === "workday") { if (parts.length < 3) return null; return { tenant: parts[0].toLowerCase(), host: parts[1].toLowerCase(), site: parts[2] }; }
   if (kind === "radancy") { if (!parts.length) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }; }
   if (kind === "eightfold") { if (parts.length < 2) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""), company: parts[1].toLowerCase() }; }
+  if (kind === "icims") { if (!parts.length) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }; }
+  if (kind === "phenom") { if (!parts.length) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""), path: (parts[1] || "us/en").replace(/^\/|\/$/g, "") }; }
   if (!parts.length) return null;
   return kind === "lever" || kind === "smartrecruiters" ? { company: parts[0] } : { board: parts[0] };
 }
