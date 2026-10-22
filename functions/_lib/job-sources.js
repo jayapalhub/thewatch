@@ -351,6 +351,7 @@ export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, m
     out.push(await runJobSource(db, src, { fetcher }));
     spent += cost;
   }
+  out.spent = spent; // so the tick can give what is left to cheaper work
   return out;
 }
 

@@ -256,8 +256,13 @@ async function logRun(db, src, s) {
   ]);
 }
 
-export async function runAllSources(db, { onlyId = null } = {}) {
-  const { results } = await db.prepare(onlyId ? "SELECT * FROM feed_sources WHERE id=?" : "SELECT * FROM feed_sources WHERE active=1 ORDER BY id").bind(...(onlyId ? [onlyId] : [])).all();
+export async function runAllSources(db, { onlyId = null, dueOnly = false, max = null } = {}) {
+  // dueOnly: only sources not pulled in the last day, oldest first, up to max; the hourly tick uses this so every
+  // feed is read about daily instead of once a week.
+  const sql = onlyId ? "SELECT * FROM feed_sources WHERE id=?"
+    : dueOnly ? "SELECT * FROM feed_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-23 hours')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
+    : "SELECT * FROM feed_sources WHERE active=1 ORDER BY id";
+  const { results } = await db.prepare(sql).bind(...(onlyId ? [onlyId] : dueOnly ? [max || 3] : [])).all();
   const out = [];
   for (const src of results) out.push(await runSource(db, src));
   return out;
