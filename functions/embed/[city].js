@@ -16,7 +16,7 @@ export async function onRequestGet({ params, env, request }) {
   if (!city) return new Response(wantsJs ? "/* The Watch: unknown city */" : "Not found", { status: 404, headers: { "Content-Type": wantsJs ? "text/javascript" : "text/plain" } });
   if (wantsJs) {
     const u = new URL(request.url); const n = Math.min(12, Math.max(3, parseInt(u.searchParams.get("n") || "6", 10) || 6));
-    const js = `(function(){var s=document.currentScript||(function(){var a=document.getElementsByTagName("script");return a[a.length-1];})();var f=document.createElement("iframe");f.src=${JSON.stringify(`${siteUrl}/embed/${slug}?n=${n}`)};f.title=${JSON.stringify(`The Watch ${city.name}: upcoming security events`)};f.loading="lazy";f.style.cssText="width:100%;max-width:640px;height:"+(96+n*62)+"px;border:0;display:block;";f.setAttribute("referrerpolicy","no-referrer-when-downgrade");s.parentNode.insertBefore(f,s);window.addEventListener("message",function(e){if(e.origin===${JSON.stringify(siteUrl)}&&e.data&&e.data.watchEmbedHeight&&e.source===f.contentWindow){f.style.height=e.data.watchEmbedHeight+"px";}});})();`;
+    const js = `(function(){var s=document.currentScript||(function(){var a=document.getElementsByTagName("script");return a[a.length-1];})();var f=document.createElement("iframe");f.src=${JSON.stringify(`${siteUrl}/embed/${slug}?n=${n}`)};f.title=${JSON.stringify(`The Watch ${city.name}: upcoming security events`)};f.loading="lazy";f.style.cssText="width:100%;max-width:640px;height:${96 + n * 62}px;border:0;display:block;";f.setAttribute("referrerpolicy","no-referrer-when-downgrade");s.parentNode.insertBefore(f,s);window.addEventListener("message",function(e){if(e.origin===${JSON.stringify(siteUrl)}&&e.data&&e.data.watchEmbedHeight&&e.source===f.contentWindow){f.style.height=e.data.watchEmbedHeight+"px";}});})();`;
     return new Response(js, { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=86400" } });
   }
   const u = new URL(request.url); const n = Math.min(12, Math.max(3, parseInt(u.searchParams.get("n") || "6", 10) || 6));
@@ -29,6 +29,6 @@ export async function onRequestGet({ params, env, request }) {
 ${rows ? `<ul>${rows}</ul>` : `<p class="e">${esc(city.empty)}</p>`}
 <div class="f">From <a href="${esc(siteUrl)}/${esc(slug)}?utm_source=embed" target="_top">The Watch</a>, with CPE hours, prices and registration links. <a href="${esc(siteUrl)}/subscribe?city=${esc(slug)}&src=embed" target="_top">Get the Sunday email</a>.</div></div>
 <script>try{parent.postMessage({watchEmbedHeight:document.documentElement.scrollHeight},"*")}catch(e){}</script></body></html>`;
-  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=600", "X-Frame-Options": "", "Content-Security-Policy": "frame-ancestors *" } });
+  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=600", "Content-Security-Policy": "frame-ancestors *" } });
 }
 function db(env) { return env.DB; }
