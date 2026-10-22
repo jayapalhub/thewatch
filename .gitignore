@@ -6,3 +6,4 @@ node_modules/
 *.local
 scripts/seed.sql
 .DS_Store
+.scratch/
