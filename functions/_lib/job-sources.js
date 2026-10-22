@@ -64,6 +64,9 @@ async function getJson(url, init = {}) {
   return r.json();
 }
 
+const ENT = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "\u2013", mdash: "\u2014", rsquo: "\u2019", lsquo: "\u2018", rdquo: "\u201d", ldquo: "\u201c" };
+function decodeEntities(t) { return String(t).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => e[0] === "#" ? String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)) : (ENT[e.toLowerCase()] ?? m)); }
+
 // ---------- adapters: each returns [{ key, title, url, location, posted_at (YYYY-MM-DD or null), salary_text, remote }] ----------
 const WORKDAY_MAX_DETAILS = 25; // detail fetches per run; a Worker invocation has a small subrequest budget
 
@@ -150,18 +153,24 @@ export async function pullSmartRecruiters(cfg, searchText, fetcher = getJson) {
 // search endpoint answers JSON whose "results" field is the HTML list; titles, locations and links are read from it.
 // Its location filter is loose, so every result comes back and location_terms do the geography.
 export async function pullRadancy(cfg, searchText, fetcher = getJson) {
-  const q = new URLSearchParams({ ActiveFacetID: "0", CurrentPage: "1", RecordsPerPage: "100", Distance: "50", RadiusUnitType: "0", Keywords: searchText || "security", Location: "", ShowRadius: "False", IsPagination: "False", SearchResultsModuleName: "Search Results", SearchFiltersModuleName: "Search Filters", SortCriteria: "0", SortDirection: "0", SearchType: "5", ResultsType: "0" });
-  const j = await fetcher(`https://${cfg.host}/search-jobs/results?${q}`, { headers: { "X-Requested-With": "XMLHttpRequest", Referer: `https://${cfg.host}/search-jobs` } });
-  const html = (j && j.results) || "";
-  const out = [];
-  const re = /<a\b([^>]*?)href="([^"]*\/job\/[^"]*)"([^>]*)>([\s\S]*?)<\/a>/gi; let m;
-  while ((m = re.exec(html))) {
-    const attrs = m[1] + m[3], inner = m[4];
-    const id = (/data-job-id="([^"]+)"/.exec(attrs) || [])[1] || m[2].split("/").pop();
-    const title = ((/<h2[^>]*>([\s\S]*?)<\/h2>/i.exec(inner) || [])[1] || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    const loc = ((/class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(inner) || [])[1] || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-    if (!title || !isOurRole(title)) continue;
-    out.push({ key: String(id), title, url: `https://${cfg.host}${m[2].split("?")[0]}`, location: loc, posted_at: null, salary_text: null, remote: inferRemote(loc) });
+  const out = []; const seen = new Set();
+  const clean = (h) => decodeEntities(String(h || "").replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim();
+  for (let page = 1; page <= 5; page++) {
+    const q = new URLSearchParams({ ActiveFacetID: "0", CurrentPage: String(page), RecordsPerPage: "100", Distance: "50", RadiusUnitType: "0", Keywords: searchText || "security", Location: "", ShowRadius: "False", IsPagination: page > 1 ? "True" : "False", SearchResultsModuleName: "Search Results", SearchFiltersModuleName: "Search Filters", SortCriteria: "0", SortDirection: "0", SearchType: "5", ResultsType: "0" });
+    const j = await fetcher(`https://${cfg.host}/search-jobs/results?${q}`, { headers: { "X-Requested-With": "XMLHttpRequest", Referer: `https://${cfg.host}/search-jobs` } });
+    const html = (j && j.results) || "";
+    let added = 0;
+    const re = /<a\b([^>]*?)href="([^"]*\/job\/[^"]*)"([^>]*)>([\s\S]*?)<\/a>/gi; let m;
+    while ((m = re.exec(html))) {
+      const attrs = m[1] + m[3], inner = m[4];
+      const id = (/data-job-id="([^"]+)"/.exec(attrs) || [])[1] || m[2].split("?")[0].split("/").pop();
+      if (seen.has(id)) continue; seen.add(id); added++;
+      const title = clean((/<h2[^>]*>([\s\S]*?)<\/h2>/i.exec(inner) || [])[1]);
+      const loc = clean((/class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(inner) || [])[1]);
+      if (!title || !isOurRole(title)) continue;
+      out.push({ key: String(id), title, url: `https://${cfg.host}${m[2].split("?")[0]}`, location: loc, posted_at: null, salary_text: null, remote: inferRemote(loc) });
+    }
+    if (!added) break; // no new rows on this page: the list is exhausted
   }
   return out;
 }
