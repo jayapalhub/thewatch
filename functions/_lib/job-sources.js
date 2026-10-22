@@ -7,8 +7,8 @@ import { cleanJobUrl, JOB_DAYS } from "./jobs.js";
 import { slugify } from "./html.js";
 
 // What counts as one of our roles. Title must match SECURITY_RE and must not match NOT_OURS_RE.
-const SECURITY_RE = /\b(security|cyber|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
-const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|event security|workplace security|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
+const SECURITY_RE = /\b(security|cyber|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
+const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|event security|workplace security|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
 export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby" };
 
@@ -44,8 +44,8 @@ export function inferTopics(title) {
 export function inferSeniority(title) {
   const t = String(title).toLowerCase();
   if (/chief|ciso|\bvp\b|vice president|executive/.test(t)) return "executive";
-  if (/director|head of|principal/.test(t)) return "director";
-  if (/manager|lead\b|supervisor|biso/.test(t)) return "manager";
+  if (/director|head of/.test(t)) return "director";
+  if (/manager|lead\b|supervisor|biso/.test(t)) return "manager"; // principal, staff and senior are IC grades: practitioner
   if (/\b(i|1|associate|junior|entry|analyst i)\b$|\bi\b$|intern/.test(t)) return "early_career";
   return "practitioner";
 }
