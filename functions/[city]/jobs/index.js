@@ -27,7 +27,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
   <section class="cal-head">
     <div class="wrap">
       <p class="kicker">${city.region}</p>
-      <h1>Hiring in ${city.name} security</h1>
+      <h1>Security jobs in ${city.name}</h1>
       <p class="jobs-lede">Open security, GRC, privacy and audit roles at local employers, each linked to the employer's own posting.${named ? ` Where a hiring manager or recruiter posted about the role, we show who, so you know who to reach out to.` : ""}</p>
       ${total ? html`<form class="filters" method="get" action="/${city.slug}/jobs">
         <label>Seniority<select name="seniority"><option value="">All levels</option>${opt(SENIORITY, f.seniority)}</select></label>

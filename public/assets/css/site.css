@@ -285,7 +285,13 @@ small { color: var(--muted); }
 
 /* Virtual calendar */
 .cal-sub { color: var(--muted); max-width: 64ch; margin: 6px 0 0; }
-.city-toggle a { min-width: 96px; text-align: center; }
+.city-toggle a { min-width: 96px; text-align: center; white-space: nowrap; }
+/* Five calendars do not fit a phone in one row: the strip scrolls sideways and the current city stays visible */
+@media (max-width: 640px) {
+  .city-toggle { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .city-toggle::-webkit-scrollbar { display: none; }
+  .city-toggle a { min-width: 0; padding: 8px 12px; }
+}
 .virtual-list { margin-top: 10px; }
 .virtual-list .day-sep { list-style: none; font-family: var(--display); font-weight: 800; font-size: 1.15rem; color: var(--shield); padding: 22px 0 6px; border-top: 1px solid var(--mist); }
 .virtual-list .day-sep:first-child { border-top: 0; padding-top: 10px; }

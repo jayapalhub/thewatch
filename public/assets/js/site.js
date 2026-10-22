@@ -146,3 +146,11 @@
     el.textContent = 'In your time zone: ' + f.format(s) + (en ? ' to ' + t.format(en) : '');
   } catch (e) {}
 })();
+
+// On a phone the city strip scrolls sideways; start it with the current city in view.
+(function () {
+  var cur = document.querySelector('.city-toggle a[aria-selected="true"]');
+  if (!cur || !cur.parentNode) return;
+  var strip = cur.parentNode;
+  if (strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, cur.offsetLeft - (strip.clientWidth - cur.offsetWidth) / 2);
+})();
