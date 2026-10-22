@@ -319,10 +319,14 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
   // and may be partial, so each missing Workday role is checked one by one before it is closed. A board that read
   // cleanly but matched nothing still counts: an employer's last security role closing is the common case, not an error.
   if (!run.error) {
-    const { results } = await db.prepare("SELECT id, source_key, url FROM jobs WHERE source_id=? AND status IN ('published','pending_review')").bind(src.id).all();
+    const { results } = await db.prepare("SELECT id, source_key, url, title FROM jobs WHERE source_id=? AND status IN ('published','pending_review')").bind(src.id).all();
+    let checks = 0;
     for (const r of results) {
       if (seen.has(String(r.source_key))) continue;
-      if (src.kind === "workday" && (await workdayStillOpen(cfg, r.url, fetcher))) { await db.prepare("UPDATE jobs SET last_checked_at=datetime('now') WHERE id=?").bind(r.id).run(); continue; }
+      // A row whose title no longer passes the filter (the filter was tightened) is out of scope, not closed by the employer.
+      if (!isOurRole(r.title)) { await db.prepare("UPDATE jobs SET status='rejected', reviewer_notes=COALESCE(reviewer_notes,'') || ' Removed: title is outside the board''s scope under the current filter.', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(r.id).run(); continue; }
+      // Each Workday check is a request, and an invocation only has a few dozen: beyond the cap the rest wait for the next run.
+      if (src.kind === "workday") { if (checks >= WORKDAY_MAX_CHECKS) continue; checks++; if (await workdayStillOpen(cfg, r.url, fetcher)) { await db.prepare("UPDATE jobs SET last_checked_at=datetime('now') WHERE id=?").bind(r.id).run(); continue; } }
       await db.prepare("UPDATE jobs SET status='closed', closed_reason='No longer on the employer board on ' || date('now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(r.id).run();
       run.closed++;
     }
@@ -338,6 +342,7 @@ async function finish(db, src, run) {
 // One board per call by default: a Worker invocation can only make a few dozen outbound requests, so the hourly cron
 // takes the board that has waited longest (never run first, then anything older than six days). Hundreds of boards
 // across many cities spread themselves over the week this way.
+const WORKDAY_MAX_CHECKS = 12;
 const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40 } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
