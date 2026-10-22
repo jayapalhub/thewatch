@@ -10,7 +10,7 @@ import { slugify } from "./html.js";
 const SECURITY_RE = /\b(security|cyber|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|event security|workplace security|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -121,7 +121,32 @@ export async function pullAshby(cfg, _search, fetcher = getJson) {
     return { key: x.id, title: x.title, url: x.jobUrl, location: loc, posted_at: (x.publishedAt || "").slice(0, 10) || null, salary_text: comp && /\$/.test(comp) ? comp : payText(x.descriptionHtml), remote: x.isRemote ? (loc && !/remote/i.test(loc) ? "hybrid" : "remote") : inferRemote(loc) };
   });
 }
-const ADAPTERS = { workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby };
+// Eightfold career sites (careers.qualcomm.com and many others): config { host, company } where company is the
+// "domain" the site passes to its own API. Paged ten at a time; the site's location filter does the geography.
+export async function pullEightfold(cfg, searchText, fetcher = getJson, terms = []) {
+  const out = []; const loc = terms[0] || "";
+  for (let start = 0; start < 60; start += 10) {
+    const q = new URLSearchParams({ domain: cfg.company, query: searchText || "security", location: loc, start: String(start), num: "10", sort_by: "relevance", filter_distance: "50" });
+    const j = await fetcher(`https://${cfg.host}/api/pcsx/search?${q}`, { headers: { Referer: `https://${cfg.host}/careers` } });
+    const ps = (j && j.data && j.data.positions) || [];
+    out.push(...ps);
+    if (!ps.length || out.length >= ((j.data && j.data.count) || 0)) break;
+  }
+  return out.filter((p) => isOurRole(p.name)).map((p) => {
+    const locs = Array.isArray(p.locations) ? p.locations.join("; ") : String(p.location || "");
+    return { key: String(p.id), title: p.name, url: `https://${cfg.host}${p.positionUrl || "/careers/job/" + p.id}`, location: locs, posted_at: p.postedTs ? new Date(p.postedTs * 1000).toISOString().slice(0, 10) : null, salary_text: null, remote: p.workLocationOption === "remote" ? "remote" : p.workLocationOption === "hybrid" ? "hybrid" : inferRemote(locs) };
+  });
+}
+// SmartRecruiters public postings API: config { company } (the identifier in careers.smartrecruiters.com/<company>).
+export async function pullSmartRecruiters(cfg, searchText, fetcher = getJson) {
+  const q = new URLSearchParams({ q: searchText || "security", limit: "100" });
+  const j = await fetcher(`https://api.smartrecruiters.com/v1/companies/${cfg.company}/postings?${q}`);
+  return (j.content || []).filter((x) => isOurRole(x.name)).map((x) => {
+    const l = x.location || {}; const loc = [l.city, l.region, l.country].filter(Boolean).join(", ");
+    return { key: String(x.id), title: x.name, url: `https://jobs.smartrecruiters.com/${cfg.company}/${x.id}`, location: loc, posted_at: (x.releasedDate || "").slice(0, 10) || null, salary_text: null, remote: l.remote ? "remote" : inferRemote(loc) };
+  });
+}
+const ADAPTERS = { workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
