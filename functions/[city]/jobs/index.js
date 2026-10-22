@@ -14,6 +14,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
     topic: TOPICS[q.get("topic")] ? q.get("topic") : "",
     remote: REMOTE[q.get("remote")] ? q.get("remote") : "",
     kind: POSTER_KINDS[q.get("kind")] ? q.get("kind") : "",
+    named: q.get("contact") === "1" ? "1" : "",
   };
   const anyFilter = Object.values(f).some(Boolean);
   const [jobs, all] = await Promise.all([liveJobs(env.DB, city.slug, f), anyFilter ? liveJobs(env.DB, city.slug) : null]);
@@ -32,6 +33,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
         <label>Seniority<select name="seniority"><option value="">All levels</option>${opt(SENIORITY, f.seniority)}</select></label>
         <label>Topic<select name="topic"><option value="">All topics</option>${opt(Object.fromEntries(Object.entries(TOPICS).filter(([k]) => k !== "social")), f.topic)}</select></label>
         <label>Work model<select name="remote"><option value="">Onsite, hybrid or remote</option>${opt(REMOTE, f.remote)}</select></label>
+        <label>Contact<select name="contact"><option value="">All roles</option><option value="1" ${f.named ? raw("selected") : ""}>With a named person</option></select></label>
         <label>Posted by<select name="kind"><option value="">Anyone</option>${opt({ employer: "The employer", staffing: "A staffing firm" }, f.kind)}</select></label>
         <button class="btn btn-small btn-primary" type="submit">Apply</button>
         ${anyFilter ? html`<a class="clear" href="/${city.slug}/jobs">Clear</a>` : ""}

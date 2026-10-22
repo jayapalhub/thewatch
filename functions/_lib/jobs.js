@@ -35,7 +35,8 @@ export function hydrateJob(j) {
 }
 
 // Live roles for a city: published and not past expiry. Featured roles first, then newest.
-export async function liveJobs(db, city, { seniority, topic, remote, kind, limit = 200 } = {}) {
+// Tiered board: featured first, then roles with a named person (the thing nobody else lists), then the rest, newest first.
+export async function liveJobs(db, city, { seniority, topic, remote, kind, named, limit = 200 } = {}) {
   const today = todayKey(cityOf(city) && cityOf(city).timezone);
   const where = ["j.city = ?", "j.status = 'published'", "(j.expires_at IS NULL OR j.expires_at >= ?)"];
   const args = [city, today];
@@ -43,9 +44,10 @@ export async function liveJobs(db, city, { seniority, topic, remote, kind, limit
   if (topic && TOPICS[topic]) { where.push("j.topics LIKE ?"); args.push(`%"${topic}"%`); }
   if (remote && REMOTE[remote]) { where.push("j.remote = ?"); args.push(remote); }
   if (kind && POSTER_KINDS[kind]) { where.push("j.posted_by_kind = ?"); args.push(kind); }
+  if (named) where.push("j.posted_by_name IS NOT NULL AND j.posted_by_name != ''");
   try {
     const { results } = await db.prepare(`${SELECT} WHERE ${where.join(" AND ")}
-      ORDER BY (CASE WHEN j.featured_until >= ? THEN 0 ELSE 1 END), COALESCE(j.posted_at, substr(j.created_at, 1, 10)) DESC, j.id DESC LIMIT ?`).bind(...args, today, limit).all();
+      ORDER BY (CASE WHEN j.featured_until >= ? THEN 0 ELSE 1 END), (CASE WHEN j.posted_by_name IS NOT NULL AND j.posted_by_name != '' THEN 0 ELSE 1 END), COALESCE(j.posted_at, substr(j.created_at, 1, 10)) DESC, j.id DESC LIMIT ?`).bind(...args, today, limit).all();
     return results.map(hydrateJob);
   } catch { return []; } // table missing before the migration
 }
@@ -67,9 +69,9 @@ export function agoLabel(day, today = todayKey()) {
   return `${Math.round(n / 30)} months ago`;
 }
 
-// Seniority match for the email: featured roles first, then the reader's own level, then everything else, newest first.
+// The email's three: featured roles first, then roles with a named person, then the reader's own level, then the rest.
 export function pickJobsFor(jobs, seniority, n = 3, today = todayKey()) {
-  const rank = (j) => (isFeatured(j, today) ? 0 : seniority && j.seniority === seniority ? 1 : 2);
+  const rank = (j) => (isFeatured(j, today) ? 0 : j.posted_by_name ? 1 : seniority && j.seniority === seniority ? 2 : 3);
   return jobs.map((j, i) => ({ j, i })).sort((a, b) => rank(a.j) - rank(b.j) || a.i - b.i).slice(0, n).map((x) => x.j);
 }
 
