@@ -125,6 +125,10 @@ const ADAPTERS = { workday: pullWorkday, greenhouse: pullGreenhouse, lever: pull
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
   const run = { source: src.employer_name, fetched: 0, added: 0, closed: 0, skipped: 0 };
+  // Seeded boards may have no organization yet; every role should link to its employer's organization row.
+  if (!src.organization_id) {
+    try { src.organization_id = await ensureEmployerOrg(db, src.employer_name, src.city); await db.prepare("UPDATE job_sources SET organization_id=? WHERE id=?").bind(src.organization_id, src.id).run(); } catch {}
+  }
   let cfg; try { cfg = JSON.parse(src.config || "{}"); } catch { cfg = {}; }
   const adapter = ADAPTERS[src.kind];
   if (!adapter) { run.error = `unknown kind ${src.kind}`; return finish(db, src, run); }
@@ -182,10 +186,10 @@ export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, m
 }
 
 // Create an employer organization if the source names one we do not have yet.
-export async function ensureEmployerOrg(db, name) {
+export async function ensureEmployerOrg(db, name, city = "sandiego") {
   const slug = slugify(name);
   const o = await db.prepare("SELECT id FROM organizations WHERE slug=? OR lower(name)=lower(?) LIMIT 1").bind(slug, name).first();
   if (o) return o.id;
-  const r = await db.prepare("INSERT INTO organizations (slug, name, type, notes) VALUES (?,?,?,?)").bind(slug, name, "employer", "Created for a jobs board source").run();
+  const r = await db.prepare("INSERT INTO organizations (slug, name, type, default_city, notes) VALUES (?,?,?,?,?)").bind(slug, name, "employer", city, "Created for a jobs board source").run();
   return r.meta.last_row_id;
 }

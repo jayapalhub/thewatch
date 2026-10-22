@@ -1,6 +1,6 @@
 import { html, page, raw, readForm, redirect, str } from "../../../_lib/html.js";
 import { adminShell, flash } from "../../../_lib/admin.js";
-import { CITIES } from "../../../_lib/constants.js";
+import { CITIES, DEFAULT_CITY } from "../../../_lib/constants.js";
 import { SOURCE_KINDS, runAllJobSources, ensureEmployerOrg } from "../../../_lib/job-sources.js";
 
 // Admin > Jobs > Sources: the employer boards the Thursday sweep reads. Roles it finds publish in 24 hours unless held.
@@ -66,7 +66,7 @@ export async function onRequestPost({ request, env }) {
     const kind = SOURCE_KINDS[str(p.kind)] ? str(p.kind) : null, name = str(p.employer_name, 120), terms = str(p.location_terms, 200), city = CITIES[str(p.city, 30)] ? str(p.city, 30) : null;
     const cfg = kind && parseConfig(kind, str(p.config, 300));
     if (!kind || !name || !terms || !city || !cfg) return back("Employer, city, board details and location words are all required.");
-    const orgId = await ensureEmployerOrg(db, name);
+    const orgId = await ensureEmployerOrg(db, name, city || DEFAULT_CITY);
     await db.prepare("INSERT INTO job_sources (city, organization_id, employer_name, kind, config, location_terms, search_text, notes) VALUES (?,?,?,?,?,?,?,?)")
       .bind(city, orgId, name, kind, JSON.stringify(cfg), terms, str(p.search_text, 60) || `security ${terms.split(",")[0].trim()}`, str(p.notes, 300) || null).run();
     return back(`Added ${name}. Press Run on its row to read it now; otherwise the hourly job gets to it.`);
