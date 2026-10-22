@@ -21,7 +21,7 @@ export async function onRequestGet({ request, env, data }) {
     <select name="status"><option value="">Waiting and live</option>${JOB_STATUSES.map((s) => html`<option value="${s}" ${s === status ? raw("selected") : ""}>${s.replace("_", " ")}</option>`)}</select>
     <select name="city"><option value="">All cities</option>${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === city ? raw("selected") : ""}>${c.name}</option>`)}</select>
     <button class="a-btn">Filter</button>
-    <a class="a-btn a-btn-primary" href="/admin/jobs/new">Add role</a> <a class="a-btn" href="/admin/jobs/sources">Employer boards</a>
+    <a class="a-btn a-btn-primary" href="/admin/jobs/new">Add role</a> <a class="a-btn" href="/admin/jobs/sources">Employer boards</a> <a class="a-btn" href="/admin/jobs/features">Featured requests</a>
   </form>
   <table class="a-table"><thead><tr><th>Role</th><th>Who to talk to</th><th>Status</th><th>Clicks</th><th></th></tr></thead><tbody>
   ${jobs.map((j) => html`<tr>
