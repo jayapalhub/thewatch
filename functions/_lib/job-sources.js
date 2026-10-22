@@ -107,9 +107,10 @@ export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
 export async function pullLever(cfg, _search, fetcher = getJson) {
   const j = await fetcher(`https://api.lever.co/v0/postings/${cfg.company}?mode=json`);
   return (Array.isArray(j) ? j : []).filter((x) => isOurRole(x.text)).map((x) => {
-    const c = x.categories || {}; const loc = [c.location, c.allLocations && c.allLocations.join("; ")].filter(Boolean).join("; ");
+    const c = x.categories || {}; const loc = Array.from(new Set([c.location, ...(c.allLocations || [])].filter(Boolean))).join("; ");
     const wp = (x.workplaceType || "").toLowerCase();
-    return { key: x.id, title: x.text, url: x.hostedUrl, location: loc, posted_at: x.createdAt ? new Date(x.createdAt).toISOString().slice(0, 10) : null, salary_text: payText(x.descriptionPlain || x.description), remote: wp === "remote" ? "remote" : wp === "hybrid" ? "hybrid" : inferRemote(loc) };
+    const title = String(x.text || "").replace(/\s*\((?:R|REQ|JR)?[-\s]?\d{3,}\)\s*$/i, "").trim(); // "(R5824)" requisition codes
+    return { key: x.id, title, url: x.hostedUrl, location: loc, posted_at: x.createdAt ? new Date(x.createdAt).toISOString().slice(0, 10) : null, salary_text: payText(x.descriptionPlain || x.description), remote: wp === "remote" ? "remote" : wp === "hybrid" ? "hybrid" : inferRemote(loc) };
   });
 }
 export async function pullAshby(cfg, _search, fetcher = getJson) {
@@ -142,6 +143,11 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
     if (!url || !inCity(it.location, terms)) { run.skipped++; continue; }
     seen.add(String(it.key));
     const existing = await db.prepare("SELECT id, status FROM jobs WHERE (source_id=? AND source_key=?) OR url=? LIMIT 1").bind(src.id, String(it.key), url).first();
+    if (!existing) {
+      // Some boards post the same requisition once per office. One live row per title and employer is enough.
+      const twin = await db.prepare("SELECT id FROM jobs WHERE source_id=? AND lower(title)=lower(?) AND status IN ('published','pending_review') LIMIT 1").bind(src.id, String(it.title)).first();
+      if (twin) { seen.add(String(it.key)); run.skipped++; continue; }
+    }
     if (existing) {
       if (["published", "pending_review"].includes(existing.status)) await db.prepare("UPDATE jobs SET salary_text=COALESCE(?, salary_text), posted_at=COALESCE(posted_at, ?), last_checked_at=datetime('now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(it.salary_text, it.posted_at, existing.id).run();
       continue;
