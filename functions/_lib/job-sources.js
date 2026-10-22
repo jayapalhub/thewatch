@@ -174,15 +174,16 @@ export async function pullRadancy(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-// Phenom career sites (careers.pacificlife.com, careers.firstam.com, jobs.danaher.com and many others): config { host, path }
-// where path is the locale prefix in the site's URLs ("us/en", "global/en"). The site's own search widget answers JSON;
-// keyword search is fuzzy, so titles are filtered here and location_terms do the geography.
+// Phenom career sites (careers.pacificlife.com, careers.firstam.com, jobs.danaher.com and many others): config { host, path, state }
+// where path is the locale prefix in the site's URLs ("us/en", "global/en") and state, optional, narrows the search with
+// the site's own facet ("California"), which matters on boards with thousands of roles. Keyword search is fuzzy, so
+// titles are filtered here and location_terms do the geography.
 export async function pullPhenom(cfg, searchText, fetcher = getJson) {
   const path = String(cfg.path || "us/en").replace(/^\/|\/$/g, "");
   const [country = "us", lang = "en"] = path.split("/");
   const out = []; const seen = new Set();
-  for (let from = 0; from < 200; from += 50) {
-    const body = { lang: `${lang}_${country}`, deviceType: "desktop", country, pageName: "search-results", ddoKey: "refineSearch", sortBy: "", subsearch: "", from, jobs: true, counts: true, all_fields: ["category", "country", "state", "city", "type"], size: 50, clearAll: false, jdsource: "facets", isSliderEnable: false, pageId: "page12", siteType: "external", keywords: searchText || "security", global: true, selected_fields: {}, locationData: {} };
+  for (let from = 0; from < 300; from += 50) {
+    const body = { lang: `${lang}_${country}`, deviceType: "desktop", country, pageName: "search-results", ddoKey: "refineSearch", sortBy: "", subsearch: "", from, jobs: true, counts: true, all_fields: ["category", "country", "state", "city", "type"], size: 50, clearAll: false, jdsource: "facets", isSliderEnable: false, pageId: "page12", siteType: "external", keywords: searchText || "security", global: true, selected_fields: cfg.state ? { state: [cfg.state] } : {}, locationData: {} };
     const j = await fetcher(`https://${cfg.host}/widgets`, { method: "POST", headers: { "Content-Type": "application/json", Referer: `https://${cfg.host}/${path}/search-results` }, body: JSON.stringify(body) });
     const rs = (j && j.refineSearch) || {}; const jobs = (rs.data && rs.data.jobs) || [];
     for (const x of jobs) {
