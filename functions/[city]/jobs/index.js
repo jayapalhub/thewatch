@@ -2,7 +2,7 @@ import { html, page, raw, notFound } from "../../_lib/html.js";
 import { shell } from "../../_lib/layout.js";
 import { CITIES, TOPICS, SENIORITY } from "../../_lib/constants.js";
 import { todayKey } from "../../_lib/dates.js";
-import { liveJobs, jobRow, lazyJobs, REMOTE, POSTER_KINDS, JOB_DAYS } from "../../_lib/jobs.js";
+import { liveJobs, jobRow, lazyJobs, jobsJsonLd, REMOTE, POSTER_KINDS, JOB_DAYS } from "../../_lib/jobs.js";
 
 export async function onRequestGet({ params, request, env, waitUntil }) {
   const city = CITIES[params.city];
@@ -45,6 +45,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
       ? html`<p class="jobs-count">${anyFilter ? `${jobs.length} of ${total} open roles match.` : `${total} open role${total === 1 ? "" : "s"}.`}</p><ul class="job-list">${jobs.map((j) => jobRow(j, today))}</ul>`
       : html`<p class="jobs-empty">${anyFilter ? html`No roles match these filters. <a href="/${city.slug}/jobs">See all roles</a>.` : `No roles are listed for ${city.name} yet. The first ones are on the way.`}</p>`}
     <p class="jobs-fine">Listings come down after ${JOB_DAYS} days or as soon as the employer's posting closes. Direct employers and named staffing firms with a real opening only, no aggregator links.</p>
+    ${anyFilter ? "" : jobsJsonLd(jobs, city, env.SITE_URL || "https://bettersecurity.ai", today)}
   </div>
   <section class="band band-navy band-tight"><div class="wrap split-center">
     <div><h2>Hiring in ${city.name}?</h2><p>Post a security role free. It reaches the people already planning their week on The Watch, and the best roles go in the Sunday email. Want yours at the top of the board and first in Sunday's email? <a href="/${city.slug}/jobs/feature">Feature a role</a>.</p></div>

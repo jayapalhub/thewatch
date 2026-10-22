@@ -1,3 +1,4 @@
+import { isoWithOffset } from "./dates.js";
 import { html, raw, list } from "./html.js";
 import { TOPICS, FORMATS, COST_TYPES, eventPath, orgPath, calendarPath, SHOW_BS_EVENTS } from "./constants.js";
 import { fmtTimeRange, fmtDateLong, weekday, month3, dayNum, dateKey, todayKey, nowLocalIso } from "./dates.js";
@@ -133,15 +134,32 @@ export function dayList(events, { empty = "Nothing on the calendar yet for these
 
 export function longDate(e) { return fmtDateLong(e.start_at); }
 
-export function eventJsonLd(e, siteUrl) {
-  const o = {
+// Event structured data for search results: dates carry the zone offset, offers carry the price or free, the OG
+// image doubles as the event image. eventObject() is the bare object, used on its own page and in city lists.
+export function eventObject(e, siteUrl) {
+  const tz = e.timezone || "America/Los_Angeles";
+  const free = ["free", "members_free", "donation"].includes(e.cost_type);
+  const offers = e.cost_type && e.cost_type !== "unknown" ? { "@type": "Offer", url: e.registration_url || `${siteUrl}${eventPath(e)}`, price: free ? 0 : (e.cost_min != null ? +e.cost_min : undefined), priceCurrency: "USD", availability: "https://schema.org/InStock", validFrom: e.published_at ? String(e.published_at).slice(0, 10) : undefined } : undefined;
+  return {
     "@context": "https://schema.org", "@type": "Event", name: e.title,
-    startDate: e.start_at, endDate: e.end_at || undefined,
-    eventAttendanceMode: e.format === "virtual" ? "https://schema.org/OnlineEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
+    startDate: isoWithOffset(e.start_utc, tz) || e.start_at, endDate: isoWithOffset(e.end_utc, tz) || e.end_at || undefined,
+    eventStatus: e.status === "cancelled" ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled",
+    eventAttendanceMode: e.format === "virtual" ? "https://schema.org/OnlineEventAttendanceMode" : e.format === "hybrid" || e.also_virtual ? "https://schema.org/MixedEventAttendanceMode" : "https://schema.org/OfflineEventAttendanceMode",
     description: e.description_short || undefined,
+    image: e.slug ? `${siteUrl}/og/event/${e.slug}.png` : undefined,
     url: `${siteUrl}${eventPath(e)}`,
-    organizer: e.org_name ? { "@type": "Organization", name: e.org_name } : undefined,
-    location: e.format === "virtual" ? { "@type": "VirtualLocation", url: e.registration_url || undefined } : { "@type": "Place", name: e.venue_display || undefined, address: e.venue_address_display || undefined },
+    organizer: e.org_name ? { "@type": "Organization", name: e.org_name, url: e.org_website || undefined } : undefined,
+    location: e.format === "virtual" ? { "@type": "VirtualLocation", url: e.registration_url || `${siteUrl}${eventPath(e)}` } : { "@type": "Place", name: e.venue_display || e.venue_name || undefined, address: e.venue_address_display || e.venue_address || undefined },
+    offers,
   };
+}
+export function eventJsonLd(e, siteUrl) {
+  const o = eventObject(e, siteUrl);
+  return raw(`<script type="application/ld+json">${JSON.stringify(o).replace(/</g, "\\u003c")}</script>`);
+}
+// A calendar page lists its next events as an ItemList of Event objects (up to 30).
+export function eventListJsonLd(events, siteUrl) {
+  if (!events || !events.length) return "";
+  const o = { "@context": "https://schema.org", "@type": "ItemList", itemListElement: events.slice(0, 30).map((e, i) => ({ "@type": "ListItem", position: i + 1, item: { ...eventObject(e, siteUrl), "@context": undefined } })) };
   return raw(`<script type="application/ld+json">${JSON.stringify(o).replace(/</g, "\\u003c")}</script>`);
 }

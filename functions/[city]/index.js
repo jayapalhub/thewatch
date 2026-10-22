@@ -5,7 +5,7 @@ import { lazyJobs } from "../_lib/jobs.js";
 import { pageSponsor, clickUrl } from "../_lib/sponsors.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { shell, signupForm } from "../_lib/layout.js";
-import { queryEvents, dayList, groupByDay } from "../_lib/events.js";
+import { queryEvents, dayList, groupByDay, eventListJsonLd } from "../_lib/events.js";
 import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/constants.js";
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
 
@@ -50,6 +50,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       <div class="wrap">
         ${dayList(events, { today, empty: anyFilter ? "No events match these filters in the next ten weeks. Try clearing a filter." : city.empty })}
         ${events.length ? html`<p class="list-foot">Showing events through ${monthName(horizon)} ${dayNum(horizon)}. <a href="/${city.slug}?view=month">Browse by month</a> or <a href="/${city.slug}/feed.ics">subscribe to the calendar feed</a>.</p>` : ""}
+        ${anyFilter ? "" : eventListJsonLd(events, env.SITE_URL || "https://bettersecurity.ai")}
       </div>`;
   }
 

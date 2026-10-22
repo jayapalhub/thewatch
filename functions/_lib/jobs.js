@@ -1,6 +1,6 @@
 // Jobs: curated local roles at /<city>/jobs and a Hiring this week block in the Sunday email. See project doc 125.
 // Rows move pending_review -> published (publish by default, same rules as events) -> expired (30 days) or closed (URL gone).
-import { html } from "./html.js";
+import { html, raw } from "./html.js";
 import { TOPICS, SENIORITY, cityOf } from "./constants.js";
 import { todayKey, addDays } from "./dates.js";
 
@@ -96,7 +96,7 @@ export function jobsEmailBlock(siteUrl, city, picks, total, issueId, styles) {
 // Public page row.
 export function jobRow(j, today = todayKey()) {
   const where = [j.location, REMOTE[j.remote]].filter(Boolean).join(", ");
-  return html`<li class="job-row ${isFeatured(j, today) ? "is-featured" : ""}">
+  return html`<li class="job-row ${isFeatured(j, today) ? "is-featured" : ""}" id="job-${j.id}">
     <div class="job-main">
       ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
       <h3 class="job-title"><a href="/go/j/${j.id}" rel="noopener" target="_blank">${j.title}</a></h3>
@@ -148,3 +148,31 @@ export function lazyJobs(db, waitUntil) {
 }
 
 export function defaultExpiry(from = todayKey()) { return addDays(from, JOB_DAYS); }
+
+// JobPosting structured data for a city's board: one object per live role, the employer's own posting as the
+// apply link (directApply false, since the application happens on the employer's site).
+export function jobsJsonLd(jobs, city, siteUrl, today = todayKey()) {
+  if (!jobs || !jobs.length) return "";
+  const region = city.region || city.name;
+  const items = jobs.slice(0, 50).map((j) => {
+    const loc = String(j.location || "").split(";")[0].trim();
+    const salary = j.salary_text ? (String(j.salary_text).match(/\$?\s?([\d,]{4,})/g) || []).map((m) => parseInt(m.replace(/[^\d]/g, ""), 10)).filter((n) => n >= 20000) : [];
+    return {
+      "@context": "https://schema.org", "@type": "JobPosting",
+      title: j.title,
+      description: `${j.title} at ${j.employer}${loc ? `, ${loc}` : ""}${SENIORITY[j.seniority] ? ` (${SENIORITY[j.seniority]})` : ""}. Listed on The Watch ${city.name}, the security events calendar and jobs board for ${region}; the full description and application are on ${j.employer}'s own careers page.`,
+      datePosted: j.posted_at || String(j.created_at || "").slice(0, 10) || today,
+      validThrough: j.expires_at ? `${j.expires_at}T23:59:59` : undefined,
+      employmentType: "FULL_TIME",
+      hiringOrganization: { "@type": "Organization", name: j.employer },
+      jobLocation: j.remote === "remote" ? undefined : { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: loc.split(",")[0] || city.name, addressRegion: "CA", addressCountry: "US" } },
+      jobLocationType: j.remote === "remote" ? "TELECOMMUTE" : undefined,
+      applicantLocationRequirements: j.remote === "remote" ? { "@type": "Country", name: "USA" } : undefined,
+      baseSalary: salary.length ? { "@type": "MonetaryAmount", currency: "USD", value: salary.length > 1 ? { "@type": "QuantitativeValue", minValue: Math.min(...salary), maxValue: Math.max(...salary), unitText: "YEAR" } : { "@type": "QuantitativeValue", value: salary[0], unitText: "YEAR" } } : undefined,
+      directApply: false,
+      url: `${siteUrl}/${city.slug}/jobs#job-${j.id}`,
+      identifier: { "@type": "PropertyValue", name: "The Watch", value: String(j.id) },
+    };
+  });
+  return raw(`<script type="application/ld+json">${JSON.stringify(items).replace(/</g, "\\u003c")}</script>`);
+}

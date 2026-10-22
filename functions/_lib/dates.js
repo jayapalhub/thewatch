@@ -119,3 +119,13 @@ export function fmtUtcLocal(s, tz = TZ) {
   const f = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
   return `${f.format(d)} ${zoneLabel(tz)}`;
 }
+
+// ISO 8601 with the zone's offset ("2026-10-28T10:00:00-07:00") for structured data, from a UTC instant.
+export function isoWithOffset(utc, tz = TZ) {
+  if (!utc) return undefined;
+  const d = new Date(utc); if (isNaN(d)) return undefined;
+  const wall = utcToWall(d, tz);
+  const asUtc = Date.UTC(+wall.slice(0, 4), +wall.slice(5, 7) - 1, +wall.slice(8, 10), +wall.slice(11, 13), +wall.slice(14, 16));
+  const off = Math.round((asUtc - d.getTime()) / 60000); const sign = off < 0 ? "-" : "+"; const a = Math.abs(off);
+  return `${wall}${sign}${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
+}
