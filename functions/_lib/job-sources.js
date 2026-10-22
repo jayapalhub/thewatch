@@ -10,7 +10,7 @@ import { slugify } from "./html.js";
 const SECURITY_RE = /\b(security|cyber|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|security officer|physical security|corporate security|regional security|global security|event security|workplace security|set watch|security guard|patrol|security officer|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|business development|marketing|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", successfactors: "SuccessFactors" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -59,9 +59,10 @@ export function inferRemote(locationText) {
 function payText(html) { const m = strip(html).match(PAY_RE); if (!m) return null; let s = m[0].replace(/\s+/g, " ").replace(/\$\s/g, "$"); if (!s.includes("$")) s = s.replace(/([\d,.]+)\s*USD/g, "$$$1"); return s; }
 
 async function getJson(url, init = {}) {
-  const r = await fetch(url, { ...init, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 } });
+  const { text, ...rest } = init;
+  const r = await fetch(url, { ...rest, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: text ? "text/html,application/json" : "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  return text ? r.text() : r.json(); // init.text: the caller wants the body as a string (HTML career pages)
 }
 
 const ENT = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "\u2013", mdash: "\u2014", rsquo: "\u2019", lsquo: "\u2018", rdquo: "\u201d", ldquo: "\u201c" };
@@ -216,7 +217,55 @@ export async function pullIcims(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-const ADAPTERS = { workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
+// SAP SuccessFactors career sites, both kinds: the newer ones (careers.skyworksinc.com) answer a JSON POST at
+// /services/recruiting/v1/jobs; the classic Career Site Builder ones (careers-americas.kia.com/kus) are HTML tables.
+// Config { host, base } where base is the path prefix some sites carry ("kus"), usually empty. Dates come as
+// MM/DD/YY on the new kind and "Sep 25, 2026" on the classic one.
+const MONTHS = { jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06", jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12" };
+function sfDate(s) {
+  const t = String(s || "").trim(); let m;
+  if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(t))) return `${m[3].length === 2 ? "20" + m[3] : m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}`;
+  if ((m = /^([A-Za-z]{3})[a-z]*\.? (\d{1,2}), (\d{4})$/.exec(t)) && MONTHS[m[1].toLowerCase()]) return `${m[3]}-${MONTHS[m[1].toLowerCase()]}-${m[2].padStart(2, "0")}`;
+  return null;
+}
+export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
+  const base = `https://${cfg.host}${cfg.base ? "/" + String(cfg.base).replace(/^\/|\/$/g, "") : ""}`;
+  const out = []; const seen = new Set();
+  const push = (id, title, url, loc, posted) => { if (!id || seen.has(id)) return; seen.add(id); if (!isOurRole(title)) return; out.push({ key: String(id), title, url, location: loc, posted_at: posted, salary_text: null, remote: inferRemote(loc) }); };
+  const body = (pageNumber) => JSON.stringify({ locale: "en_US", pageNumber, sortBy: "", keywords: searchText || "security", location: "", facetFilters: {}, brand: "", skills: [], categoryId: 0, alertId: "", rcmCandidateId: "" });
+  // Newer sites: JSON. A classic site answers this with an HTML page (or 404), which is the cue to fall back.
+  let json = null;
+  try { json = await fetcher(`${base}/services/recruiting/v1/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: body(0) }); } catch { json = null; }
+  if (json && Array.isArray(json.jobSearchResult)) {
+    let page = 0, got = json;
+    while (got && Array.isArray(got.jobSearchResult) && got.jobSearchResult.length) {
+      for (const row of got.jobSearchResult) {
+        const x = row.response || row; const loc = (Array.isArray(x.jobLocationShort) ? x.jobLocationShort : [x.jobLocationShort]).filter(Boolean).map((l) => String(l).trim()).join("; ");
+        push(x.id, x.unifiedStandardTitle || x.title, `${base}/job/${x.unifiedUrlTitle || x.urlTitle || "job"}/${x.id}-en_US`, loc, sfDate(x.unifiedStandardStart));
+      }
+      if (++page >= 10 || page * 10 >= (got.totalJobs || 0)) break;
+      got = await fetcher(`${base}/services/recruiting/v1/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: body(page) });
+    }
+    return out;
+  }
+  // Classic Career Site Builder: HTML rows, 25 a page by startrow.
+  for (let start = 0; start < 250; start += 25) {
+    const html = await fetcher(`${base}/search/?q=${encodeURIComponent(searchText || "security")}&sortColumn=referencedate&sortDirection=desc&startrow=${start}`, { text: true });
+    const rows = String(html).split(/<tr[^>]*class="data-row"/i).slice(1);
+    for (const row of rows) {
+      const a = /<a[^>]*href="([^"]+)"[^>]*class="jobTitle-link"[^>]*>([\s\S]*?)<\/a>/i.exec(row) || /<a[^>]*class="jobTitle-link"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i.exec(row);
+      if (!a) continue;
+      const href = a[1]; const id = (href.match(/\/(\d+)\/?$/) || [])[1] || href;
+      const title = decodeEntities(a[2].replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim();
+      const loc = decodeEntities(((/<span class="jobLocation">\s*([\s\S]*?)<\/span>/i.exec(row) || [])[1] || "").replace(/<[^>]+>/g, "")).replace(/\s+/g, " ").trim();
+      const date = ((/<span class="jobDate[^"]*">\s*([^<]+)<\/span>/i.exec(row) || [])[1] || "").trim();
+      push(id, title, href.startsWith("http") ? href : `https://${cfg.host}${href}`, loc, sfDate(date));
+    }
+    if (rows.length < 25) break;
+  }
+  return out;
+}
+const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
@@ -276,7 +325,7 @@ async function finish(db, src, run) {
 // One board per call by default: a Worker invocation can only make a few dozen outbound requests, so the hourly cron
 // takes the board that has waited longest (never run first, then anything older than six days). Hundreds of boards
 // across many cities spread themselves over the week this way.
-const REQUEST_COST = { workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
+const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40 } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-6 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
