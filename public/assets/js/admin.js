@@ -13,6 +13,6 @@
   });
   function fallback(el, done) { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); s.removeAllRanges(); done(); }
   document.querySelectorAll('[data-copy-text]').forEach(function (b) {
-    b.addEventListener('click', function () { var ta = document.getElementById(b.getAttribute('data-copy-text')); navigator.clipboard.writeText(ta.value).then(function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy raw HTML'; }, 1800); }); });
+    b.addEventListener('click', function () { var ta = document.getElementById(b.getAttribute('data-copy-text')); var label = b.getAttribute('data-copy-label') || 'Copy raw HTML'; navigator.clipboard.writeText(ta.value).then(function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = label; }, 1800); }); });
   });
 })();

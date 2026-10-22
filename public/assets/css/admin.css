@@ -76,3 +76,5 @@ h1 { font-size: 1.5rem; margin: 0 0 16px; } h2 { font-size: 1.1rem; margin: 24px
 .a-btn-small { padding: 4px 9px; font-size: 12px; }
 .a-inline input { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--mist); border-radius: 7px; }
 td .a-inline + .a-inline { margin-top: 4px; }
+.a-card + .a-card { margin-top: 12px; }
+.a-card .a-preview-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
