@@ -7,7 +7,7 @@ export async function onRequestPost(context) {
   const user = await requireAdmin(context);
   if (!user) return json({ success: false, error: "unauthorized" }, 401);
   const id = parseInt(new URL(context.request.url).searchParams.get("id") || "", 10) || null;
-  const runs = await runAllJobSources(context.env.DB, { onlyId: id });
+  const runs = await runAllJobSources(context.env.DB, { onlyId: id, max: 2, dueOnly: false });
   return json({ success: true, added: runs.reduce((a, r) => a + (r.added || 0), 0), runs });
 }
 export async function onRequest() { return json({ success: false, error: "method_not_allowed" }, 405); }

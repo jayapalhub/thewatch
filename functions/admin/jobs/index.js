@@ -16,7 +16,7 @@ export async function onRequestGet({ request, env, data }) {
   const today = todayKey();
   const waiting = jobs.filter((j) => j.status === "pending_review" && (j.hold || !j.auto_publish_at)).length;
   const body = html`${flash(u.searchParams.get("msg"))}
-  <p class="a-muted">Roles on the public jobs pages. Roles from the <a href="/admin/jobs/sources">employer boards sweep</a> and roles added here go live 24 hours after they appear unless you press Hold or Reject; posts from the public employer form wait for you. Live roles expire after 30 days and their posting URLs are rechecked about once a week. ${waiting ? html`<strong>${waiting}</strong> need a decision.` : ""}</p>
+  <p class="a-muted">Roles on the public jobs pages. Roles from the <a href="/admin/jobs/sources">employer boards</a> (read one board an hour, each about weekly) and roles added here go live 24 hours after they appear unless you press Hold or Reject; posts from the public employer form wait for you. Live roles expire after 30 days and their posting URLs are rechecked about once a week. ${waiting ? html`<strong>${waiting}</strong> need a decision.` : ""}</p>
   <form class="a-toolbar" method="get">
     <select name="status"><option value="">Waiting and live</option>${JOB_STATUSES.map((s) => html`<option value="${s}" ${s === status ? raw("selected") : ""}>${s.replace("_", " ")}</option>`)}</select>
     <select name="city"><option value="">All cities</option>${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === city ? raw("selected") : ""}>${c.name}</option>`)}</select>

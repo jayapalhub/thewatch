@@ -65,14 +65,18 @@ async function getJson(url, init = {}) {
 }
 
 // ---------- adapters: each returns [{ key, title, url, location, posted_at (YYYY-MM-DD or null), salary_text, remote }] ----------
+const WORKDAY_MAX_DETAILS = 25; // detail fetches per run; a Worker invocation has a small subrequest budget
+
 export async function pullWorkday(cfg, searchText, fetcher = getJson) {
   const base = `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com`;
   const out = [];
-  for (let offset = 0; offset < 100; offset += 20) {
+  let details = 0;
+  for (let offset = 0; offset < 200 && details < WORKDAY_MAX_DETAILS; offset += 20) {
     const page = await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
     const list = page.jobPostings || [];
     for (const p of list) {
       if (!isOurRole(p.title)) continue;
+      if (details++ >= WORKDAY_MAX_DETAILS) { out.partial = true; break; }
       let info = {};
       try { info = (await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}${p.externalPath}`)).jobPostingInfo || {}; } catch { continue; }
       const locs = [info.location, ...(info.additionalLocations || [])].filter(Boolean).join("; ") || p.locationsText || "";
@@ -81,7 +85,15 @@ export async function pullWorkday(cfg, searchText, fetcher = getJson) {
     }
     if (list.length < 20 || offset + 20 >= (page.total || 0)) break;
   }
+  if (out.length >= WORKDAY_MAX_DETAILS) out.partial = true;
   return out;
+}
+// Workday search is fuzzy and paged, so a role missing from one run's list is not proof it closed. Ask for it directly.
+async function workdayStillOpen(cfg, url, fetcher) {
+  const m = String(url).match(/myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?[^/]+(\/job\/.+)$/);
+  if (!m) return true;
+  try { const j = await fetcher(`https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com/wday/cxs/${cfg.tenant}/${cfg.site}${m[1].split("?")[0]}`); return !!(j && j.jobPostingInfo); }
+  catch (e) { return !/HTTP 404/.test(String(e && e.message)); } // network trouble: keep it
 }
 export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
   const j = await fetcher(`https://boards-api.greenhouse.io/v1/boards/${cfg.board}/jobs?content=true`);
@@ -134,11 +146,13 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
         autoPublishAt(24, now), src.id, String(it.key), `From the ${SOURCE_KINDS[src.kind]} board on ${now.toISOString().slice(0, 10)}. Publishes in 24 hours unless held.`).run();
     run.added++;
   }
-  // Anything from this board that is live with us but no longer on the board has closed.
+  // Anything from this board that is live with us but no longer on the board has closed. Workday lists are fuzzy
+  // and may be partial, so each missing Workday role is checked one by one before it is closed.
   if (!run.error && run.fetched) {
-    const { results } = await db.prepare("SELECT id, source_key FROM jobs WHERE source_id=? AND status IN ('published','pending_review')").bind(src.id).all();
+    const { results } = await db.prepare("SELECT id, source_key, url FROM jobs WHERE source_id=? AND status IN ('published','pending_review')").bind(src.id).all();
     for (const r of results) {
       if (seen.has(String(r.source_key))) continue;
+      if (src.kind === "workday" && (await workdayStillOpen(cfg, r.url, fetcher))) { await db.prepare("UPDATE jobs SET last_checked_at=datetime('now') WHERE id=?").bind(r.id).run(); continue; }
       await db.prepare("UPDATE jobs SET status='closed', closed_reason='No longer on the employer board on ' || date('now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(r.id).run();
       run.closed++;
     }
@@ -151,8 +165,14 @@ async function finish(db, src, run) {
   return run;
 }
 
-export async function runAllJobSources(db, { onlyId = null, fetcher = getJson } = {}) {
-  const { results } = await db.prepare(onlyId ? "SELECT * FROM job_sources WHERE id=?" : "SELECT * FROM job_sources WHERE active=1 ORDER BY id").bind(...(onlyId ? [onlyId] : [])).all();
+// One board per call by default: a Worker invocation can only make a few dozen outbound requests, so the hourly cron
+// takes the board that has waited longest (never run first, then anything older than six days). Hundreds of boards
+// across many cities spread themselves over the week this way.
+export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true } = {}) {
+  const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
+    : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-6 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
+    : "SELECT * FROM job_sources WHERE active=1 ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?";
+  const { results } = await db.prepare(sql).bind(...(onlyId ? [onlyId] : [max])).all();
   const out = [];
   for (const src of results) out.push(await runJobSource(db, src, { fetcher }));
   return out;

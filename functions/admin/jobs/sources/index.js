@@ -8,8 +8,8 @@ export async function onRequestGet({ request, env, data }) {
   const msg = new URL(request.url).searchParams.get("msg");
   const { results: sources } = await env.DB.prepare("SELECT s.*, (SELECT COUNT(*) FROM jobs j WHERE j.source_id=s.id AND j.status='published') live, (SELECT COUNT(*) FROM jobs j WHERE j.source_id=s.id AND j.status='pending_review') pending FROM job_sources s ORDER BY s.active DESC, s.city, s.employer_name").all();
   const body = html`${flash(msg)}
-  <p class="a-muted">Every Thursday morning the sweep reads each board below, keeps the security, GRC, privacy and audit roles whose location matches the city, and files them as pending review with a 24 hour clock. If you do nothing they go live; press Hold or Reject on <a href="/admin/jobs">Jobs</a> to stop one. Roles that leave a board are closed on the next run. <a href="/admin/jobs">Back to jobs</a>.</p>
-  <form method="post" class="a-inline"><input type="hidden" name="action" value="run"><button class="a-btn a-btn-primary">Run the sweep now</button></form>
+  <p class="a-muted">The hourly job takes one board an hour, so each board is read about once a week. It keeps the security, GRC, privacy and audit roles whose location matches the city, and files them as pending review with a 24 hour clock. If you do nothing they go live; press Hold or Reject on <a href="/admin/jobs">Jobs</a> to stop one. Roles that leave a board are closed on the next run. <a href="/admin/jobs">Back to jobs</a>.</p>
+  <form method="post" class="a-inline"><input type="hidden" name="action" value="run"><button class="a-btn a-btn-primary">Read the two boards that have waited longest</button></form>
   <table class="a-table"><thead><tr><th>Employer</th><th>City</th><th>Board</th><th>Location must include</th><th>Live / pending</th><th>Last run</th><th></th></tr></thead><tbody>
   ${sources.map((s) => html`<tr class="${s.active ? "" : "a-dim"}">
     <td><strong>${s.employer_name}</strong>${s.notes ? html`<br><small class="a-muted">${s.notes}</small>` : ""}</td>
@@ -56,7 +56,7 @@ export async function onRequestPost({ request, env }) {
   const db = env.DB;
   const back = (m) => redirect("/admin/jobs/sources?msg=" + encodeURIComponent(m), 303);
   if (action === "run" || action === "run_one") {
-    const runs = await runAllJobSources(db, { onlyId: action === "run_one" ? id : null });
+    const runs = await runAllJobSources(db, { onlyId: action === "run_one" ? id : null, max: 2, dueOnly: false });
     const added = runs.reduce((a, r) => a + (r.added || 0), 0), closed = runs.reduce((a, r) => a + (r.closed || 0), 0), errs = runs.filter((r) => r.error);
     return back(`Sweep done: ${added} added, ${closed} closed${errs.length ? `; ${errs.length} board${errs.length === 1 ? "" : "s"} failed (${errs.map((r) => r.source).join(", ")})` : ""}.`);
   }
@@ -69,7 +69,7 @@ export async function onRequestPost({ request, env }) {
     const orgId = await ensureEmployerOrg(db, name);
     await db.prepare("INSERT INTO job_sources (city, organization_id, employer_name, kind, config, location_terms, search_text, notes) VALUES (?,?,?,?,?,?,?,?)")
       .bind(city, orgId, name, kind, JSON.stringify(cfg), terms, str(p.search_text, 60) || "security", str(p.notes, 300) || null).run();
-    return back(`Added ${name}. Run the sweep to pull its roles now, or wait for Thursday.`);
+    return back(`Added ${name}. Press Run on its row to read it now; otherwise the hourly job gets to it.`);
   }
   return back("Unknown action.");
 }
