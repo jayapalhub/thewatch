@@ -103,14 +103,19 @@ export function parseIcal(text, defaultTz = TZ) {
     const de = props.DTEND && parseIcsDate(props.DTEND.value, props.DTEND.params, defaultTz);
     const endUtc = de && de.utc ? de.utc : new Date(ds.utc.getTime() + 3600000);
     const desc = stripHtml(icsUnescape(props.DESCRIPTION?.value || "")).replace(/^[^\n]{0,80}\n+(?=#+\s|\S)/, (m) => (/meetup|group|chapter/i.test(m) ? "" : m)).replace(/^#+\s*/gm, "").trim();
-    const location = icsUnescape(props.LOCATION?.value || "").trim();
+    let location = icsUnescape(props.LOCATION?.value || "").trim();
     const url = (props.URL?.value || (desc.match(/https?:\/\/\S+/) || [])[0] || "").trim();
+    // Luma puts its own event link in LOCATION when the address is shown only after registration. That is an in person
+    // event with a withheld address, not an online one, unless the title says so.
+    const meetingLink = /zoom\.|teams\.microsoft|webex\.|meet\.google|youtube\.|youtu\.be|linkedin\.com\/events|brighttalk|on24|streamyard|gotowebinar/i;
+    const titleSaysOnline = /\b(virtual|online|webinar)\b/i.test(props.SUMMARY?.value || "");
+    if (/^https?:\/\//i.test(location) && !meetingLink.test(location) && !titleSaysOnline) location = "Address shared on registration";
     out.push({
       uid: `ical:${(props.UID?.value || url || props.SUMMARY?.value || "").trim()}`,
       title: icsUnescape(props.SUMMARY?.value || "").trim(),
       startUtc: ds.utc, endUtc, url, summary: desc, speakers: null, location,
       platform: /zoom/i.test(location + " " + url) ? "Zoom" : /teams/i.test(location) ? "Teams" : "other",
-      online: !location || /online|virtual|zoom|webinar|teams|webex|https?:/i.test(location),
+      online: !location || titleSaysOnline || /online|virtual|zoom|webinar|teams|webex|https?:/i.test(location),
       cpeHint: /\bCPE\b/.test(desc) ? 1 : null,
     });
   }
