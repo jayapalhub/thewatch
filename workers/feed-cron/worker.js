@@ -1,7 +1,7 @@
 // Scheduled Worker for The Watch.
 //   Thursday 13:00 UTC: ask the Pages site to pull all feeds.
 //   Every hour:         publish pending rows whose 24 hour hold has passed, and send due event reminders.
-//   Weekends, every 10 minutes 13:00 to 20:00 UTC: newsletter previews (Saturday 8 AM local) and sends (Sunday 8 AM local).
+//   Friday to Sunday UTC, every 10 minutes: newsletter previews (Saturday 8 AM local) and sends (Sunday 8 AM local) in every city zone.
 // Deploy once from the repo root:  cd workers/feed-cron && npx wrangler deploy && npx wrangler secret put ADMIN_TOKEN
 export default {
   async scheduled(event, env, ctx) {

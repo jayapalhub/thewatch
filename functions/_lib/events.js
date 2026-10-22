@@ -117,17 +117,16 @@ export function eventRow(e) {
   </li>`;
 }
 
-export function dayHeading(key) {
-  const today = todayKey();
+export function dayHeading(key, today = todayKey()) {
   const label = key === today ? "Today" : weekday(key);
   return html`<div class="day-head"><span class="day-num">${dayNum(key)}</span><span class="day-text"><span class="day-name">${label}</span><span class="day-month">${month3(key)}</span></span></div>`;
 }
 
-export function dayList(events, { empty = "Nothing on the calendar yet for these days." } = {}) {
+export function dayList(events, { empty = "Nothing on the calendar yet for these days.", today = todayKey() } = {}) {
   if (!events.length) return html`<p class="empty">${empty}</p>`;
   return html`${groupByDay(events).map((g) => html`
     <section class="day-group" id="d-${g.key}">
-      ${dayHeading(g.key)}
+      ${dayHeading(g.key, today)}
       <ul class="event-list">${g.events.map(eventRow)}</ul>
     </section>`)}`;
 }

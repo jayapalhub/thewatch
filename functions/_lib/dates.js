@@ -86,3 +86,27 @@ export function toUtc(iso, tz = TZ) {
 export function icsStamp(date) {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 }
+
+// A wall clock ISO string ("2026-10-28T10:00:00") for a UTC instant in the given zone.
+export function utcToWall(date, tz = TZ) {
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const o = {}; f.formatToParts(date instanceof Date ? date : new Date(date)).forEach((x) => { o[x.type] = x.value; });
+  return `${o.year}-${o.month}-${o.day}T${o.hour === "24" ? "00" : o.hour}:${o.minute}:00`;
+}
+
+// Re-express an event stored in one zone (its wall clock plus start_utc/end_utc) in another city's zone, for lists
+// that mix calendars, such as the virtual sessions in an Eastern city's email. Same zone returns the row unchanged.
+export function inZone(e, tz) {
+  if (!e || !tz || (e.timezone || TZ) === tz) return e;
+  const su = e.start_utc ? new Date(e.start_utc) : toUtc(e.start_at, e.timezone || TZ);
+  const eu = e.end_at ? (e.end_utc ? new Date(e.end_utc) : toUtc(e.end_at, e.timezone || TZ)) : null;
+  return { ...e, start_at: utcToWall(su, tz), end_at: eu ? utcToWall(eu, tz) : e.end_at, timezone: tz };
+}
+
+// "Pacific", "Eastern", "Central European Time": how an email names the zone its times are in.
+const ZONE_NAMES = { "America/Los_Angeles": "Pacific", "America/Denver": "Mountain", "America/Phoenix": "Arizona", "America/Chicago": "Central", "America/New_York": "Eastern", "America/Anchorage": "Alaska", "Pacific/Honolulu": "Hawaii" };
+export function zoneLabel(tz = TZ) {
+  if (ZONE_NAMES[tz]) return ZONE_NAMES[tz];
+  try { return new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "longGeneric" }).formatToParts(new Date()).find((p) => p.type === "timeZoneName").value; }
+  catch { return "local time"; }
+}

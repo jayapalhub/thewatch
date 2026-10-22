@@ -7,7 +7,7 @@ export async function onRequestGet({ env, params }) {
   if (!city) return new Response("Not found", { status: 404 });
   const events = await upcomingEvents(env.DB, { city: city.slug, limit: 300 });
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
-  return new Response(icsDocument(events, siteUrl, city.title), {
+  return new Response(icsDocument(events, siteUrl, city.title, city.timezone), {
     headers: { "Content-Type": "text/calendar; charset=utf-8", "Cache-Control": "public, max-age=900" },
   });
 }

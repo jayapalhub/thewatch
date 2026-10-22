@@ -33,8 +33,12 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? "The Watch: cybersecurity events calendars by Better Security" : `${brandTitle}: cybersecurity events in ${c.name}`;
   const desc = description || (generic ? `Every cybersecurity, AI security, privacy and audit event in ${cityListText()}, in one calendar and one Sunday email. By Better Security.` : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
   const calHome = isVirtual ? "/virtual" : `/${c.slug}`;
+  // Up to three cities sit in the header by name. Past that the header shows the current city and an All cities link
+  // to the chooser, so the navigation stays the same width however many cities there are.
+  const cityList = Object.values(CITIES);
+  const cityNav = cityList.length <= 3 ? cityList.map((x) => [`/${x.slug}`, x.name]) : [...(c && !generic && CITIES[c.slug] ? [[`/${c.slug}`, c.name]] : []), ["/?choose=1", "All cities"]];
   const nav = [
-    ...Object.values(CITIES).map((x) => [`/${x.slug}`, x.name]),
+    ...cityNav,
     ["/virtual", "Virtual"],
     ...(SHOW_BS_EVENTS ? [["/events", "Our events"]] : []),
     ["/submit", "Submit an event"],

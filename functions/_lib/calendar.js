@@ -29,10 +29,10 @@ export function eventToVevent(e, siteUrl) {
   ].filter(Boolean).join("\r\n");
 }
 
-export function icsDocument(events, siteUrl, name = "The Watch San Diego") {
+export function icsDocument(events, siteUrl, name = "The Watch", tz = "America/Los_Angeles") {
   return [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Better Security//The Watch San Diego//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-    `X-WR-CALNAME:${icsEscape(name)}`, "X-WR-TIMEZONE:America/Los_Angeles",
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Better Security//The Watch//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+    `X-WR-CALNAME:${icsEscape(name)}`, `X-WR-TIMEZONE:${tz}`,
     ...events.map((e) => eventToVevent(e, siteUrl)),
     "END:VCALENDAR", "",
   ].join("\r\n");

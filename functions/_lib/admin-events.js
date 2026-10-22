@@ -1,5 +1,5 @@
 import { str, list, slugify } from "./html.js";
-import { TOPICS, DEFAULT_CITY, cityOf, eventPath } from "./constants.js";
+import { TOPICS, DEFAULT_CITY, cityOf, cityTz, eventPath } from "./constants.js";
 import { sendEmail, emailShell } from "./integrations.js";
 import { toUtc } from "./dates.js";
 
@@ -44,8 +44,9 @@ export function parseEventForm(p) {
     recording_url: str(p.recording_url, 500) || null,
     also_virtual: str(p.also_virtual) === "1" ? 1 : 0,
   };
-  row.start_utc = toUtc(row.start_at, "America/Los_Angeles").toISOString();
-  row.end_utc = row.end_at ? toUtc(row.end_at, "America/Los_Angeles").toISOString() : null;
+  row.timezone = cityTz(row.city); // wall clock times are in the calendar's own zone
+  row.start_utc = toUtc(row.start_at, row.timezone).toISOString();
+  row.end_utc = row.end_at ? toUtc(row.end_at, row.timezone).toISOString() : null;
   return { row };
 }
 

@@ -149,8 +149,9 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
     run.added++;
   }
   // Anything from this board that is live with us but no longer on the board has closed. Workday lists are fuzzy
-  // and may be partial, so each missing Workday role is checked one by one before it is closed.
-  if (!run.error && run.fetched) {
+  // and may be partial, so each missing Workday role is checked one by one before it is closed. A board that read
+  // cleanly but matched nothing still counts: an employer's last security role closing is the common case, not an error.
+  if (!run.error) {
     const { results } = await db.prepare("SELECT id, source_key, url FROM jobs WHERE source_id=? AND status IN ('published','pending_review')").bind(src.id).all();
     for (const r of results) {
       if (seen.has(String(r.source_key))) continue;

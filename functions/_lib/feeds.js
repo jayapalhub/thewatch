@@ -3,6 +3,7 @@
 import { slugify } from "./html.js";
 import { toUtc, TZ } from "./dates.js";
 import { autoPublishAt } from "./autopublish.js";
+import { cityTz } from "./constants.js";
 
 const WINDOW_DAYS = 90;
 
@@ -182,7 +183,8 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     if (it.startUtc < now || it.startUtc > horizon) { stats.skipped++; continue; }
     stats.fetched++;
     await enrichFromAggregator(db, it);
-    const startLocal = utcToLocalIso(it.startUtc), endLocal = utcToLocalIso(it.endUtc);
+    const tz = cityTz(src.city); // the calendar's own zone; virtual rows stay in Pacific
+    const startLocal = utcToLocalIso(it.startUtc, tz), endLocal = utcToLocalIso(it.endUtc, tz);
     const day = startLocal.slice(0, 10);
     // Dedupe: feed uid, registration url, or same title on the same day (any status except rejected keeps it out)
     const dup = await db.prepare(`SELECT id FROM events WHERE (feed_uid=? OR registration_url=? OR registration_url=? OR (lower(title)=lower(?) AND substr(start_at,1,10)=?)) AND status!='rejected' LIMIT 1`)
@@ -202,7 +204,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(slug, src.city, it.title.slice(0, 140), it.organizationId || src.organization_id || null,
         isSd && !online ? (it.location || null) : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
-        startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), TZ, format, online ? it.platform : null, it.speakers,
+        startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), tz, format, online ? it.platform : null, it.speakers,
         firstSentence(it.summary, 200) || it.title, it.summary ? plainText(it.summary).slice(0, 4000) : null, it.url,
         src.kind === "brighttalk" ? "free" : "unknown", src.kind === "brighttalk" ? 0 : null, src.kind === "brighttalk" ? 0 : null,
         cpe, cpe && src.cpe_default ? 1 : null, cpe ? (src.cpe_body || "self_reported") : null, JSON.stringify(topics.length ? topics : ["threat_intel"]), "practitioner",

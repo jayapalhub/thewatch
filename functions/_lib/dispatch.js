@@ -171,7 +171,7 @@ export async function newsletterTick(env) {
 let lastLazy = 0;
 export function lazyNewsletterTick(env, waitUntil) {
   const now = Date.now(); const dow = new Date().getUTCDay();
-  if (dow !== 0 && dow !== 6 && dow !== 1) return; // weekends (UTC Monday covers Sunday evening Pacific)
+  if (dow === 2 || dow === 3 || dow === 4) return; // Friday to Monday UTC covers Saturday and Sunday mornings in every zone
   if (now - lastLazy < 300000) return;
   lastLazy = now;
   const p = newsletterTick(env).catch(() => {});

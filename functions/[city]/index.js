@@ -19,7 +19,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
   const url = new URL(request.url);
   const q = url.searchParams;
   const view = q.get("view") === "month" ? "month" : "list";
-  const today = todayKey();
+  const today = todayKey(city.timezone); // the city's own day, not Pacific
   const filters = {
     topic: TOPICS[q.get("topic")] ? q.get("topic") : "",
     org: (q.get("org") || "").slice(0, 80),
@@ -48,7 +48,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
     const strip = weekStrip(today, events, today);
     body = html`${header(city, "list", filters, orgs, anyFilter)}${strip}
       <div class="wrap">
-        ${dayList(events, { empty: anyFilter ? "No events match these filters in the next ten weeks. Try clearing a filter." : city.empty })}
+        ${dayList(events, { today, empty: anyFilter ? "No events match these filters in the next ten weeks. Try clearing a filter." : city.empty })}
         ${events.length ? html`<p class="list-foot">Showing events through ${monthName(horizon)} ${dayNum(horizon)}. <a href="/${city.slug}?view=month">Browse by month</a> or <a href="/${city.slug}/feed.ics">subscribe to the calendar feed</a>.</p>` : ""}
       </div>`;
   }
