@@ -21,7 +21,8 @@ export async function loadIssueData(db, issue) {
   const virt = (await queryEvents(db, { city: "virtual", from, to, cpe: "1", limit: 200 }))
     .filter((e) => !events.find((x) => x.id === e.id))
     .sort((a, b) => (a.org_type === "vendor") - (b.org_type === "vendor") || (a.cost_type !== "free") - (b.cost_type !== "free") || a.start_at.localeCompare(b.start_at))
-    .slice(0, 5);
+    .slice(0, 5)
+    .sort((a, b) => a.start_at.localeCompare(b.start_at)); // chosen by quality, shown in day order
   const sponsor = issue.sponsor_name ? null : await emailSponsor(db, issue);
   const jobs = await liveJobs(db, issue.city || "sandiego", { limit: 60 });
   return { events, soon, bs, featured, virt, sponsor, jobs };
@@ -146,7 +147,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   ${data.sponsor && !issue.sponsor_name ? sponsorLine(data.sponsor, siteUrl, issue, city) : ""}
   <div style="margin:26px 0 0;padding-top:14px;border-top:1px solid ${MIST};font-size:13px;color:${MUTED};line-height:1.6;">
     {{SHARE}}Know an event that should be here? <a href="${siteUrl}/submit" style="color:${SHIELD};">Submit it</a>. Want to reach this list? <a href="${siteUrl}/sponsor" style="color:${SHIELD};">Sponsor an issue</a>. Full calendar at <a href="${siteUrl}/${issue.city || "sandiego"}" style="color:${SHIELD};">bettersecurity.ai/${issue.city || "sandiego"}</a>.<br>
-    ${esc(city.title)} is published by Better Security, ${esc(MAIL_ADDRESS)}.<br>
+    ${esc(city.title)} is published by ${esc(MAIL_ADDRESS)}.<br>
     You are getting this because you subscribed at bettersecurity.ai. <a href="{{UNSUB}}" style="color:${MUTED};">Unsubscribe</a> in one click.
   </div>
 </div>`;

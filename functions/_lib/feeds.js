@@ -16,8 +16,19 @@ function decodeEntities(s) {
     .replace(/â€™/g, "'").replace(/â€œ|â€\x9d/g, '"').replace(/â€["”“]/g, ", ").replace(/â€¯|â€\u00af/g, " ").replace(/â€\S?/g, "'");
 }
 function stripHtml(s) { return decodeEntities(String(s || "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, "")).replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim(); }
-function firstSentence(text, max = 200) {
-  const t = String(text || "").replace(/\s+/g, " ").trim();
+// Meetup descriptions arrive as markdown. Drop emphasis markers, rules and bare labels ("**Description:**") before the
+// short blurb is cut, and skip a leading headline line (a panel title ending without a period) when a paragraph follows.
+export function plainText(text) {
+  return String(text || "")
+    .replace(/^\s*(\*{3,}|-{3,}|_{3,})\s*$/gm, "")
+    .replace(/\*{1,3}([^*\n]+)\*{1,3}/g, "$1").replace(/(^|\s)_{1,2}([^_\n]+)_{1,2}(?=\s|$)/g, "$1$2")
+    .replace(/^\s*(description|about|details|agenda|summary)\s*:\s*$/gim, "")
+    .trim();
+}
+export function firstSentence(text, max = 200) {
+  const lines = plainText(text).split("\n").map((l) => l.trim()).filter(Boolean);
+  while (lines.length > 1 && lines[0].length < 120 && !/[.!?]$/.test(lines[0])) lines.shift(); // headline lines before the first real sentence
+  const t = lines.join(" ").replace(/\s+/g, " ").trim();
   if (t.length <= max) return t;
   const cut = t.slice(0, max);
   const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("! "), cut.lastIndexOf("? "));
@@ -192,7 +203,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
       .bind(slug, src.city, it.title.slice(0, 140), it.organizationId || src.organization_id || null,
         isSd && !online ? (it.location || null) : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
         startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), TZ, format, online ? it.platform : null, it.speakers,
-        firstSentence(it.summary, 200) || it.title, it.summary ? it.summary.slice(0, 4000) : null, it.url,
+        firstSentence(it.summary, 200) || it.title, it.summary ? plainText(it.summary).slice(0, 4000) : null, it.url,
         src.kind === "brighttalk" ? "free" : "unknown", src.kind === "brighttalk" ? 0 : null, src.kind === "brighttalk" ? 0 : null,
         cpe, cpe && src.cpe_default ? 1 : null, cpe ? (src.cpe_body || "self_reported") : null, JSON.stringify(topics.length ? topics : ["threat_intel"]), "practitioner",
         isSd && online ? 1 : 0, 0, "pending_review", "feed", it.aggregatorUrl || src.url, notes, it.uid, autoPublishAt()).run();
