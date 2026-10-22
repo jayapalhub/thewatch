@@ -63,7 +63,9 @@ function eventLine(e) {
   const when = `${weekday3(e.start_at)} ${fmtTime(e.start_at)}`;
   const where = e.format === "virtual" ? "online" : (e.venue_display || "");
   const cost = costLabel(e) && e.cost_type !== "unknown" ? costLabel(e) : "";
-  return `${when}: ${e.title}${e.org_display ? ` (${e.org_display}${where ? `, ${where}` : ""})` : where ? ` (${where})` : ""}${cost ? `, ${cost}` : ""}`;
+  const org = e.org_display && !String(e.title).toLowerCase().includes(String(e.org_display).toLowerCase()) ? e.org_display : ""; // skip "Authenticate 2026 (FIDO Alliance) (FIDO Alliance)"
+  const paren = [org, where].filter(Boolean).join(", ");
+  return `${when}: ${e.title}${paren ? ` (${paren})` : ""}${cost ? `, ${cost}` : ""}`;
 }
 
 // The Monday post: the coming week's events for a city. Featured first, then free in person, then the rest.
