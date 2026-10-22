@@ -192,8 +192,9 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     const tz = cityTz(src.city); // the calendar's own zone; virtual rows stay in Pacific
     const startLocal = utcToLocalIso(it.startUtc, tz), endLocal = utcToLocalIso(it.endUtc, tz);
     const day = startLocal.slice(0, 10);
-    // Dedupe: feed uid, registration url, or same title on the same day (any status except rejected keeps it out)
-    const dup = await db.prepare(`SELECT id FROM events WHERE (feed_uid=? OR registration_url=? OR registration_url=? OR (lower(title)=lower(?) AND substr(start_at,1,10)=?)) AND status!='rejected' LIMIT 1`)
+    // Dedupe: the same feed uid keeps it out in any status (a rejected feed row must not come back on the next pull);
+    // registration url or same title on the same day keeps it out unless that row was rejected
+    const dup = await db.prepare(`SELECT id FROM events WHERE feed_uid=? OR ((registration_url=? OR registration_url=? OR (lower(title)=lower(?) AND substr(start_at,1,10)=?)) AND status!='rejected') LIMIT 1`)
       .bind(it.uid, it.url, it.aggregatorUrl || it.url, it.title, day).first();
     if (dup) { stats.skipped++; continue; }
     let slug = `${slugify(it.title).slice(0, 80).replace(/-+$/, "")}-${day}`;
