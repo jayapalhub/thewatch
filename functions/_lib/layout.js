@@ -102,6 +102,7 @@ ${body}
       ${isVirtual ? "" : html`<a href="${calHome}/organizers">Organizers in ${c.name}</a>`}
       <a href="${calHome}/speakers">${isVirtual ? "Speakers at online sessions" : `Speakers in ${c.name}`}</a>
       ${isVirtual ? "" : html`<a href="${calHome}/jobs">Security jobs in ${c.name}</a>`}
+      ${isVirtual ? "" : html`<a href="${calHome}/cpe">CPE in ${c.name}</a>`}
       ${isVirtual ? "" : html`<a href="${calHome}/issues">Past issues</a>`}
       <a href="/submit">Submit an event</a>
     </div>
