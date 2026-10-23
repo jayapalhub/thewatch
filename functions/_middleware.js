@@ -12,7 +12,7 @@ import { meterDB, noteRequest, flushUsage, alertOnce } from "./_lib/ops.js";
 //    applies to static files. The embed pages are the one place framing is allowed.
 const FRESH_SECONDS = 300;
 const STALE_SECONDS = 172800; // two days
-const PRIVATE = /^\/(admin|api|go|r|profile|unsubscribe|resubscribe|remind|cpe|subscribe|submit)(\/|$)/;
+const PRIVATE = /^\/(admin|api|go|r|profile|unsubscribe|resubscribe|remind|cpe|subscribe|submit|casestudy)(\/|$)/;
 
 function cacheable(request, path) {
   if (request.method !== "GET") return false;

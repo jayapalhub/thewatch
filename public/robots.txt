@@ -5,6 +5,7 @@ Disallow: /profile
 Disallow: /go/
 Disallow: /r/
 Disallow: /api/
+Disallow: /casestudy
 # Filtered and month views are the same events as the plain calendar pages; keep crawlers on the plain pages.
 Disallow: /*?
 Sitemap: https://bettersecurity.ai/sitemap.xml

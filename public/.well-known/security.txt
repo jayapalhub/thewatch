@@ -1,0 +1,4 @@
+Contact: mailto:watch@bettersecurity.ai
+Expires: 2027-10-23T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://bettersecurity.ai/.well-known/security.txt
