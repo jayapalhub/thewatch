@@ -36,7 +36,9 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
 
   let body;
   if (view === "month") {
-    const m = /^\d{4}-\d{2}$/.test(q.get("month") || "") ? q.get("month") + "-01" : monthStart(today);
+    // Month pages are bounded (three months back to fifteen ahead) so crawlers following the arrows cannot walk forever.
+    const asked = /^\d{4}-\d{2}$/.test(q.get("month") || "") ? q.get("month") + "-01" : "";
+    const m = asked && asked >= addMonths(monthStart(today), -3) && asked <= addMonths(monthStart(today), 15) ? asked : monthStart(today);
     const from = monthStart(m), to = addDays(monthEnd(m), 1);
     const events = await queryEvents(env.DB, { city: city.slug, from, to: to + "T00:00", ...filters });
     body = html`${header(city, "month", filters, orgs, anyFilter, m)}${monthGrid(city, m, events, today, filters)}`;
