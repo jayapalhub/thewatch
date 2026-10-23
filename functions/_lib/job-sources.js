@@ -67,7 +67,11 @@ export async function getJson(url, init = {}) {
   const { text, ...rest } = init;
   // A 15 second limit per request: one hung connection (a Workday tenant on 2026-10-23) otherwise stalls the whole hourly run.
   const r = await fetch(url, { ...rest, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: text ? "text/html,application/json" : "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 }, signal: rest.signal || AbortSignal.timeout(15000) });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  if (!r.ok) {
+    // Keep a short piece of the body: Workday's 422s say why, and the board's last_status is where that gets read.
+    let why = ""; try { why = (await r.text()).replace(/\s+/g, " ").slice(0, 90); } catch {}
+    throw new Error(`HTTP ${r.status}${why ? ` (${why})` : ""}`);
+  }
   return text ? r.text() : r.json(); // init.text: the caller wants the body as a string (HTML career pages)
 }
 
@@ -82,7 +86,9 @@ export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []
   const out = [];
   let details = 0;
   for (let offset = 0; offset < 300 && details < WORKDAY_MAX_DETAILS; offset += 20) {
-    const page = await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
+    // The headers a browser sends from the careers page itself. Some tenants answer a bare POST with HTTP 422 while the
+    // same request from the careers page succeeds (checked in Chrome on 2026-10-23 for Cotality).
+    const page = await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}/jobs`, { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9", Origin: base, Referer: `${base}/${cfg.site}` }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
     const list = page.jobPostings || [];
     for (const p of list) {
       if (!isOurRole(p.title)) continue;
