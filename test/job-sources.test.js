@@ -40,6 +40,41 @@ describe("location and inference helpers", () => {
     assert.equal(inCity("San Diego", []), false);
   });
 
+  test("inCity matches terms as whole words only", () => {
+    assert.equal(inCity("Colorado Springs, CO", ["Spring"]), false);
+    assert.equal(inCity("Spring, TX", ["Spring"]), true);
+    assert.equal(inCity("Springfield, VA", ["Spring"]), false);
+    assert.equal(inCity("San Diego-CA", ["San Diego"]), true); // punctuation is a word edge
+    assert.equal(inCity("Fort Worth, TX", ["Worth"]), true);
+    assert.equal(inCity("Ventura, CA", ["Vent"]), false);
+  });
+
+  test("inCity skips foreign locations that share a name with a US city", () => {
+    assert.equal(inCity("Melbourne, Victoria, Australia", ["Melbourne"]), false);
+    assert.equal(inCity("Melbourne, AU", ["Melbourne"]), false);
+    assert.equal(inCity("Melbourne, FL", ["Melbourne"]), true);
+    assert.equal(inCity("Novi Sad, RS", ["Novi"]), false);
+    assert.equal(inCity("Novi Sad, Serbia", ["Novi"]), false);
+    assert.equal(inCity("Novi, MI", ["Novi"]), true);
+    assert.equal(inCity("London, England, United Kingdom", ["London"]), false);
+  });
+
+  test("inCity checks each listed location on its own", () => {
+    // A US location listed beside a foreign one still counts, whatever the separator.
+    assert.equal(inCity("Melbourne, Victoria, Australia; Melbourne, FL", ["Melbourne"]), true);
+    assert.equal(inCity("Novi Sad, RS | Novi, MI", ["Novi"]), true);
+    assert.equal(inCity("Melbourne, Victoria, Australia<br/>Melbourne, FL", ["Melbourne"]), true);
+    assert.equal(inCity("Melbourne, Victoria, Australia\nMelbourne, FL", ["Melbourne"]), true);
+    // The foreign marker only rules out its own location, not the whole list.
+    assert.equal(inCity("San Diego, CA; Sydney, Australia", ["San Diego"]), true);
+    assert.equal(inCity("Melbourne, Victoria, Australia; Sydney, Australia", ["Melbourne"]), false);
+  });
+
+  test("inCity escapes terms, so punctuation in a term is literal", () => {
+    assert.equal(inCity("St. Louis, MO", ["St. Louis"]), true);
+    assert.equal(inCity("Stx Louis, MO", ["St. Louis"]), false);
+  });
+
   test("parseTerms splits the location_terms column", () => {
     assert.deepEqual(parseTerms(" San Diego, La Jolla ,,Carlsbad "), ["San Diego", "La Jolla", "Carlsbad"]);
     assert.deepEqual(parseTerms(null), []);
@@ -251,6 +286,20 @@ describe("pullRadancy", () => {
     assert.equal(out[0].title, "Security Analyst & Responder");
     assert.equal(out[0].location, "San Diego, California");
     assert.equal(out[0].url, "https://jobs.example.test/job/san-diego/security-analyst-amp-responder/1234/5001"); // query string dropped
+  });
+
+  test("reads the newer layout, where the job link sits inside the h2", async () => {
+    const rd2 = fixtureJson("jobs/radancy-h2.json");
+    const f = recordingFetcher((url) => rd2.pages[Math.min(Number(new URL(url).searchParams.get("CurrentPage")) - 1, 1)]);
+    const out = await pullRadancy({ host: "jobs.example.test" }, "security", f);
+    assert.equal(f.calls.length, 2); // page two only repeats 6001, so paging stops
+    assert.deepEqual(out.map((r) => r.key), ["6001", "6003", "6004"]);
+    out.forEach(assertRoleShape);
+    assert.equal(out[0].title, "Senior Security Engineer & Architect"); // the link text is the title
+    assert.equal(out[0].location, "San Diego, California"); // the span after the link, in the same list item
+    assert.equal(out[0].url, "https://jobs.example.test/job/san-diego/senior-security-engineer-amp-architect/1234/6001");
+    assert.equal(out[1].location, ""); // no span in its own item; the next item's location is not borrowed
+    assert.equal(out[2].location, "Austin, Texas");
   });
 
   test("reads at most five pages", async () => {

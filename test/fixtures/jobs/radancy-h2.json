@@ -1,0 +1,12 @@
+{
+  "pages": [
+    {
+      "filters": "",
+      "results": "<section id=\"search-results-list\"><ul>\n<li><h2><a href=\"/job/san-diego/senior-security-engineer-amp-architect/1234/6001?src=search\" data-job-id=\"6001\">Senior Security Engineer &amp; Architect</a></h2><span class=\"job-location\">San Diego, California</span><span class=\"job-date-posted\">10/20/2026</span></li>\n<li><h2><a href=\"/job/san-diego/payroll-analyst/1234/6002?src=search\" data-job-id=\"6002\">Payroll Analyst</a></h2><span class=\"job-location\">San Diego, California</span><span class=\"job-date-posted\">10/20/2026</span></li>\n<li><h2><a href=\"/job/san-diego/cyber-threat-analyst/1234/6003?src=search\" data-job-id=\"6003\">Cyber Threat Analyst</a></h2><span class=\"job-date-posted\">10/20/2026</span></li>\n<li><h2><a href=\"/job/san-diego/privacy-program-manager/1234/6004?src=search\" data-job-id=\"6004\">Privacy Program Manager</a></h2><span class=\"job-location\">Austin, Texas</span><span class=\"job-date-posted\">10/20/2026</span></li>\n</ul></section>"
+    },
+    {
+      "filters": "",
+      "results": "<section id=\"search-results-list\"><ul>\n<li><h2><a href=\"/job/san-diego/senior-security-engineer-amp-architect/1234/6001?src=search\" data-job-id=\"6001\">Senior Security Engineer &amp; Architect</a></h2><span class=\"job-location\">San Diego, California</span><span class=\"job-date-posted\">10/20/2026</span></li>\n</ul></section>"
+    }
+  ]
+}
