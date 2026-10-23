@@ -4,7 +4,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   isOurRole, inCity, parseTerms, inferTopics, inferSeniority, inferRemote,
-  pullWorkday, pullGreenhouse, pullLever, pullAshby, pullEightfold, pullSmartRecruiters, pullRadancy, pullPhenom, pullIcims, pullSuccessFactors,
+  pullWorkday, pullGreenhouse, pullLever, pullAshby, pullEightfold, pullSmartRecruiters, pullRadancy, pullPhenom, pullIcims, pullSuccessFactors, pullOracle,
 } from "../functions/_lib/job-sources.js";
 import { fixtureJson, fixtureText, recordingFetcher } from "./helpers.js";
 
@@ -424,5 +424,37 @@ describe("pullSuccessFactors", () => {
   test("a classic page with no job table is an error", async () => {
     const f = recordingFetcher((url, init) => { if (init.method === "POST") throw new Error("HTTP 403"); return "<html><body>Access denied</body></html>"; });
     await assert.rejects(pullSuccessFactors({ host: "h.test" }, "", f), /no job table/);
+  });
+});
+
+describe("pullOracle", () => {
+  test("reads the requisition list, dedupes, joins locations and links to the candidate site", async () => {
+    const f = fixed("oracle");
+    const out = await pullOracle({ host: "careers.example.test", site: "careers" }, "security", f);
+    assert.equal(f.calls.length, 1);
+    const u = String(f.calls[0].url || f.calls[0]);
+    assert.match(u, /^https:\/\/careers\.example\.test\/hcmRestApi\/resources\/latest\/recruitingCEJobRequisitions\?/);
+    assert.match(u, /siteNumber=careers,limit=25,offset=0,keyword=%22security%22/);
+    assert.deepEqual(out.map((r) => r.key), ["215007", "213001"]);
+    out.forEach(assertRoleShape);
+    assert.equal(out[0].url, "https://careers.example.test/hcmUI/CandidateExperience/en/sites/careers/job/215007");
+    assert.equal(out[0].location, "New York, NY, United States; Jersey City, NJ, United States");
+    assert.equal(out[0].remote, "hybrid");
+    assert.equal(out[0].posted_at, "2026-10-23");
+    assert.equal(out[1].remote, "remote");
+  });
+
+  test("pages by 25 until the total is reached", async () => {
+    const page = (off) => ({ items: [{ TotalJobsCount: 40, requisitionList: Array.from({ length: off === 0 ? 25 : 15 }, (_, i) => ({ Id: `${off}-${i}`, Title: "Security Analyst", PrimaryLocation: "Austin, TX" })) }] });
+    const f = recordingFetcher((url) => page(Number(/offset=(\d+)/.exec(url)[1])));
+    const out = await pullOracle({ host: "h.test" }, "", f);
+    assert.equal(f.calls.length, 2);
+    assert.equal(out.length, 40);
+    assert.match(String(f.calls[0].url || f.calls[0]), /siteNumber=CX_1/);
+  });
+
+  test("throws on a response without items", async () => {
+    const f = recordingFetcher(() => ({ error: "nope" }));
+    await assert.rejects(pullOracle({ host: "h.test", site: "CX_1" }, "security", f), /unexpected response from Oracle/);
   });
 });

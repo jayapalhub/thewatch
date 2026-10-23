@@ -10,7 +10,7 @@ import { slugify } from "./html.js";
 const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph\w*)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems )security officer|physical security|corporate security|regional security|global security|event security|workplace security|workplace (?:&|and) security|real estate|safety (?:&|and) security|personal security|K9|cargo security|security (?:supervisor|assistant manager|shift|operator|officers|technology technician)|supervisor,? security|shift supervisor|concierge|trade compliance|security valuation|lecturer|professor|faculty|employee relations|political law|hackathon|solution consultant|success architect|customer engineering|escalations? engineer|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|account director|customer success|customer advocacy|business development|marketing|communications|public relations|public affairs|go[- ]to[- ]market|GTM|partnerships?|partner manager|evangelist|developer advocate|community manager|technical writer|content (?:writer|strategist|lead|marketer)|copywriter|demand generation|revenue|field CTO|recruiter|intern(?:ships?)?|industrial security|personnel security|PERSEC|security rep|ACSSO|AFSO|FSO|maritime security|treaty|join noblis|program security|special programs security|activity security|security representative|security cooperation|international security|security dispatch|dispatcher|security communication|sergeant|police|public safety|building security|security observation|TSCM|fire alarm|DC security|bancorp security|category manager|proposal|law enforcement|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", successfactors: "SuccessFactors" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", successfactors: "SuccessFactors", oracle: "Oracle Recruiting" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -294,7 +294,33 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
+// Oracle Recruiting Cloud (Candidate Experience): config { host, site }. host is the careers host (a custom domain such as
+// enterpriseplatform.dell.com or the tenant's *.fa.*.oraclecloud.com), site is the siteNumber or the path name after
+// /sites/ in the careers URL (CX_1, careers). The public REST finder answers JSON, 25 a page, newest first.
+export async function pullOracle(cfg, searchText, fetcher = getJson) {
+  const site = cfg.site || "CX_1"; const kw = String(searchText || "security").replace(/[",;]/g, " ").trim();
+  const out = []; const seen = new Set();
+  for (let offset = 0; offset < 200; offset += 25) {
+    const finder = `findReqs;siteNumber=${site},limit=25,offset=${offset},keyword=%22${encodeURIComponent(kw)}%22,sortBy=POSTING_DATES_DESC`;
+    const j = await fetcher(`https://${cfg.host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=${finder}`);
+    const block = j && Array.isArray(j.items) ? j.items[0] : null;
+    if (!j || !Array.isArray(j.items)) throw new Error("unexpected response from Oracle Recruiting");
+    const list = block && Array.isArray(block.requisitionList) ? block.requisitionList : [];
+    for (const x of list) {
+      if (!x.Id || seen.has(x.Id)) continue; seen.add(x.Id);
+      if (!isOurRole(x.Title)) continue;
+      const locs = [x.PrimaryLocation, ...(Array.isArray(x.secondaryLocations) ? x.secondaryLocations.map((l) => l.Name) : [])].filter(Boolean);
+      const loc = [...new Set(locs.map((l) => String(l).trim()))].join("; ");
+      const wp = String(x.WorkplaceTypeCode || x.WorkplaceType || "").toLowerCase();
+      out.push({ key: String(x.Id), title: x.Title, url: `https://${cfg.host}/hcmUI/CandidateExperience/en/sites/${site}/job/${x.Id}`, location: loc,
+        posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.PostedDate || "") ? x.PostedDate.slice(0, 10) : null, salary_text: null,
+        remote: /remote/.test(wp) ? "remote" : /hybrid/.test(wp) ? "hybrid" : inferRemote(loc) });
+    }
+    if (list.length < 25 || offset + 25 >= ((block && block.TotalJobsCount) || 0)) break;
+  }
+  return out;
+}
+export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, oracle: pullOracle };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
@@ -367,7 +393,7 @@ async function finish(db, src, run) {
 // to a subrequest budget. On Workers Paid (10,000 subrequests per invocation) the tick gives boards a budget of 300,
 // so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
-const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
+const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, oracle: 4 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40, deadline = null } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
