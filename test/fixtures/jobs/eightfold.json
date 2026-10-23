@@ -1,0 +1,134 @@
+{
+  "pages": [
+    {
+      "data": {
+        "count": 12,
+        "positions": [
+          {
+            "id": 9001,
+            "name": "Product Security Engineer",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9001",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9002,
+            "name": "Hardware Engineer",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9002",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9003,
+            "name": "Security Architect",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9003",
+            "postedTs": 1791158400,
+            "workLocationOption": "hybrid"
+          },
+          {
+            "id": 9004,
+            "name": "Program Manager",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9004",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9005,
+            "name": "Test Engineer",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9005",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9006,
+            "name": "Firmware Engineer",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9006",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9007,
+            "name": "RF Engineer",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9007",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9008,
+            "name": "Staff Accountant",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9008",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9009,
+            "name": "Systems Engineer",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9009",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          },
+          {
+            "id": 9010,
+            "name": "Design Verification Engineer",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9010",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          }
+        ]
+      }
+    },
+    {
+      "data": {
+        "count": 12,
+        "positions": [
+          {
+            "id": 9011,
+            "name": "Threat Intelligence Analyst",
+            "workLocationOption": "remote",
+            "location": "Remote, United States"
+          },
+          {
+            "id": 9012,
+            "name": "Security Guard",
+            "locations": [
+              "San Diego, California, United States"
+            ],
+            "positionUrl": "/careers/job/9012",
+            "postedTs": 1791158400,
+            "workLocationOption": "onsite"
+          }
+        ]
+      }
+    }
+  ]
+}

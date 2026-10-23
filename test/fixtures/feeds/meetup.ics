@@ -1,0 +1,57 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//Handcrafted fixture//EN
+X-WR-TIMEZONE:America/Los_Angeles
+BEGIN:VEVENT
+UID:evt-in-person@example.test
+SUMMARY:Monthly Meetup: Detection Engineering
+DTSTART;TZID=America/Los_Angeles:20261112T180000
+DTEND;TZID=America/Los_Angeles:20261112T200000
+LOCATION:Example Brewing\, 123 Main St\, San Diego\, CA
+URL:https://www.meetup.com/example-security-group/events/311000001/
+DESCRIPTION:Example Security Group\n\n## Agenda\nTwo talks on detection engineering\, then networking. 1 CP
+ E available.
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-all-day@example.test
+SUMMARY:Conference Day With No Start Time
+DTSTART;VALUE=DATE:20261120
+DTEND;VALUE=DATE:20261121
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-zoom@example.test
+SUMMARY:Threat Briefing
+DTSTART:20261201T170000Z
+LOCATION:https://zoom.us/j/1234567890
+URL:https://example.org/threat-briefing
+DESCRIPTION:Quarterly threat briefing.
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-luma@example.test
+SUMMARY:Security Social
+DTSTART:20261204T020000Z
+DTEND:20261204T040000Z
+LOCATION:https://lu.ma/exampleevent
+URL:https://lu.ma/exampleevent
+DESCRIPTION:Drinks and conversation.
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-floating@example.test
+SUMMARY:AppSec Office Hours
+DTSTART:20261203T090000
+DTEND:20261203T100000
+DESCRIPTION:This is an online event. Register at https://example.org/register for the link.
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-past@example.test
+SUMMARY:Detection Meetup In September
+DTSTART:20260901T010000Z
+URL:https://example.org/past
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-far@example.test
+SUMMARY:Detection Summit Next Spring
+DTSTART:20270301T170000Z
+URL:https://example.org/far
+END:VEVENT
+END:VCALENDAR

@@ -1,0 +1,60 @@
+{
+  "jobs": [
+    {
+      "id": 1001,
+      "title": "Senior Security Engineer",
+      "absolute_url": "https://boards.greenhouse.io/examplecorp/jobs/1001",
+      "location": {
+        "name": "San Diego, CA"
+      },
+      "updated_at": "2026-10-01T12:00:00-04:00",
+      "content": "&lt;p&gt;The pay range is $150,000 - $190,000.&lt;/p&gt;"
+    },
+    {
+      "id": 1002,
+      "title": "Account Executive, Security",
+      "absolute_url": "https://boards.greenhouse.io/examplecorp/jobs/1002",
+      "location": {
+        "name": "San Diego, CA"
+      },
+      "updated_at": "2026-10-02T12:00:00Z",
+      "content": ""
+    },
+    {
+      "id": 1003,
+      "title": "Privacy Counsel",
+      "absolute_url": "https://boards.greenhouse.io/examplecorp/jobs/1003",
+      "location": null,
+      "offices": [
+        {
+          "name": "Remote - US"
+        },
+        {
+          "name": "New York"
+        }
+      ],
+      "updated_at": "",
+      "content": "Competitive pay."
+    },
+    {
+      "id": 1004,
+      "title": "Office Manager",
+      "absolute_url": "https://boards.greenhouse.io/examplecorp/jobs/1004",
+      "location": {
+        "name": "San Diego, CA"
+      },
+      "updated_at": "2026-10-03T12:00:00Z",
+      "content": ""
+    },
+    {
+      "id": 1005,
+      "title": "Application Security Engineer",
+      "absolute_url": "https://boards.greenhouse.io/examplecorp/jobs/1005",
+      "location": {
+        "name": "Austin, TX"
+      },
+      "updated_at": "2026-10-04T12:00:00Z",
+      "content": ""
+    }
+  ]
+}

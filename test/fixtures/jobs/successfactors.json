@@ -1,0 +1,68 @@
+{
+  "pages": [
+    {
+      "totalJobs": 12,
+      "jobSearchResult": [
+        {
+          "response": {
+            "id": "70001",
+            "unifiedStandardTitle": "Product Security Engineer",
+            "unifiedUrlTitle": "Product-Security-Engineer",
+            "jobLocationShort": [
+              "San Diego, CA, US "
+            ],
+            "unifiedStandardStart": "10/05/26"
+          }
+        },
+        {
+          "response": {
+            "id": "70002",
+            "unifiedStandardTitle": "Wafer Fab Technician",
+            "unifiedUrlTitle": "Wafer-Fab-Technician",
+            "jobLocationShort": [
+              "San Diego, CA, US"
+            ],
+            "unifiedStandardStart": "10/06/26"
+          }
+        },
+        {
+          "response": {
+            "id": "70003",
+            "unifiedStandardTitle": "Cybersecurity GRC Lead",
+            "unifiedUrlTitle": "Cybersecurity-GRC-Lead",
+            "jobLocationShort": [
+              "Irvine, CA, US",
+              "San Diego, CA, US"
+            ],
+            "unifiedStandardStart": "1/2/2026"
+          }
+        }
+      ]
+    },
+    {
+      "totalJobs": 12,
+      "jobSearchResult": [
+        {
+          "response": {
+            "id": "70004",
+            "unifiedStandardTitle": "Security Architect",
+            "unifiedUrlTitle": null,
+            "jobLocationShort": "San Diego, CA, US",
+            "unifiedStandardStart": "garbage"
+          }
+        },
+        {
+          "response": {
+            "id": "70001",
+            "unifiedStandardTitle": "Product Security Engineer",
+            "unifiedUrlTitle": "Product-Security-Engineer",
+            "jobLocationShort": [
+              "San Diego, CA, US"
+            ],
+            "unifiedStandardStart": "10/05/26"
+          }
+        }
+      ]
+    }
+  ]
+}

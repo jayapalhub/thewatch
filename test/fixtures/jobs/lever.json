@@ -1,0 +1,45 @@
+[
+  {
+    "id": "a1b2c3d4-0001",
+    "text": "Application Security Engineer (R5824)",
+    "hostedUrl": "https://jobs.lever.co/examplecorp/a1b2c3d4-0001",
+    "categories": {
+      "location": "San Diego, CA",
+      "allLocations": [
+        "San Diego, CA",
+        "Remote"
+      ]
+    },
+    "workplaceType": "hybrid",
+    "createdAt": 1790762400000,
+    "descriptionPlain": "Salary $120,000 to $150,000 depending on experience."
+  },
+  {
+    "id": "a1b2c3d4-0002",
+    "text": "Sales Engineer, Security",
+    "hostedUrl": "https://jobs.lever.co/examplecorp/a1b2c3d4-0002",
+    "categories": {
+      "location": "San Diego, CA"
+    },
+    "workplaceType": "onsite"
+  },
+  {
+    "id": "a1b2c3d4-0003",
+    "text": "Detection Engineering Manager",
+    "hostedUrl": "https://jobs.lever.co/examplecorp/a1b2c3d4-0003",
+    "categories": {
+      "location": "Remote"
+    },
+    "workplaceType": "remote",
+    "description": "<p>No pay listed.</p>"
+  },
+  {
+    "id": "a1b2c3d4-0004",
+    "text": "Cloud Security Architect",
+    "hostedUrl": "https://jobs.lever.co/examplecorp/a1b2c3d4-0004",
+    "categories": {
+      "location": "San Diego, CA; Irvine, CA"
+    },
+    "workplaceType": ""
+  }
+]

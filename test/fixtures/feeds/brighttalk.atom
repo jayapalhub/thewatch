@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:bt="http://brighttalk.com/2009/atom_extensions">
+  <title>Example Security Briefings</title>
+  <id>tag:www.brighttalk.com,2006:channel-13159</id>
+  <updated>2026-10-20T12:00:00Z</updated>
+  <entry>
+    <title>Zero Trust &amp; Identity: What&#39;s Next for 2027</title>
+    <summary>Join this briefing on identity threats. Members earn 1 CPE credit for attending live.</summary>
+    <author><name>Jordan Example;Sam  Sample</name></author>
+    <link href="https://www.brighttalk.com/webcast/13159/650001?utm_source=feed&amp;utm_medium=atom" rel="alternate" type="text/html"/>
+    <id>tag:www.brighttalk.com,2006:communication-650001</id>
+    <bt:communication id="650001">
+      <bt:channel id="13159"/>
+      <bt:status>upcoming</bt:status>
+      <bt:start>1794330000</bt:start>
+      <bt:duration>2700</bt:duration>
+    </bt:communication>
+  </entry>
+  <entry>
+    <title>Cloud Detection Roundtable</title>
+    <summary>A recorded session from last month.</summary>
+    <author><name>Taylor Placeholder</name></author>
+    <link href="https://www.brighttalk.com/webcast/13159/640000" rel="alternate" type="text/html"/>
+    <bt:communication id="640000">
+      <bt:channel id="13159"/>
+      <bt:status>recorded</bt:status>
+      <bt:start>1788282000</bt:start>
+      <bt:duration>3600</bt:duration>
+    </bt:communication>
+  </entry>
+  <entry>
+    <title>Ransomware Readiness Workshop</title>
+    <summary>Tabletop walkthrough for incident responders.</summary>
+    <author><name>Casey Sample</name></author>
+    <bt:communication id="650002">
+      <bt:channel id="13159"/>
+      <bt:status>upcoming</bt:status>
+      <bt:start>1795017600</bt:start>
+    </bt:communication>
+  </entry>
+  <entry>
+    <title>Start Time To Be Announced</title>
+    <summary>No start yet.</summary>
+    <bt:communication id="650003">
+      <bt:channel id="13159"/>
+      <bt:status>upcoming</bt:status>
+      <bt:start></bt:start>
+    </bt:communication>
+  </entry>
+</feed>
