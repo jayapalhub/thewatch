@@ -43,6 +43,7 @@ export function parseEventForm(p) {
     speakers: str(p.speakers, 200) || null,
     recording_url: str(p.recording_url, 500) || null,
     also_virtual: str(p.also_virtual) === "1" ? 1 : 0,
+    members_only: str(p.members_only) === "1" ? 1 : 0,
   };
   row.timezone = cityTz(row.city); // wall clock times are in the calendar's own zone
   row.start_utc = toUtc(row.start_at, row.timezone).toISOString();

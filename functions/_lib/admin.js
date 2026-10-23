@@ -88,6 +88,7 @@ export function eventForm(e, orgs, venues, { action, isNew = false } = {}) {
     <div class="a-grid-3">
       <label class="a-check"><input type="checkbox" name="is_better_security_event" value="1" ${e.is_better_security_event ? raw("checked") : ""}> Better Security event</label>
       <label class="a-check"><input type="checkbox" name="is_featured" value="1" ${e.is_featured ? raw("checked") : ""}> Jerome's pick</label>
+      <label class="a-check"><input type="checkbox" name="members_only" value="1" ${e.members_only ? raw("checked") : ""}> Members only (shown as a tag on the listing)</label>
       <label class="a-check"><input type="checkbox" name="also_virtual" value="1" ${e.also_virtual ? raw("checked") : ""}> Also list on the Virtual calendar (online events from a city calendar)</label>
     </div>
     <label>Reviewer notes <small>(private)</small><textarea name="reviewer_notes" rows="2">${e.reviewer_notes || ""}</textarea></label>
