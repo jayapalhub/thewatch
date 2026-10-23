@@ -1,4 +1,5 @@
 import { loadCities } from "./_lib/constants.js";
+import { meterDB, noteRequest, flushUsage, alertOnce } from "./_lib/ops.js";
 
 // Runs before every function.
 // 1. Public pages are cached at the edge for a few minutes, so crawlers and repeat visitors do not each cost a set of
@@ -50,15 +51,26 @@ export async function onRequest(context) {
     if (hit) return withHeaders(hit, path, { "X-Watch-Cache": "hit" });
   }
 
-  let res;
+  // Every function downstream sees a metered binding, so reads and writes are counted per request.
+  context.env.DB = meterDB(context.env.DB);
+  let res, err = null;
   try {
     await loadCities(context.env.DB);
     res = await context.next();
   } catch (e) {
-    res = null;
+    res = null; err = e;
   }
 
-  if (!res || res.status >= 500) {
+  const failed = !res || res.status >= 500;
+  noteRequest(failed);
+  if (context.waitUntil) context.waitUntil(flushUsage(context.env.DB));
+  if (failed) {
+    const detail = err ? String(err.message || err).slice(0, 300) : `status ${res.status}`;
+    if (context.waitUntil) context.waitUntil(alertOnce(context.env, "fallback-served", "The site served a fallback page",
+      `<p>A request for <code>${path}</code> failed and visitors are getting the cached copy or the short notice instead.</p><p>Error: ${detail.replace(/</g, "&lt;")}</p><p>If this says the D1 read limit was reached, check usage at /api/health and the Cloudflare dashboard. Otherwise look at the Pages function logs for this route.</p>`).catch(() => {}));
+  }
+
+  if (failed) {
     if (cache) {
       const old = await cache.match(staleKey(request.url)).catch(() => null);
       if (old) return withHeaders(old, path, { "X-Watch-Cache": "stale" });

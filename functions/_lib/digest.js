@@ -48,7 +48,7 @@ export function renderNumbers(n, { siteUrl = "https://bettersecurity.ai" } = {})
   <p style="margin:6px 0 0;">Delivery: ${(() => { const d = n.delivery || {}; return d.bounced || d.complaints || d.soft ? `${d.bounced || 0} address${d.bounced === 1 ? "" : "es"} bounced for good and ${d.complaints || 0} marked the email as spam this week${d.soft ? `, with ${d.soft} temporary bounce${d.soft === 1 ? "" : "s"} that will be retried` : ""}.` : "no bounces or spam complaints this week."; })()}</p>
   <h3 style="margin:18px 0 6px;font-size:15px;">Clicks this week</h3><p style="margin:0;">${clicks}.</p>${top}${jobsTop}
   <h3 style="margin:18px 0 6px;font-size:15px;">LinkedIn page</h3><p style="margin:0;">${li}.</p>
-  <h3 style="margin:18px 0 6px;font-size:15px;">Needs a look</h3>${trouble.length ? `<ul style="margin:0;padding-left:18px;">${trouble.map((t) => `<li>${t}</li>`).join("")}</ul>` : `<p style="margin:0;">Every board and feed read cleanly.</p>`}${n.sponsorInquiries ? `<p style="margin:8px 0 0;">${n.sponsorInquiries} new sponsor inquir${n.sponsorInquiries === 1 ? "y" : "ies"} at <a href="${siteUrl}/admin/sponsors">${siteUrl}/admin/sponsors</a>.</p>` : ""}
+  ${n.usageLine || ""}<h3 style="margin:18px 0 6px;font-size:15px;">Needs a look</h3>${trouble.length ? `<ul style="margin:0;padding-left:18px;">${trouble.map((t) => `<li>${t}</li>`).join("")}</ul>` : `<p style="margin:0;">Every board and feed read cleanly.</p>`}${n.sponsorInquiries ? `<p style="margin:8px 0 0;">${n.sponsorInquiries} new sponsor inquir${n.sponsorInquiries === 1 ? "y" : "ies"} at <a href="${siteUrl}/admin/sponsors">${siteUrl}/admin/sponsors</a>.</p>` : ""}
   <p style="margin:16px 0 0;color:#5B6B80;font-size:13px;">Counts cover the last seven days. Held rows wait at <a href="${siteUrl}/admin/review">${siteUrl}/admin/review</a>; everything else publishes on its own.</p>`;
 }
 
@@ -63,6 +63,11 @@ export async function runMondayDigest(env, { force = false } = {}) {
   } else await env.DB.prepare("INSERT OR IGNORE INTO digest_log (week_start) VALUES (?)").bind(week).run();
   try {
     const n = await weeklyNumbers(env.DB);
+    n.usageLine = "";
+    try {
+      const u = await env.DB.prepare("SELECT sum(reads) reads, sum(writes) writes, sum(requests) requests, sum(errors) errors, max(reads) peak FROM usage_daily WHERE day >= date('now','-7 days')").first();
+      if (u && u.requests) n.usageLine = `<p style="margin:8px 0 0;">Database this week: ${Number(u.reads).toLocaleString()} rows read (peak day ${Number(u.peak).toLocaleString()}), ${Number(u.writes).toLocaleString()} written, ${Number(u.requests).toLocaleString()} requests, ${Number(u.errors).toLocaleString()} fallback pages served. Paid plan includes 25 billion reads a month.</p>`;
+    } catch { /* usage table not there yet */ }
     const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
     const totalSubs = n.cities.reduce((a, c) => a + ((n.subs[c.slug] || {}).active || 0), 0);
     const sent = n.issues.filter((i) => i.status === "sent").length;

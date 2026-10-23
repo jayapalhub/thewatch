@@ -9,6 +9,7 @@ import { runLinkedInSchedule } from "../../_lib/linkedin.js";
 import { runMondayDigest } from "../../_lib/digest.js";
 import { refreshTargets } from "../../_lib/sweep-targets.js";
 import { runAllSources } from "../../_lib/feeds.js";
+import { recordRun, checkBudget, flushUsage } from "../../_lib/ops.js";
 
 // POST /api/events/autopublish: publish every pending row whose hold has passed.
 // Auth: Cloudflare Access session (from the admin) or Authorization: Bearer ADMIN_TOKEN (cron worker).
@@ -28,6 +29,9 @@ export async function onRequestPost(context) {
   const targets = await refreshTargets(context.env.DB, { max: Math.min(8, Math.max(0, left - feedCost)) }).catch((e) => ({ error: e && e.message }));
   const linkedin = await runLinkedInSchedule(context.env).catch((e) => ({ error: e && e.message })); // Monday and Thursday page posts
   const digest = await runMondayDigest(context.env).catch((e) => ({ error: e && e.message })); // Monday numbers to Jerome, once a week
-  return json({ success: true, ...r, reminders, jobs, referrals, boards, feeds, targets, linkedin, digest });
+  const usage = await checkBudget(context.env, context.env.DB);
+  await recordRun(context.env.DB, "hourly", true, `published ${r.published || 0}, boards ${Array.isArray(boards) ? boards.length : 0}, feeds ${feeds.length || 0}`);
+  await flushUsage(context.env.DB, { force: true });
+  return json({ success: true, ...r, reminders, jobs, referrals, boards, feeds, targets, linkedin, digest, usage });
 }
 export async function onRequest() { return json({ success: false, error: "method_not_allowed" }, 405); }
