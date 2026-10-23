@@ -20,6 +20,6 @@ export async function onRequestGet({ params, env }) {
       ${i.preheader ? html`<p class="issue-pre">${i.preheader}</p>` : ""}
     </li>`)}</ul>` : html`<p class="empty">The first issue goes out soon. Subscribe below and it lands in your inbox Sunday morning.</p>`}
   </div></section>
-  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Get the next one.</h2><p>Sunday at 8 AM, ${city.name} time.</p></div>${signupForm({ source: `archive:${city.slug}` })}</div></section>`;
+  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Get the next one.</h2><p>Sunday at 8 AM, ${city.name} time.</p></div>${signupForm({ source: `archive:${city.slug}`, city: city.slug })}</div></section>`;
   return page(shell({ title: `Past issues`, description: `The Watch ${city.name} archive: every Sunday email of ${city.name} security events.`, body, city: city.slug, path: `/${city.slug}` }), 200, { "Cache-Control": "public, max-age=300" });
 }

@@ -7,13 +7,16 @@ export function mark(size = 36, cls = "") {
   return raw(`<svg class="mark ${cls}" width="${size}" height="${size}" viewBox="0 0 25400 25400" aria-hidden="true"><rect width="25400" height="25400" rx="5600" fill="#1FB6F0"/><g transform="translate(12700 12700) scale(1.42) translate(-12700 -12700)"><path fill="#1B4A8A" fill-rule="evenodd" d="${SHIELD_PATH}"/></g></svg>`);
 }
 
-export function signupForm({ source, compact = false, cta = "Get the Sunday email", chooseCity = false, city = DEFAULT_CITY }) {
+// city: the calendar the visitor is on. Every caller on a city page must pass it; when it is left out the form sends no
+// city and the server files the address by its source (calendar:<slug>) or the default, never by a silent San Diego.
+export function signupForm({ source, compact = false, cta = "Get the Sunday email", chooseCity = false, city = null }) {
+  const picked = CITIES[city] ? city : DEFAULT_CITY;
   return html`
   <form class="signup ${compact ? "signup-compact" : ""}" method="post" action="/api/subscribe" data-signup>
     <input type="hidden" name="source" value="${source}">
     <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
     ${!chooseCity && CITIES[city] ? html`<input type="hidden" name="city" value="${city}">` : ""}
-    ${chooseCity && Object.keys(CITIES).length > 1 ? html`<label class="signup-city">Your city <select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === city ? raw("selected") : ""}>${c.name}${c.newsletter === "sunday" ? "" : " (starting soon)"}</option>`)}</select></label>` : ""}
+    ${chooseCity && Object.keys(CITIES).length > 1 ? html`<label class="signup-city">Your city <select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === picked ? raw("selected") : ""}>${c.name}${c.newsletter === "sunday" ? "" : " (starting soon)"}</option>`)}</select></label>` : ""}
     <label class="sr-only" for="email-${source}">Email address</label>
     <div class="signup-row">
       <input id="email-${source}" type="email" name="email" placeholder="you@company.com" required autocomplete="email" inputmode="email">

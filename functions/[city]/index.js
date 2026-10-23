@@ -67,7 +67,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       ${city.newsletter === "sunday"
         ? html`<div><h2>Get the week in your inbox on Sunday.</h2><p>Everything above, curated down to what's worth your time, with a note from Jerome.</p></div>`
         : html`<div><h2>A ${city.name} email is on the way.</h2><p>Subscribe now and you're on the first send, the week it launches.</p></div>`}
-      ${signupForm({ source: `calendar:${city.slug}` })}
+      ${signupForm({ source: `calendar:${city.slug}`, city: city.slug })}
     </div></section>`;
 
   const res = page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });

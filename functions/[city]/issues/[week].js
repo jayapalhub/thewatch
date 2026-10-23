@@ -19,7 +19,7 @@ export async function onRequestGet({ params, env }) {
     <p class="lede">Sent ${issue.completed_at ? issue.completed_at.slice(0, 10) : issue.week_start}. ${issue.preheader || ""}</p>
   </div></section>
   <section class="band"><div class="wrap narrow issue-body">${raw(inner)}</div></section>
-  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Get the next one.</h2><p>Sunday at 8 AM, ${city.name} time.</p></div>${signupForm({ source: `archive:${city.slug}` })}</div></section>`;
+  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Get the next one.</h2><p>Sunday at 8 AM, ${city.name} time.</p></div>${signupForm({ source: `archive:${city.slug}`, city: city.slug })}</div></section>`;
   const head = `<meta property="og:title" content="${title.replace(/"/g, "&quot;")}"><meta property="og:description" content="${(issue.preheader || `The week's security events in ${city.name}.`).replace(/"/g, "&quot;")}">`;
   return page(shell({ title, description: issue.preheader || `The Watch ${city.name}, week of ${issue.week_start}.`, body, city: city.slug, path: `/${city.slug}`, head, image: `/og/issue/${city.slug}/${issue.week_start}.png` }), 200, { "Cache-Control": "public, max-age=3600" });
 }

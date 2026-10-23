@@ -77,7 +77,7 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
     </div>
   </article>
   ${more.length ? html`<section class="band band-paper"><div class="wrap narrow"><h2>More from ${e.org_display}</h2><ul class="event-list">${more.map(eventRow)}</ul></div></section>` : ""}
-  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Never miss one.</h2><p>The Sunday email has the whole week.</p></div>${signupForm({ source: "event:" + e.slug })}</div></section>
+  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Never miss one.</h2><p>The Sunday email has the whole week.</p></div>${e.city === "virtual" ? signupForm({ source: "event:" + e.slug, chooseCity: true }) : signupForm({ source: "event:" + e.slug, city: e.city })}</div></section>
   ${eventJsonLd(e, siteUrl)}`;
 
   return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)}${e.city === "virtual" ? " online" : ` in ${city.name}`}`, body, city: e.city, path: calendarPath(e.city), image: `/og/event/${e.slug}.png` }), 200, { "Cache-Control": "public, max-age=300" });
