@@ -31,5 +31,6 @@ import s28 from "./secondpass.js";
 import s29 from "./stlouis.js";
 import s30 from "./tampa.js";
 import s31 from "./vendorevents.js";
-import s32 from "./washington.js";
-export const SEEDS = {"atlanta": s0, "austin": s1, "baltimore": s2, "boston": s3, "charlotte": s4, "chicago": s5, "cincinnati": s6, "cleveland": s7, "columbus": s8, "dallas": s9, "detroit": s10, "houston": s11, "indianapolis": s12, "kansascity": s13, "miami": s14, "milwaukee": s15, "minneapolis": s16, "nashville": s17, "newyork": s18, "orlando": s19, "philadelphia": s20, "pittsburgh": s21, "portland": s22, "raleigh": s23, "richmond": s24, "sacramento": s25, "saltlake": s26, "sanantonio": s27, "secondpass": s28, "stlouis": s29, "tampa": s30, "vendorevents": s31, "washington": s32};
+import s32 from "./verifyfix.js";
+import s33 from "./washington.js";
+export const SEEDS = {"atlanta": s0, "austin": s1, "baltimore": s2, "boston": s3, "charlotte": s4, "chicago": s5, "cincinnati": s6, "cleveland": s7, "columbus": s8, "dallas": s9, "detroit": s10, "houston": s11, "indianapolis": s12, "kansascity": s13, "miami": s14, "milwaukee": s15, "minneapolis": s16, "nashville": s17, "newyork": s18, "orlando": s19, "philadelphia": s20, "pittsburgh": s21, "portland": s22, "raleigh": s23, "richmond": s24, "sacramento": s25, "saltlake": s26, "sanantonio": s27, "secondpass": s28, "stlouis": s29, "tampa": s30, "vendorevents": s31, "verifyfix": s32, "washington": s33};
