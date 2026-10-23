@@ -5,7 +5,7 @@ Jerome Jayapal's multi city cybersecurity events calendar, jobs board and Sunday
 ## Standing rules (do not relax these)
 - Never sign in anywhere on Jerome's behalf. Never send email, publish a newsletter, post or message anywhere without his approval. Never click Apply, connect or message on LinkedIn.
 - Jobs: names only from public posts; links only to the employer's own posting, never an aggregator. Events: the organizer's own registration page, never an aggregator or reseller.
-- Member only events are listed, not rejected: set `members_only=1` (shown as a Members only tag) and say who can attend in `cost_notes`.
+- Member only events are listed, not rejected: set `members_only=1` (shown as a Members only tag) and say who can attend in `cost_notes`. Invitation only and application only events (Evanta summits and Inner Circle dinners, vendor CISO dinners) are listed too (decided 2026-10-23): leave `members_only=0`, state the access in `cost_notes`, and do not hold them for that reason alone.
 - Publish by default with 24 hour holds. New rows land as `pending_review` with `auto_publish_at`; hold (`hold=1`) only for a stated reason written in `reviewer_notes`.
 - Writing: professional and friendly, flowing paragraphs, no dashes or ellipses, no exclamation marks, never "genuinely", "honestly", "actually" or "charm". Emails sign off "Thank you,".
 - Secrets live in the Cloudflare dashboard only. Never paste them into chat, commits or docs. The repo is public.
