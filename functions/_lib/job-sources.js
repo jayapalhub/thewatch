@@ -77,12 +77,16 @@ function decodeEntities(t) { return String(t).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+
 // ---------- adapters: each returns [{ key, title, url, location, posted_at (YYYY-MM-DD or null), salary_text, remote }] ----------
 const WORKDAY_MAX_DETAILS = 25; // detail fetches per run; a Worker invocation has a small subrequest budget
 
+// The cxs API path normally repeats the tenant from the host name, but a few tenants answer only to another spelling
+// (osv-amerisure.wd5 wants osv_amerisure and returns 422 otherwise). Config { cxsTenant } names it; the host keeps tenant.
+const cxsBase = (cfg) => `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com/wday/cxs/${cfg.cxsTenant || cfg.tenant}/${cfg.site}`;
+
 export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []) {
-  const base = `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com`;
+  const base = `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com`, cxs = cxsBase(cfg);
   const out = [];
   let details = 0;
   for (let offset = 0; offset < 300 && details < WORKDAY_MAX_DETAILS; offset += 20) {
-    const page = await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
+    const page = await fetcher(`${cxs}/jobs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
     const list = page.jobPostings || [];
     for (const p of list) {
       if (!isOurRole(p.title)) continue;
@@ -90,7 +94,7 @@ export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []
       if (terms.length && p.locationsText && !/\d+ Locations/i.test(p.locationsText) && !inCity(p.locationsText, terms)) continue;
       if (details++ >= WORKDAY_MAX_DETAILS) { out.partial = true; break; }
       let info = {};
-      try { info = (await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}${p.externalPath}`)).jobPostingInfo || {}; } catch { continue; }
+      try { info = (await fetcher(`${cxs}${p.externalPath}`)).jobPostingInfo || {}; } catch { continue; }
       const locs = [info.location, ...(info.additionalLocations || [])].filter(Boolean).join("; ") || p.locationsText || "";
       out.push({ key: info.jobReqId || (p.bulletFields || [])[0] || p.externalPath, title: info.title || p.title, url: info.externalUrl || `${base}/${cfg.site}${p.externalPath}`,
         location: locs, posted_at: /^\d{4}-\d{2}-\d{2}$/.test(info.startDate || "") ? info.startDate : null, salary_text: payText(info.jobDescription), remote: inferRemote(locs) });
@@ -104,7 +108,7 @@ export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []
 async function workdayStillOpen(cfg, url, fetcher) {
   const m = String(url).match(/myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?[^/]+(\/job\/.+)$/);
   if (!m) return true;
-  try { const j = await fetcher(`https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com/wday/cxs/${cfg.tenant}/${cfg.site}${m[1].split("?")[0]}`); return !!(j && j.jobPostingInfo); }
+  try { const j = await fetcher(`${cxsBase(cfg)}${m[1].split("?")[0]}`); return !!(j && j.jobPostingInfo); }
   catch (e) { return !/HTTP 404/.test(String(e && e.message)); } // network trouble: keep it
 }
 export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
