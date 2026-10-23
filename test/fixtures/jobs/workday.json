@@ -1,0 +1,223 @@
+{
+  "pages": [
+    {
+      "total": 22,
+      "jobPostings": [
+        {
+          "title": "Senior Security Engineer",
+          "externalPath": "/job/San-Diego-CA/Senior-Security-Engineer_R100",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R100"
+          ]
+        },
+        {
+          "title": "Security Analyst",
+          "externalPath": "/job/Austin-TX/Security-Analyst_R101",
+          "locationsText": "Austin, TX",
+          "bulletFields": [
+            "R101"
+          ]
+        },
+        {
+          "title": "GRC Manager",
+          "externalPath": "/job/San-Diego-CA/GRC-Manager_R102",
+          "locationsText": "3 Locations",
+          "bulletFields": [
+            "R102"
+          ]
+        },
+        {
+          "title": "Incident Response Lead",
+          "externalPath": "/job/San-Diego-CA/Incident-Response-Lead_R103",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R103"
+          ]
+        },
+        {
+          "title": "Senior Accountant",
+          "externalPath": "/job/Somewhere/Senior-Accountant_R200",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R200"
+          ]
+        },
+        {
+          "title": "Payroll Specialist",
+          "externalPath": "/job/Somewhere/Payroll-Specialist_R201",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R201"
+          ]
+        },
+        {
+          "title": "Mechanical Engineer",
+          "externalPath": "/job/Somewhere/Mechanical-Engineer_R202",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R202"
+          ]
+        },
+        {
+          "title": "Product Designer",
+          "externalPath": "/job/Somewhere/Product-Designer_R203",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R203"
+          ]
+        },
+        {
+          "title": "Data Analyst",
+          "externalPath": "/job/Somewhere/Data-Analyst_R204",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R204"
+          ]
+        },
+        {
+          "title": "Supply Chain Planner",
+          "externalPath": "/job/Somewhere/Supply-Chain-Planner_R205",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R205"
+          ]
+        },
+        {
+          "title": "Software Engineer",
+          "externalPath": "/job/Somewhere/Software-Engineer_R206",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R206"
+          ]
+        },
+        {
+          "title": "Financial Analyst",
+          "externalPath": "/job/Somewhere/Financial-Analyst_R207",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R207"
+          ]
+        },
+        {
+          "title": "Office Coordinator",
+          "externalPath": "/job/Somewhere/Office-Coordinator_R208",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R208"
+          ]
+        },
+        {
+          "title": "HR Generalist",
+          "externalPath": "/job/Somewhere/HR-Generalist_R209",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R209"
+          ]
+        },
+        {
+          "title": "Quality Engineer",
+          "externalPath": "/job/Somewhere/Quality-Engineer_R210",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R210"
+          ]
+        },
+        {
+          "title": "Buyer",
+          "externalPath": "/job/Somewhere/Buyer_R211",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R211"
+          ]
+        },
+        {
+          "title": "Technician",
+          "externalPath": "/job/Somewhere/Technician_R212",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R212"
+          ]
+        },
+        {
+          "title": "Program Manager",
+          "externalPath": "/job/Somewhere/Program-Manager_R213",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R213"
+          ]
+        },
+        {
+          "title": "Account Executive, Security Products",
+          "externalPath": "/job/Somewhere/Account-Executive-Security-Products_R214",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R214"
+          ]
+        },
+        {
+          "title": "Physical Security Officer",
+          "externalPath": "/job/Somewhere/Physical-Security-Officer_R215",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R215"
+          ]
+        }
+      ]
+    },
+    {
+      "total": 22,
+      "jobPostings": [
+        {
+          "title": "Cyber Threat Analyst",
+          "externalPath": "/job/San-Diego-CA/Cyber-Threat-Analyst_R104",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R104"
+          ]
+        },
+        {
+          "title": "Facilities Manager",
+          "externalPath": "/job/San-Diego-CA/Facilities-Manager_R105",
+          "locationsText": "San Diego, CA",
+          "bulletFields": [
+            "R105"
+          ]
+        }
+      ]
+    }
+  ],
+  "details": {
+    "/job/San-Diego-CA/Senior-Security-Engineer_R100": {
+      "jobPostingInfo": {
+        "jobReqId": "R100",
+        "title": "Senior Security Engineer",
+        "externalUrl": "https://examplecorp.wd5.myworkdayjobs.com/External/job/San-Diego-CA/Senior-Security-Engineer_R100",
+        "location": "San Diego, CA",
+        "startDate": "2026-10-01",
+        "jobDescription": "<p>The base pay range for this role is $140,000 - $180,000 per year.</p>"
+      }
+    },
+    "/job/San-Diego-CA/GRC-Manager_R102": {
+      "jobPostingInfo": {
+        "jobReqId": "R102",
+        "title": "GRC Manager",
+        "externalUrl": "https://examplecorp.wd5.myworkdayjobs.com/External/job/San-Diego-CA/GRC-Manager_R102",
+        "location": "Remote, US",
+        "additionalLocations": [
+          "San Diego, CA",
+          "Denver, CO"
+        ],
+        "startDate": "not a date",
+        "jobDescription": "<p>No pay listed.</p>"
+      }
+    },
+    "/job/San-Diego-CA/Incident-Response-Lead_R103": {
+      "jobPostingInfo": {
+        "title": "Incident Response Lead",
+        "location": "San Diego, CA"
+      }
+    },
+    "/job/San-Diego-CA/Cyber-Threat-Analyst_R104": "HTTP 500"
+  }
+}

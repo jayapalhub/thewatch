@@ -1,0 +1,40 @@
+{
+  "totalCount": 3,
+  "count": 3,
+  "jobs": [
+    {
+      "data": {
+        "req_id": "IC-100",
+        "title": "Security Operations Center Analyst, SOC Analyst II",
+        "full_location": "San Diego, CA, United States",
+        "posted_date": "2026-10-08T00:00:00+0000",
+        "description": "<p>Hiring range $85,000 - $105,000.</p>",
+        "meta_data": {
+          "canonical_url": "https://careers.example.test/careers-home/jobs/IC-100?lang=en-us"
+        }
+      }
+    },
+    {
+      "data": {
+        "slug": "IC-101",
+        "title": "Vulnerability Management Engineer",
+        "city": "San Diego",
+        "state": "CA"
+      }
+    },
+    {
+      "data": {
+        "req_id": "IC-102",
+        "title": "Registered Nurse",
+        "full_location": "San Diego, CA"
+      }
+    },
+    {
+      "data": {
+        "req_id": "IC-100",
+        "title": "Security Operations Center Analyst, SOC Analyst II",
+        "full_location": "San Diego, CA"
+      }
+    }
+  ]
+}

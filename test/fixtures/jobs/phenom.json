@@ -1,0 +1,40 @@
+{
+  "refineSearch": {
+    "totalHits": 4,
+    "data": {
+      "jobs": [
+        {
+          "jobId": "PH-1",
+          "title": "Information Security Analyst",
+          "location": "San Diego, California, United States",
+          "multi_location": [
+            "San Diego, California, United States"
+          ],
+          "postedDate": "2026-10-07T00:00:00.000+0000",
+          "descriptionTeaser": "Pay: $95,000 - $120,000 annually.",
+          "checkRemote": "false"
+        },
+        {
+          "jobId": "PH-2",
+          "title": "IT Audit Manager",
+          "multi_location": [
+            "San Diego, California, United States",
+            "Irvine, California, United States"
+          ],
+          "postedDate": "",
+          "checkRemote": "true"
+        },
+        {
+          "jobId": "PH-1",
+          "title": "Information Security Analyst",
+          "location": "San Diego, California, United States"
+        },
+        {
+          "reqId": "PH-3",
+          "title": "Customer Success Manager, Security",
+          "cityStateCountry": "San Diego, California, United States"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "jobs": [
+    {
+      "id": "ash-1",
+      "title": "GRC Analyst",
+      "jobUrl": "https://jobs.ashbyhq.com/examplecorp/ash-1",
+      "location": "San Diego",
+      "secondaryLocations": [
+        {
+          "location": "Irvine"
+        }
+      ],
+      "isRemote": true,
+      "publishedAt": "2026-10-10T09:00:00.000Z",
+      "compensation": {
+        "compensationTierSummary": "$110K – $140K"
+      }
+    },
+    {
+      "id": "ash-2",
+      "title": "Security Engineer",
+      "jobUrl": "https://jobs.ashbyhq.com/examplecorp/ash-2",
+      "location": "Remote",
+      "isRemote": true,
+      "publishedAt": "2026-10-11T09:00:00.000Z",
+      "descriptionHtml": "<p>Range: $160,000 - $200,000</p>"
+    },
+    {
+      "id": "ash-3",
+      "title": "Growth Marketing Lead",
+      "jobUrl": "https://jobs.ashbyhq.com/examplecorp/ash-3",
+      "location": "San Diego",
+      "isRemote": false
+    },
+    {
+      "id": "ash-4",
+      "title": "Vulnerability Researcher",
+      "jobUrl": "https://jobs.ashbyhq.com/examplecorp/ash-4",
+      "location": "San Diego, CA",
+      "isRemote": false,
+      "compensation": {
+        "compensationTierSummary": "Competitive"
+      }
+    }
+  ]
+}

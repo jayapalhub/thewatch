@@ -1,0 +1,12 @@
+{
+  "pages": [
+    {
+      "filters": "",
+      "results": "<section id=\"search-results-list\"><ul>\n<li><a href=\"/job/san-diego/security-analyst-amp-responder/1234/5001?src=search\" data-job-id=\"5001\"><h2>Security Analyst &amp; Responder</h2><span class=\"job-location\">San Diego, California</span><span class=\"job-date-posted\">10/05/2026</span></a></li>\n<li><a href=\"/job/san-diego/tax-manager/1234/5002?src=search\" data-job-id=\"5002\"><h2>Tax Manager</h2><span class=\"job-location\">San Diego, California</span><span class=\"job-date-posted\">10/05/2026</span></a></li>\n<li><a href=\"/job/san-diego/principal-cybersecurity-engineer/1234/5003?src=search\" data-job-id=\"5003\"><h2>Principal Cybersecurity Engineer</h2><span class=\"job-location\">Remote, United States</span><span class=\"job-date-posted\">10/05/2026</span></a></li>\n</ul></section>"
+    },
+    {
+      "filters": "",
+      "results": "<section id=\"search-results-list\"><ul>\n<li><a href=\"/job/san-diego/security-analyst-amp-responder/1234/5001?src=search\" data-job-id=\"5001\"><h2>Security Analyst &amp; Responder</h2><span class=\"job-location\">San Diego, California</span><span class=\"job-date-posted\">10/05/2026</span></a></li>\n</ul></section>"
+    }
+  ]
+}
