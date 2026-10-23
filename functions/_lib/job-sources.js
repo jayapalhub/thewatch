@@ -62,7 +62,7 @@ export function inferRemote(locationText) {
 }
 function payText(html) { const m = strip(html).match(PAY_RE); if (!m) return null; let s = m[0].replace(/\s+/g, " ").replace(/\$\s/g, "$"); if (!s.includes("$")) s = s.replace(/([\d,.]+)\s*USD/g, "$$$1"); return s; }
 
-async function getJson(url, init = {}) {
+export async function getJson(url, init = {}) {
   const { text, ...rest } = init;
   const r = await fetch(url, { ...rest, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: text ? "text/html,application/json" : "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -282,7 +282,7 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
+export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
