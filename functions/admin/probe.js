@@ -71,11 +71,51 @@ function snippets(text, cityRe, slugOf) {
   return found;
 }
 
+
+// Places mode: every US "City, ST" (or "City, State") that sits near a date between Oct 23 2026 and Apr 30 2027.
+// Used to see which cities outside our calendars get the most sponsor events.
+const STATES = { Alabama: "AL", Alaska: "AK", Arizona: "AZ", Arkansas: "AR", California: "CA", Colorado: "CO", Connecticut: "CT", Delaware: "DE", Florida: "FL", Georgia: "GA", Hawaii: "HI", Idaho: "ID", Illinois: "IL", Indiana: "IN", Iowa: "IA", Kansas: "KS", Kentucky: "KY", Louisiana: "LA", Maine: "ME", Maryland: "MD", Massachusetts: "MA", Michigan: "MI", Minnesota: "MN", Mississippi: "MS", Missouri: "MO", Montana: "MT", Nebraska: "NE", Nevada: "NV", "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY", "North Carolina": "NC", "North Dakota": "ND", Ohio: "OH", Oklahoma: "OK", Oregon: "OR", Pennsylvania: "PA", "Rhode Island": "RI", "South Carolina": "SC", "South Dakota": "SD", Tennessee: "TN", Texas: "TX", Utah: "UT", Vermont: "VT", Virginia: "VA", Washington: "WA", "West Virginia": "WV", Wisconsin: "WI", Wyoming: "WY" };
+const ABBR = new Set([...Object.values(STATES), "DC"]);
+const PLACE_RE = new RegExp(`\\b((?:[A-Z][A-Za-z.'-]+ ){0,2}[A-Z][A-Za-z.'-]+),\\s+(${[...ABBR].join("|")}|${Object.keys(STATES).join("|")})\\b`, "g");
+const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+const MD_RE = new RegExp(`\\b(${MONTH})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b(?:,?\\s+(202[5-7]))?`, "gi");
+function inWindow(mo, d, y) {
+  if (!y) y = (mo > 10 || (mo === 10 && d >= 23)) ? 2026 : (mo <= 4 ? 2027 : 0);
+  const iso = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  return iso >= "2026-10-23" && iso <= "2027-04-30" ? iso : null;
+}
+function placesOf(text) {
+  const out = []; const seen = new Set(); PLACE_RE.lastIndex = 0; let m;
+  while ((m = PLACE_RE.exec(text)) && out.length < 60) {
+    const st = STATES[m[2]] || m[2];
+    let city = m[1].replace(/^(?:In|At|Join|Us|The|And|Of|From|Event|Events|Location|Venue|Where|Live|Hotel|Center|Downtown)\s+/i, "");
+    if (/^(Inc|LLC|Ltd|Suite|Floor|Corp|Street|St|Ave|Road|Rd|Blvd)$/i.test(city)) continue;
+    const ws = Math.max(0, m.index - 140); const w = text.slice(ws, m.index + m[0].length + 140);
+    const at = m.index - ws, end = at + m[0].length;
+    MD_RE.lastIndex = 0; let d, best = null, bestDist = 1e9;
+    while ((d = MD_RE.exec(w))) {
+      const dist = d.index >= end ? d.index - end : d.index + d[0].length <= at ? at - (d.index + d[0].length) + 5 : 0;
+      if (dist < bestDist) { bestDist = dist; best = d; }
+    }
+    if (!best) continue;
+    const iso = inWindow(MON[best[1].slice(0, 3).toLowerCase()], Number(best[2]), best[3] ? Number(best[3]) : 0);
+    if (!iso) continue;
+    const key = city.toLowerCase() + "," + st + "," + iso; if (seen.has(key)) continue; seen.add(key);
+    out.push({ p: `${city}, ${st}`, d: iso });
+  }
+  return out;
+}
+
 export async function onRequestPost({ request, env }) {
   let body; try { body = await request.json(); } catch { return json({ ok: false, error: "send JSON" }, 400); }
   const sites = (Array.isArray(body.sites) ? body.sites : []).filter((u) => /^https?:\/\//.test(u)).slice(0, 10);
   const pages = (Array.isArray(body.pages) ? body.pages : []).filter((u) => /^https?:\/\//.test(u)).slice(0, 10);
   const perSite = Math.max(1, Math.min(3, Number(body.per_site) || 3));
+  if (body.mode === "places") {
+    const out = [];
+    for (const pg of pages.slice(0, 8)) { const p = await get(pg); out.push({ page: pg, status: p.status, places: p.html ? placesOf(textOf(p.html)) : [] }); }
+    return json({ ok: true, results: out });
+  }
   const { results: cities } = await env.DB.prepare("SELECT slug, name FROM cities WHERE active=1").all();
   const nameTo = [];
   for (const c of cities) for (const n of new Set([c.name, ...(ALIASES[c.slug] || [])])) nameTo.push([n.toLowerCase().replace(/\s+/g, " "), c.slug]);
