@@ -37,41 +37,38 @@ async function get(url) {
     if (!r.ok) return { status: r.status, url: r.url };
     const ct = r.headers.get("content-type") || "";
     if (!/html/.test(ct)) return { status: r.status, url: r.url, skipped: ct.slice(0, 40) };
-    return { status: r.status, url: r.url, html: (await r.text()).slice(0, 600000) };
+    return { status: r.status, url: r.url, html: (await r.text()).slice(0, 250000) };
   } catch (e) { return { status: 0, url, error: String(e && e.message || e).slice(0, 80) }; }
 }
 function eventLinks(html, pageUrl) {
   const out = new Map(); let base; try { base = new URL(pageUrl); } catch { return []; }
-  const bd = baseDomain(base.host);
-  for (const m of String(html).matchAll(/<a\b[^>]*href\s*=\s*["']([^"'#]+)["'][^>]*>([\s\S]{0,200}?)<\/a>/gi)) {
-    let u; try { u = new URL(m[1], base); } catch { continue; }
+  const bd = baseDomain(base.host); const baseKey = base.toString().replace(/\/$/, "");
+  const re = /<a\b[^>]*?href\s*=\s*["']([^"'#]+)["']/gi; let m; let n = 0;
+  while ((m = re.exec(html)) && n++ < 1500) {
+    const href = m[1];
+    const label = html.slice(re.lastIndex, re.lastIndex + 160).replace(/<[^>]+>/g, " ").toLowerCase();
+    if (!LINK_RE.test(href) && !/\b(events?|webinars?|roadshow|world tour|on tour|summit|dinner|meet us)\b/.test(label.split("</a")[0])) continue;
+    let u; try { u = new URL(href, base); } catch { continue; }
     if (!/^https?:$/.test(u.protocol) || /\.(pdf|png|jpe?g|zip|mp4)$/i.test(u.pathname)) continue;
     if (baseDomain(u.host) !== bd) continue;
-    const label = textOf(m[2]).toLowerCase();
     const path = u.pathname.toLowerCase();
-    if (!LINK_RE.test(path) && !/\b(events?|webinars?|roadshow|world tour|on tour|summit|dinner|meet us)\b/.test(label)) continue;
     if (/\/(blog|news|press|careers|jobs|privacy|legal|terms)\b/.test(path) && !/event/.test(path)) continue;
     u.hash = ""; const key = u.toString().replace(/\/$/, "");
-    if (key === base.toString().replace(/\/$/, "")) continue;
-    const score = (/event/.test(path) ? 3 : 0) + (/roadshow|tour|dinner|happy|lunch|summit/.test(path + " " + label) ? 2 : 0) + (/webinar/.test(path) ? -1 : 0) - path.split("/").length * 0.1;
+    if (key === baseKey) continue;
+    const score = (/event/.test(path) ? 3 : 0) + (/roadshow|tour|dinner|happy|lunch|summit/.test(path) ? 2 : 0) + (/webinar/.test(path) ? -1 : 0) - path.split("/").length * 0.1;
     if (!out.has(key) || out.get(key) < score) out.set(key, score);
   }
   return [...out.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
 }
-function snippets(text, cityRes) {
-  const found = []; const seen = new Set();
-  for (const { slug, re } of cityRes) {
-    re.lastIndex = 0; let m; let n = 0;
-    while ((m = re.exec(text)) && n < 4) {
-      const s = Math.max(0, m.index - 170), e = Math.min(text.length, m.index + m[0].length + 170);
-      const w = text.slice(s, e);
-      if (!DATE_RE.test(w) || /\b2025\b/.test(w) && !/\b202[67]\b/.test(w)) continue;
-      const key = slug + ":" + w.slice(150, 230);
-      if (seen.has(key)) continue; seen.add(key); n++;
-      found.push({ city: slug, text: w });
-    }
+function snippets(text, cityRe, slugOf) {
+  const found = []; const seen = new Set(); cityRe.lastIndex = 0; let m;
+  while ((m = cityRe.exec(text)) && found.length < 10) {
+    const w = text.slice(Math.max(0, m.index - 170), m.index + m[0].length + 170);
+    if (!DATE_RE.test(w) || /\b2025\b/.test(w) && !/\b202[67]\b/.test(w)) continue;
+    const key = w.slice(150, 230); if (seen.has(key)) continue; seen.add(key);
+    found.push({ city: slugOf(m[0]), text: w });
   }
-  return found.slice(0, 10);
+  return found;
 }
 
 export async function onRequestPost({ request, env }) {
@@ -80,10 +77,11 @@ export async function onRequestPost({ request, env }) {
   const pages = (Array.isArray(body.pages) ? body.pages : []).filter((u) => /^https?:\/\//.test(u)).slice(0, 10);
   const perSite = Math.max(1, Math.min(3, Number(body.per_site) || 3));
   const { results: cities } = await env.DB.prepare("SELECT slug, name FROM cities WHERE active=1").all();
-  const cityRes = cities.map((c) => {
-    const names = [...new Set([c.name, ...(ALIASES[c.slug] || [])])].map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"));
-    return { slug: c.slug, re: new RegExp(`\\b(?:${names.join("|")})\\b`, "g") };
-  });
+  const nameTo = [];
+  for (const c of cities) for (const n of new Set([c.name, ...(ALIASES[c.slug] || [])])) nameTo.push([n.toLowerCase().replace(/\s+/g, " "), c.slug]);
+  const cityRe = new RegExp(`\\b(?:${nameTo.map(([n]) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+")).join("|")})\\b`, "gi");
+  const slugOf = (s) => { const k = s.toLowerCase().replace(/\s+/g, " "); const hit = nameTo.find(([n]) => n === k); return hit ? hit[1] : k; };
+  const cityRes = [cityRe, slugOf];
   const out = [];
   for (const site of sites) {
     const home = await get(site);
@@ -91,11 +89,11 @@ export async function onRequestPost({ request, env }) {
     if (home.html) {
       const links = eventLinks(home.html, home.url || site);
       row.links = links.slice(0, 8);
-      row.pages.push({ url: home.url, hits: snippets(textOf(home.html), cityRes) });
+      row.pages.push({ url: home.url, hits: snippets(textOf(home.html), ...cityRes) });
       for (const l of links.slice(0, perSite)) {
         const p = await get(l);
         const t = p.html ? textOf(p.html) : "";
-        row.pages.push({ url: l, status: p.status, chars: t.length, hits: t ? snippets(t, cityRes) : [] });
+        row.pages.push({ url: l, status: p.status, chars: t.length, hits: t ? snippets(t, ...cityRes) : [] });
       }
     } else if (home.error) row.error = home.error;
     out.push(row);
@@ -103,7 +101,7 @@ export async function onRequestPost({ request, env }) {
   for (const pg of pages) {
     const p = await get(pg);
     const t = p.html ? textOf(p.html) : "";
-    out.push({ page: pg, status: p.status, final: p.url, chars: t.length, links: p.html ? eventLinks(p.html, p.url || pg).slice(0, 8) : [], hits: t ? snippets(t, cityRes) : [] });
+    out.push({ page: pg, status: p.status, final: p.url, chars: t.length, links: p.html ? eventLinks(p.html, p.url || pg).slice(0, 8) : [], hits: t ? snippets(t, ...cityRes) : [] });
   }
   return json({ ok: true, results: out });
 }
