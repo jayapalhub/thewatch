@@ -86,3 +86,39 @@ test("jobs board: a Dallas signup band above the hiring band", async () => {
   assert.deepEqual([...new Set(hiddenCities(body))], ["dallas"]);
   assert.ok(body.indexOf('id="subscribe"') < body.indexOf("Hiring in Dallas?"));
 });
+
+test("city signup page: names the city, counts the next thirty days, files signups under the city, and is edge cacheable", async () => {
+  const { onRequestGet: citySubscribe } = await import("../functions/[city]/subscribe.js");
+  const rows = [
+    { ...EVENT, id: 1, slug: "a", cost_type: "free", cpe_eligible: 1 },
+    { ...EVENT, id: 2, slug: "b", cost_type: "paid", cpe_eligible: 0, title: "Dallas Cyber Summit" },
+  ];
+  const db = fakeDb([{ match: /FROM events/, op: "all", reply: () => ({ results: rows.map((r) => ({ ...r })) }) }]);
+  const c = ctx("/dallas/subscribe", db);
+  c.params = { city: "dallas" };
+  const res = await citySubscribe(c);
+  const body = await res.text();
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("Cache-Control"), /public/);
+  assert.match(body, /<h1>Every security event in Dallas, Fort Worth and North Texas, in one Sunday email\.<\/h1>/);
+  assert.match(body, /2 events are on the Dallas calendar over the next thirty days, 1 free and 1 with CPE credit\./);
+  assert.ok(hiddenCities(body).length >= 1 && hiddenCities(body).every((x) => x === "dallas"), hiddenCities(body).join(","));
+  assert.doesNotMatch(body, /<select name="city">/);
+  assert.match(body, /name="source" value="city_subscribe:dallas"/);
+  assert.match(body, /Dallas Cyber Summit/);
+  assert.match(body, /<link rel="canonical" href="https:\/\/bettersecurity\.ai\/dallas\/subscribe">/);
+
+  const empty = ctx("/dallas/subscribe", fakeDb());
+  empty.params = { city: "dallas" };
+  const b2 = await (await citySubscribe(empty)).text();
+  assert.match(b2, /The Dallas calendar is filling up now\./);
+  assert.doesNotMatch(b2, /Coming up in Dallas/);
+
+  const shared = ctx("/dallas/subscribe?src=embed", fakeDb());
+  shared.params = { city: "dallas" };
+  assert.match(await (await citySubscribe(shared)).text(), /name="source" value="embed"/);
+
+  const none = ctx("/nowhere/subscribe", fakeDb());
+  none.params = { city: "nowhere" };
+  assert.equal((await citySubscribe(none)).status, 404);
+});
