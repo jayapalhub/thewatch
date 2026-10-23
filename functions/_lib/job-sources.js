@@ -343,14 +343,14 @@ async function finish(db, src, run) {
   return run;
 }
 
-// One board per call by default: a Worker invocation can only make a few dozen outbound requests, so the hourly cron
-// takes the board that has waited longest (never run first, then anything older than six days). Hundreds of boards
-// across many cities spread themselves over the week this way.
+// The hourly cron takes the boards that have waited longest (never run first, then anything older than two days), up
+// to a subrequest budget. On Workers Paid (10,000 subrequests per invocation) the tick gives boards a budget of 300,
+// so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
 const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40 } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
-    : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-6 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
+    : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
     : "SELECT * FROM job_sources WHERE active=1 ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?";
   const { results } = await db.prepare(sql).bind(...(onlyId ? [onlyId] : [max])).all();
   const out = [];

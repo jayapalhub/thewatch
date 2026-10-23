@@ -20,13 +20,12 @@ export async function onRequestPost(context) {
   const reminders = await runReminders(context.env).catch((e) => ({ error: e && e.message }));
   const jobs = await runJobMaintenance(context.env.DB).catch((e) => ({ error: e && e.message }));
   const referrals = await runReferralThanks(context.env).catch((e) => ({ error: e && e.message }));
-  const boards = await runAllJobSources(context.env.DB, { max: 4 }).catch((e) => [{ error: e && e.message }]); // one Workday board an hour, or a few of the cheaper API boards; each board is read about weekly
-  // Whatever the board run left of the request budget goes to daily feed pulls (a few requests each) and then to
-  // sweep target change detection (one request each), so a cheap hour does more and a Workday hour does less.
-  const left = Math.max(0, 44 - (typeof boards.spent === "number" ? boards.spent : 40));
-  const feeds = left >= 6 ? await runAllSources(context.env.DB, { dueOnly: true, max: Math.min(3, Math.floor(left / 6)) }).catch((e) => [{ error: e && e.message }]) : [];
-  const feedCost = (feeds.length || 0) * 6;
-  const targets = await refreshTargets(context.env.DB, { max: Math.min(8, Math.max(0, left - feedCost)) }).catch((e) => ({ error: e && e.message }));
+  const boards = await runAllJobSources(context.env.DB, { max: 12, budget: 300 }).catch((e) => [{ error: e && e.message }]); // Workers Paid allows 10,000 subrequests: about seven Workday boards an hour or a dozen API boards, so each board is read about every two days
+  // Feeds and sweep target change detection get fixed shares rather than what the boards leave (the old 44 request cap
+  // came from the free plan's 50 subrequest limit). Eight feeds an hour reads every feed source daily; twelve targets an
+  // hour rehashes every sweep target about every two and a half days.
+  const feeds = await runAllSources(context.env.DB, { dueOnly: true, max: 8 }).catch((e) => [{ error: e && e.message }]);
+  const targets = await refreshTargets(context.env.DB, { max: 12 }).catch((e) => ({ error: e && e.message }));
   const linkedin = await runLinkedInSchedule(context.env).catch((e) => ({ error: e && e.message })); // Monday and Thursday page posts
   const digest = await runMondayDigest(context.env).catch((e) => ({ error: e && e.message })); // Monday numbers to Jerome, once a week
   const usage = await checkBudget(context.env, context.env.DB);
