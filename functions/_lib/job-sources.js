@@ -10,7 +10,7 @@ import { slugify } from "./html.js";
 const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph\w*)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems )security officer|physical security|corporate security|regional security|global security|event security|workplace security|workplace (?:&|and) security|real estate|safety (?:&|and) security|personal security|K9|cargo security|security (?:supervisor|assistant manager|shift|operator|officers|technology technician)|supervisor,? security|shift supervisor|concierge|trade compliance|security valuation|lecturer|professor|faculty|employee relations|political law|hackathon|solution consultant|success architect|customer engineering|escalations? engineer|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|account director|customer success|customer advocacy|business development|marketing|communications|public relations|public affairs|go[- ]to[- ]market|GTM|partnerships?|partner manager|evangelist|developer advocate|community manager|technical writer|content (?:writer|strategist|lead|marketer)|copywriter|demand generation|revenue|field CTO|recruiter|intern(?:ships?)?|industrial security|personnel security|PERSEC|security rep|ACSSO|AFSO|FSO|maritime security|treaty|join noblis|program security|special programs security|activity security|security representative|security cooperation|international security|security dispatch|dispatcher|security communication|sergeant|police|public safety|building security|security observation|TSCM|fire alarm|DC security|bancorp security|category manager|proposal|law enforcement|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", successfactors: "SuccessFactors", oracle: "Oracle Recruiting" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", icims_classic: "iCIMS classic", successfactors: "SuccessFactors", oracle: "Oracle Recruiting" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -278,7 +278,7 @@ export async function pullPhenom(cfg, searchText, fetcher = getJson) {
 }
 // iCIMS career portals of the newer kind (careers.rivian.com/careers-home, jobs.uci.edu/careers-home): config { host }.
 // The portal's /api/jobs answers JSON, 100 a page, relevance sorted; the older careers-<name>.icims.com pages are HTML
-// and are not read here.
+// and are read by pullIcimsClassic below.
 export async function pullIcims(cfg, searchText, fetcher = getJson) {
   const out = []; const seen = new Set();
   for (let page = 1; page <= 2; page++) {
@@ -294,6 +294,49 @@ export async function pullIcims(cfg, searchText, fetcher = getJson) {
       out.push({ key: id, title: x.title, url: canonical, location: loc, posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.posted_date || "") ? x.posted_date.slice(0, 10) : null, salary_text: payText(x.description), remote: inferRemote(loc), excerpt: excerptOf(x.description) });
     }
     if (jobs.length < 100) break;
+  }
+  return out;
+}
+// Classic iCIMS portals (careers-peraton.icims.com, corporatejobs-alaskaair.icims.com): config { host }. These have no
+// JSON API; the public search page answers HTML with one link per posting (/jobs/<id>/<slug>/job), the title in or on
+// that link and the location and posted date in labeled fields after it (or, on the older table layout, in the cells
+// after it). Pages are numbered from 0 with pr=; reading stops when a page adds nothing new or has no link to the next
+// page. Locations come as "US-CA-San Diego" and are turned around to "San Diego, CA, US" so they read like every other
+// board's; "US-Remote" becomes "Remote (US)".
+function icimsLocation(s) {
+  return String(s || "").split(/\s*\|\s*|\s*;\s*/).map((l) => {
+    const t = l.trim(); let m;
+    if ((m = /^([A-Z]{2})-Remote$/i.exec(t))) return `Remote (${m[1].toUpperCase()})`;
+    return (m = /^([A-Z]{2})-([A-Z]{2})-(.+)$/.exec(t)) ? `${m[3].trim()}, ${m[2]}, ${m[1]}` : t;
+  }).filter(Boolean).join("; ");
+}
+export async function pullIcimsClassic(cfg, searchText, fetcher = getJson) {
+  const host = String(cfg.host || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const out = []; const seen = new Set();
+  const clean = (h) => decodeEntities(String(h || "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+  for (let pr = 0; pr < 10; pr++) {
+    const html = String(await fetcher(`https://${host}/jobs/search?ss=1&searchKeyword=${encodeURIComponent(searchText || "security")}&in_iframe=1&pr=${pr}`, { text: true }));
+    if (pr === 0 && !/iCIMS_|\/jobs\/\d+\//.test(html)) throw new Error("unexpected page from iCIMS (no job list)");
+    // Every link to a posting, in page order; a row runs from its first link to the next posting's link.
+    const links = []; const re = /<a\b([^>]*?)href="([^"]*\/jobs\/(\d+)\/[^"]*)"([^>]*)>([\s\S]*?)<\/a>/gi; let m;
+    while ((m = re.exec(html))) links.push({ id: m[3], href: m[2], attrs: m[1] + m[4], inner: m[5], at: m.index });
+    const before = seen.size;
+    for (let i = 0; i < links.length; i++) {
+      const a = links[i]; if (seen.has(a.id)) continue; seen.add(a.id);
+      let j = i + 1; while (j < links.length && links[j].id === a.id) j++;
+      const row = html.slice(a.at, j < links.length ? links[j].at : html.length);
+      const titleAttr = (/title="([^"]*)"/i.exec(a.attrs) || [])[1];
+      const title = clean((/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i.exec(a.inner) || [])[1]) || clean(a.inner.replace(/<span[^>]*sr-only[^>]*>[\s\S]*?<\/span>/gi, "")) || clean(String(titleAttr || "").replace(/^\s*\d+\s*-\s*/, ""));
+      if (!title || !isOurRole(title)) continue;
+      const field = (label) => (new RegExp(`>\\s*${label}\\s*<\\/(?:span|dt|div|label)>\\s*(?:<[^>]+>\\s*)*([^<]+)`, "i").exec(row) || [])[1];
+      const cell = (/<\/a>\s*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/i.exec(row) || [])[1]; // table layout: the cell after the title
+      const loc = icimsLocation(clean(field("(?:Job )?Locations?") || (/\b[A-Z]{2}-(?:[A-Z]{2}-[^<|]+|Remote\b)/i.exec(row) || [])[0] || cell));
+      const dateText = (/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec((/Posted Date[\s\S]{0,300}/i.exec(row) || [])[0] || "") || []);
+      const posted = dateText.length ? `${dateText[3]}-${dateText[1].padStart(2, "0")}-${dateText[2].padStart(2, "0")}` : null;
+      const url = (a.href.startsWith("http") ? a.href : `https://${host}${a.href.startsWith("/") ? "" : "/"}${a.href}`).split("?")[0].replace(/&amp;/g, "&");
+      out.push({ key: a.id, title, url, location: loc, posted_at: posted, salary_text: null, remote: inferRemote(loc), excerpt: null });
+    }
+    if (seen.size === before || !new RegExp(`[?&;]pr=${pr + 1}\\b`).test(html)) break;
   }
   return out;
 }
@@ -376,7 +419,7 @@ export async function pullOracle(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, oracle: pullOracle };
+export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, icims_classic: pullIcimsClassic, oracle: pullOracle };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
@@ -449,7 +492,7 @@ async function finish(db, src, run) {
 // to a subrequest budget. On Workers Paid (10,000 subrequests per invocation) the tick gives boards a budget of 300,
 // so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
-const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, oracle: 4 };
+const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, icims_classic: 5, oracle: 4 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40, deadline = null } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
