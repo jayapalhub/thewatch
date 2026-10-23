@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { jobRegion, jobsJsonLd } from "../functions/_lib/jobs.js";
+import { jobRegion, jobJsonLd } from "../functions/_lib/jobs.js";
 
 test("jobRegion reads the state from the posting's location", () => {
   assert.equal(jobRegion("Dallas, TX"), "TX");
@@ -18,8 +18,8 @@ test("jobRegion leaves the state out when the location does not give one", () =>
 });
 
 test("a Dallas role is no longer marked as California", () => {
-  const out = String(jobsJsonLd([{ id: 1, title: "Security Engineer", employer: "Example Co", location: "Plano, TX", remote: "onsite" }], { slug: "dallas", name: "Dallas", region: "Dallas, Fort Worth and North Texas" }, "https://bettersecurity.ai", "2026-10-23"));
-  const [job] = JSON.parse(out.replace(/^<script[^>]*>|<\/script>$/g, ""));
+  const out = String(jobJsonLd({ id: 1, city: "dallas", title: "Security Engineer", employer: "Example Co", location: "Plano, TX", remote: "onsite" }, { slug: "dallas", name: "Dallas", region: "Dallas, Fort Worth and North Texas" }, "https://bettersecurity.ai", "2026-10-23"));
+  const job = JSON.parse(out.replace(/^<script[^>]*>|<\/script>$/g, ""));
   assert.equal(job.jobLocation.address.addressLocality, "Plano");
   assert.equal(job.jobLocation.address.addressRegion, "TX");
 });
