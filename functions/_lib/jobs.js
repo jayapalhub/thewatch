@@ -93,13 +93,14 @@ export function jobsEmailBlock(siteUrl, city, picks, total, issueId, styles) {
   ${total > picks.length ? `<div style="margin-top:8px;font-size:13px;"><a href="${siteUrl}/${city.slug}/jobs" style="color:${SHIELD};font-weight:700;">See all ${total} open roles</a></div>` : ""}`;
 }
 
-// Public page row.
+// Public page row. The title opens the role's own page; the Apply button still goes straight to the employer's posting
+// through the click counted redirect. The row keeps its job-<id> anchor so older links into the board still land.
 export function jobRow(j, today = todayKey()) {
   const where = [j.location, REMOTE[j.remote]].filter(Boolean).join(", ");
   return html`<li class="job-row ${isFeatured(j, today) ? "is-featured" : ""}" id="job-${j.id}">
     <div class="job-main">
       ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
-      <h3 class="job-title"><a href="/go/j/${j.id}" rel="noopener" target="_blank">${j.title}</a></h3>
+      <h3 class="job-title"><a href="${jobPath(j)}">${j.title}</a></h3>
       <p class="job-meta">${[j.employer, where, SENIORITY[j.seniority], j.salary_text].filter(Boolean).join(" · ")}</p>
       ${j.posted_by_name ? html`<p class="job-by">${j.posted_by_url ? html`<a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Posted by ${j.posted_by_name}</a>` : html`Posted by ${j.posted_by_name}`}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind === "staffing" ? html` <span class="tag">Staffing firm</span>` : ""}${j.posted_by_date ? html` <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>` : ""}</p>` : ""}
       <div class="tags">${j.topics.slice(0, 3).map((t) => (TOPICS[t] ? html`<span class="tag tag-topic">${TOPICS[t]}</span>` : ""))}${j.posted_at ? html`<span class="job-when">Posted ${agoLabel(j.posted_at, today)}</span>` : ""}</div>
@@ -196,9 +197,3 @@ export function jobPosting(j, city, siteUrl, today = todayKey()) {
 }
 const ldScript = (data) => raw(`<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`);
 export function jobJsonLd(j, city, siteUrl, today = todayKey()) { return ldScript(jobPosting(j, city, siteUrl, today)); }
-
-// The board's copy of the same markup, one object per live role. Still used by the city board until it moves to links.
-export function jobsJsonLd(jobs, city, siteUrl, today = todayKey()) {
-  if (!jobs || !jobs.length) return "";
-  return ldScript(jobs.slice(0, 50).map((j) => jobPosting(j, city, siteUrl, today)));
-}
