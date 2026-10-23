@@ -176,8 +176,12 @@ export async function pullRadancy(cfg, searchText, fetcher = getJson) {
       const attrs = m[1] + m[3], inner = m[4];
       const id = (/data-job-id="([^"]+)"/.exec(attrs) || [])[1] || m[2].split("?")[0].split("/").pop();
       if (seen.has(id)) continue; seen.add(id); added++;
-      const title = clean((/<h2[^>]*>([\s\S]*?)<\/h2>/i.exec(inner) || [])[1]);
-      const loc = clean((/class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(inner) || [])[1]);
+      // Two layouts: older sites wrap the <h2> title and the location span inside the link; newer ones put the link
+      // inside the <h2> (the link text is the title) with the location span just after it in the same list item.
+      const h2 = (/<h2[^>]*>([\s\S]*?)<\/h2>/i.exec(inner) || [])[1];
+      const title = clean(h2 != null ? h2 : inner);
+      const after = html.slice(re.lastIndex, re.lastIndex + 800).split(/<li\b/i)[0];
+      const loc = clean((/class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(inner) || /class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(after) || [])[1]);
       if (!title || !isOurRole(title)) continue;
       out.push({ key: String(id), title, url: `https://${cfg.host}${m[2].split("?")[0]}`, location: loc, posted_at: null, salary_text: null, remote: inferRemote(loc) });
     }
