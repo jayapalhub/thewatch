@@ -74,6 +74,7 @@ export async function onRequestGet({ env }) {
   if (speakerCities.has("virtual")) add("/virtual/speakers");
   for (const c of cities) if (boardMod.has(c)) add(`/${c}/jobs`, boardMod.get(c));
   for (const c of cities) add(`/${c}/cpe`);
+  for (const c of cities) add(`/${c}/subscribe`);
   for (const i of sentIssues) if (CITIES[i.city]) add(`/${i.city}/issues/${i.week_start}`, i.updated_at);
   for (const p of [...(SHOW_BS_EVENTS ? ["/events", "/events/padel-social-2027"] : []), "/submit", "/sponsor", "/sponsor/media-kit", "/subscribe", "/about", "/privacy", "/terms"]) add(p);
   for (const e of events) if (listed(e.city)) add(eventPath(e), e.updated_at);

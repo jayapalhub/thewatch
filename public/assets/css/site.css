@@ -434,6 +434,8 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .band-navy .signup-city, .hero .signup-city { color: var(--white); }
 .lede-note { color: var(--muted); font-weight: 600; margin-top: -4px; }
 .hero .lede-note { color: #A9B8CC; }
+.small-note { font-size: .85rem; color: var(--muted); margin: 10px 0 0; }
+.hero .small-note { color: #A9B8CC; }
 
 /* Jobs */
 .jobs-lede { max-width: 70ch; color: var(--ink); margin: 0 0 16px; }

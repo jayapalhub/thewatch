@@ -117,7 +117,7 @@ export async function composeLaunchKit(db, citySlug, siteUrl) {
   const jobs = await liveJobs(db, citySlug, { limit: 200 });
   const orgs = new Set(events.map((e) => e.org_display).filter(Boolean));
   const n = events.length, j = jobs.length;
-  const subscribe = trackUrl(siteUrl, `/subscribe`, "launch").replace("/subscribe?", `/subscribe?city=${citySlug}&`);
+  const subscribe = trackUrl(siteUrl, `/${citySlug}/subscribe`, "launch");
   const calendar = trackUrl(siteUrl, `/${citySlug}`, "launch");
   const sunday = city.newsletter === "sunday" ? `A free email every Sunday at 8 AM lists the week ahead, with a short note on which ones are worth your evening.` : `A free Sunday email for ${city.name} starts soon.`;
   const post = [

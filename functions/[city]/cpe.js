@@ -62,7 +62,7 @@ export async function onRequestGet({ params, env }) {
     <p>The organizer states the hours; you report them. The rules below are the common ones, and your body's current handbook is the final word.</p>
     <ul class="dir-list">${BODIES.map((b) => html`<li class="dir-item"><h3>${b.name}</h3><p class="dir-desc">${b.rule}</p></li>`)}</ul>
     <h2>Keeping the hours straight</h2>
-    <p>Every subscriber to The Watch gets a private CPE log. Mark an event attended from the Sunday email or the event page and the date, organizer, hours and body are recorded for you, with a CSV export when renewal comes around. <a href="/subscribe?city=${city.slug}&src=cpe_page">Subscribe for ${city.name}</a> to start one.</p>
+    <p>Every subscriber to The Watch gets a private CPE log. Mark an event attended from the Sunday email or the event page and the date, organizer, hours and body are recorded for you, with a CSV export when renewal comes around. <a href="/${city.slug}/subscribe?src=cpe_page">Subscribe for ${city.name}</a> to start one.</p>
     <h2>Questions people ask</h2>
     ${faq.map((f) => html`<h3>${f.q}</h3><p>${f.a}</p>`)}
   </div></section>
