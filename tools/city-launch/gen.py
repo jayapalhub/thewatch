@@ -294,7 +294,7 @@ def main(slug):
         bd = json.load(open(boards_path)); bd = bd.get("employers", bd) if isinstance(bd, dict) else bd
         for b in bd:
             k = b.get("kind"); name = clean(b.get("employer")); bs = slugify(b.get("slug") or name)
-            if k == "icims" and str((b.get("config") or {}).get("host", "")).endswith("icims.com"): k = "unsupported"  # hosted iCIMS portals 404 on our adapter
+            if k == "icims" and str((b.get("config") or {}).get("host", "")).endswith("icims.com"): k = "icims_classic"  # hosted iCIMS portals have no /api/jobs; read their search page
             if k == "lever" and "jobs.eu.lever.co" in (b.get("careers_url") or ""): b.setdefault("config", {})["region"] = "eu"
             if k in ("unsupported", None, ""): unsupported.append(name); continue
             if k != "existing":
