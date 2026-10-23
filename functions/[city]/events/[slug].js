@@ -82,5 +82,7 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
   ${more.length ? html`<section class="band band-paper"><div class="wrap narrow"><h2>More from ${e.org_display}</h2><ul class="event-list">${more.map(eventRow)}</ul></div></section>` : ""}
   ${eventJsonLd(e, siteUrl)}`;
 
-  return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)}${e.city === "virtual" ? " online" : ` in ${city.name}`}`, body, city: e.city, path: calendarPath(e.city), image: `/og/event/${e.slug}.png` }), 200, { "Cache-Control": "public, max-age=300" });
+  // The date and place lead the description, so a search result answers when and where before anyone clicks.
+  const lead = `${fmtDateLong(e.start_at)} ${e.city === "virtual" ? "online" : `in ${city.name}`}${e.org_display ? `, hosted by ${e.org_display}` : ""}.`;
+  return page(shell({ title: e.title, description: e.description_short ? `${lead} ${e.description_short}` : lead, body, city: e.city, path: calendarPath(e.city), canonical: eventPath(e), image: `/og/event/${e.slug}.png` }), 200, { "Cache-Control": "public, max-age=300" });
 }

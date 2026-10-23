@@ -65,6 +65,6 @@ async function renderSpeakersPage(env, c) {
   return page(shell({
     title: virtual ? "Speakers at online sessions" : `Speakers in ${c.name}`,
     description: `Everyone who has spoken or is scheduled to speak at ${where}, with the events they spoke at and their next date.`,
-    body, city: c.slug, path: `${home}/speakers`, head: people.length ? "" : '<meta name="robots" content="noindex">',
+    body, city: c.slug, path: `${home}/speakers`, canonical: `${home}/speakers`, head: people.length ? "" : '<meta name="robots" content="noindex">',
   }), 200, { "Cache-Control": "public, max-age=300" });
 }

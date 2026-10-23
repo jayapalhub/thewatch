@@ -37,8 +37,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
   let body;
   if (view === "month") {
     // Month pages are bounded (three months back to fifteen ahead) so crawlers following the arrows cannot walk forever.
-    const asked = /^\d{4}-\d{2}$/.test(q.get("month") || "") ? q.get("month") + "-01" : "";
-    const m = asked && asked >= addMonths(monthStart(today), -3) && asked <= addMonths(monthStart(today), 15) ? asked : monthStart(today);
+    const m = monthKeyOf(q, today);
     const from = monthStart(m), to = addDays(monthEnd(m), 1);
     const events = await queryEvents(env.DB, { city: city.slug, from, to: to + "T00:00", ...filters });
     body = html`${header(city, "month", filters, orgs, anyFilter, m)}${monthGrid(city, m, events, today, filters)}`;
@@ -67,9 +66,21 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       ? subscribeBand({ city, source: `calendar:${city.slug}`, text: "Everything on this calendar, curated down to what's worth your time, with a short note from Jerome. One email at 8 AM your time, and one click to unsubscribe." })
       : subscribeBand({ city, source: `calendar:${city.slug}`, heading: `A ${city.name} email is on the way.`, text: "Subscribe now and you're on the first send, the week it launches." })}`;
 
-  const res = page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
+  const title = view === "month" && !anyFilter ? `${city.name} cybersecurity events in ${monthName(monthKeyOf(q, today))} ${parts(monthKeyOf(q, today)).y}` : `${city.name} cybersecurity events calendar`;
+  const res = page(shell({ title, description: cityDescription(city), body: full, city: city.slug, path: `/${city.slug}`, canonical: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
   res.headers.append("Set-Cookie", `watch_city=${city.slug}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
   return res;
+}
+
+function monthKeyOf(q, today) {
+  const asked = /^\d{4}-\d{2}$/.test(q.get("month") || "") ? q.get("month") + "-01" : "";
+  return asked && asked >= addMonths(monthStart(today), -3) && asked <= addMonths(monthStart(today), 15) ? asked : monthStart(today);
+}
+
+// The meta description for a city calendar: what is on it, for where, and that there is a Sunday email. Written here
+// rather than read from cities.description so all 40 cities say it the same way and mention the email.
+export function cityDescription(city) {
+  return `Cybersecurity, AI security, privacy and audit events in ${city.region || city.name}: chapter meetings, meetups and conferences, with CPE and cost noted${city.newsletter === "sunday" ? ", plus a free Sunday email" : ""}. By Better Security.`;
 }
 
 function header(city, view, f, orgs, anyFilter, monthKey) {

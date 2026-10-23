@@ -80,7 +80,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
     ${signupForm({ source: "virtual", chooseCity: true })}
   </div></section>`;
 
-  const res = page(shell({ title: "Virtual security webinars and CPE sessions", description: "Live online cybersecurity, audit, privacy and AI governance sessions from ISACA, ISC2, IIA, IAPP, SANS and vendors, with CPE hours noted.", body, city: "virtual", path: "/virtual", wide: true }), 200, { "Cache-Control": "public, max-age=120" });
+  const res = page(shell({ title: "Virtual security webinars and CPE sessions", description: "Live online cybersecurity, audit, privacy and AI governance sessions from ISACA, ISC2, IIA, IAPP, SANS and vendors, with CPE hours noted.", body, city: "virtual", path: "/virtual", canonical: "/virtual", wide: true }), 200, { "Cache-Control": "public, max-age=120" });
   res.headers.append("Set-Cookie", "watch_city=virtual; Path=/; Max-Age=31536000; SameSite=Lax; Secure");
   return res;
 }

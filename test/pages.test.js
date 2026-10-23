@@ -56,6 +56,25 @@ test("event page: times are labeled in the event's own zone, not always Pacific"
   assert.doesNotMatch(when, /Pacific/);
 });
 
+test("city calendar: canonical without the query, and a title and description for search", async () => {
+  const c = ctx("/dallas?topic=grc&utm_source=x", fakeDb());
+  c.params = { city: "dallas" };
+  const body = await (await cityPage(c)).text();
+  assert.match(body, /<link rel="canonical" href="https:\/\/bettersecurity\.ai\/dallas">/);
+  assert.match(body, /<meta property="og:url" content="https:\/\/bettersecurity\.ai\/dallas">/);
+  assert.match(body, /<title>Dallas cybersecurity events calendar \| The Watch Dallas<\/title>/);
+  assert.match(body, /<meta name="description" content="Cybersecurity, AI security, privacy and audit events in Dallas, Fort Worth and North Texas: [^"]*plus a free Sunday email\. By Better Security\.">/);
+});
+
+test("event page: canonical is the event's own path and the description leads with when and where", async () => {
+  const db = fakeDb([{ match: /FROM events/, op: "first", reply: () => ({ ...EVENT }) }]);
+  const c = ctx("/dallas/events/" + EVENT.slug + "?s=abc", db);
+  c.params = { city: "dallas", slug: EVENT.slug };
+  const body = await (await eventPage(c)).text();
+  assert.match(body, /<link rel="canonical" href="https:\/\/bettersecurity\.ai\/dallas\/events\/issa-north-texas-october">/);
+  assert.match(body, /<meta name="description" content="Wednesday, October 28, 2099 in Dallas, hosted by ISSA North Texas\. Monthly chapter meeting\.">/);
+});
+
 test("jobs board: a Dallas signup band above the hiring band", async () => {
   const c = ctx("/dallas/jobs", fakeDb());
   c.params = { city: "dallas" };

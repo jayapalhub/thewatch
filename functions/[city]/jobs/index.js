@@ -54,5 +54,5 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
     <div><h2>Hiring in ${city.name}?</h2><p>Post a security role free. It reaches the people already planning their week on The Watch, and the best roles go in the Sunday email. Want yours at the top of the board and first in Sunday's email? <a href="/${city.slug}/jobs/feature">Feature a role</a>.</p></div>
     <p><a class="btn btn-electric" href="/${city.slug}/jobs/post">Post a role</a></p>
   </div></section>`;
-  return page(shell({ title: `Security jobs in ${city.name}`, description: `Open cybersecurity, GRC, privacy and audit roles in ${city.region}, linked to each employer's own posting.`, body, city: city.slug, path: `/${city.slug}/jobs`, wide: true }), 200, { "Cache-Control": "public, max-age=300" });
+  return page(shell({ title: `Cybersecurity jobs in ${city.name}`, description: `Open cybersecurity, GRC, privacy and audit roles in ${city.region}, linked to each employer's own posting.`, body, city: city.slug, path: `/${city.slug}/jobs`, canonical: `/${city.slug}/jobs`, wide: true }), 200, { "Cache-Control": "public, max-age=300" });
 }

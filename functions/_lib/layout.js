@@ -43,7 +43,10 @@ export function subscribeBand({ city, source, heading, text }) {
   </div></section>`;
 }
 
-export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null }) {
+// canonical: the one URL search engines should index for this page (a path). City pages pass it explicitly, because
+// `path` there only picks the highlighted nav item; site wide pages default to their own path. Query strings never
+// reach it, so a filtered, month or tracking URL points back at the plain page.
+export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null, canonical }) {
   const c = cityOf(city) || CITIES[DEFAULT_CITY];
   const isVirtual = c.slug === "virtual";
   const atRoot = !city && path === "/";
@@ -52,6 +55,8 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? "The Watch: cybersecurity events calendars by Better Security" : `${brandTitle}: cybersecurity events in ${c.name}`;
   const desc = description || (generic ? `Every cybersecurity, AI security, privacy and audit event in ${cityListText()}, in one calendar and one Sunday email. By Better Security.` : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
   const calHome = isVirtual ? "/virtual" : `/${c.slug}`;
+  const canonicalPath = canonical !== undefined ? canonical : generic ? path : null;
+  const canonicalUrl = canonicalPath ? `https://bettersecurity.ai${canonicalPath}` : null;
   // Up to three cities sit in the header by name. Past that the header shows the current city and an All cities link
   // to the chooser, so the navigation stays the same width however many cities there are.
   const cityList = Object.values(CITIES);
@@ -74,6 +79,8 @@ export function shell({ title, description, body, city = null, path = "/", wide 
 <meta property="og:title" content="${fullTitle}">
 <meta property="og:description" content="${desc}">
 <meta property="og:type" content="website">
+${canonicalUrl ? html`<link rel="canonical" href="${canonicalUrl}">
+<meta property="og:url" content="${canonicalUrl}">` : ""}
 <meta property="og:image" content="https://bettersecurity.ai${image || (atRoot ? "/og/city/sandiego.png" : `/og/city/${c.slug}.png`)}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
