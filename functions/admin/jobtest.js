@@ -7,7 +7,8 @@ import { ADAPTERS, getJson, inCity, parseTerms } from "../_lib/job-sources.js";
 //   total: the site's own total count when it reports one,
 //   matched: postings whose titles pass the security filter, in_city: matched postings that also match location_terms.
 // raw 0 means the board is broken or misconfigured; raw > 0 and matched 0 means no security roles open right now;
-// matched > 0 and in_city 0 means the location terms are missing them.
+// matched > 0 and in_city 0 means the location terms are missing them. With debug: true the start of the first response
+// is returned too, to see what the employer's site sends the Worker.
 function largestArray(v, depth = 0) {
   if (Array.isArray(v)) return v.length;
   if (!v || typeof v !== "object" || depth > 2) return 0;
@@ -30,6 +31,7 @@ export async function onRequestPost({ request, env }) {
     const counting = async (url, init = {}) => {
       r.calls++;
       const res = await getJson(url, init);
+      if (body.debug && r.calls === 1) r.first = (typeof res === "string" ? res : JSON.stringify(res)).replace(/\s+/g, " ").slice(0, 600);
       if (typeof res === "string") r.html_bytes += res.length;
       else { r.raw += largestArray(res); const t = reportedTotal(res); if (t != null && r.total == null) r.total = t; }
       return res;
