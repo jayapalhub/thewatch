@@ -26,6 +26,24 @@ export function plainText(text) {
     .replace(/^\s*(description|about|details|agenda|summary)\s*:\s*$/gim, "")
     .trim();
 }
+// House style for titles that arrive from feeds: no dash or pipe separators, no exclamation runs, no stray
+// asterisks or unmatched quotes, and no trailing "| October 2026" or "- TBD". The first separator becomes a colon
+// unless the title already has a colon, in which case it and any later ones become commas. Brand names keep a single "!".
+export function tidyTitle(t) {
+  let s = String(t || "").replace(/\*+/g, "").trim();
+  if ((s.match(/"/g) || []).length % 2) s = s.replace(/"/g, "");
+  s = s.replace(/\s*\|\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}\s*$/i, "");
+  s = s.replace(/\s+[-\u2013\u2014]\s+TBD\s*$/i, "");
+  s = s.replace(/!{2,}/g, "").replace(/!+\s*$/, "");
+  let first = true;
+  s = s.replace(/\s+[-\u2013\u2014|]\s+/g, (m, off, all) => {
+    const r = first && !all.includes(":") ? ": " : ", ";
+    first = false;
+    return r;
+  });
+  return s.replace(/\s{2,}/g, " ").trim();
+}
+
 export function firstSentence(text, max = 200) {
   const lines = plainText(text).split("\n").map((l) => l.trim()).filter(Boolean);
   while (lines.length > 1 && lines[0].length < 120 && !/[.!?]$/.test(lines[0])) lines.shift(); // headline lines before the first real sentence
@@ -216,6 +234,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
       const hay = titleOnly ? String(it.title || "") : `${it.title} ${it.summary || ""}`;
       if (!kw.some((re) => re.test(hay))) { stats.skipped++; continue; }
     }
+    it.title = tidyTitle(it.title);
     if (!it.title || !it.startUtc || !(it.url || "").startsWith("http")) { stats.skipped++; continue; }
     // English calendar: sessions titled in Japanese, Chinese, Korean, Cyrillic, Arabic, Hebrew or Thai are skipped.
     if (/[Ѐ-ӿ֐-ۿ฀-๿぀-ヿ㐀-鿿가-힯]/.test(it.title)) { stats.skipped++; continue; }
