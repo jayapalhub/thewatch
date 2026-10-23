@@ -328,6 +328,13 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
   // cleanly but matched nothing still counts: an employer's last security role closing is the common case, not an error.
   if (!run.error) {
     const { results } = await db.prepare("SELECT id, source_key, url, title FROM jobs WHERE source_id=? AND status IN ('published','pending_review')").bind(src.id).all();
+    // A board that suddenly reads nothing while several of its roles are live is far more likely to be a changed page
+    // layout or a blocked request than every role closing at once (the Radancy layout change of October 2026 read as
+    // zero). Keep the roles and flag the board instead of closing them; a real wind-down still closes one or two.
+    if (run.fetched === 0 && results.length >= 3) {
+      run.suspect = `read nothing but ${results.length} roles are live; none closed, check the board`;
+      return finish(db, src, run);
+    }
     let checks = 0;
     for (const r of results) {
       if (seen.has(String(r.source_key))) continue;
@@ -342,7 +349,7 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
   return finish(db, src, run);
 }
 async function finish(db, src, run) {
-  const status = run.error ? `error: ${run.error}` : `${run.fetched} matched, ${run.added} added, ${run.closed} closed`;
+  const status = run.error ? `error: ${run.error}` : run.suspect ? `suspect: ${run.suspect}` : `${run.fetched} matched, ${run.added} added, ${run.closed} closed`;
   await db.prepare("UPDATE job_sources SET last_run_at=datetime('now'), last_status=?, last_added=? WHERE id=?").bind(status.slice(0, 200), run.added, src.id).run();
   return run;
 }
