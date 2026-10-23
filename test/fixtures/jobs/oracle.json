@@ -1,0 +1,6 @@
+{"items":[{"TotalJobsCount":3,"requisitionList":[
+{"Id":"215007","Title":"Cyber Security Threat Management Associate","PostedDate":"2026-10-23","PrimaryLocation":"New York, NY, United States","WorkplaceTypeCode":"ORA_HYBRID","secondaryLocations":[{"Name":"Jersey City, NJ, United States"},{"Name":"New York, NY, United States"}]},
+{"Id":"214097","Title":"Blockchain Engineer","PostedDate":"2026-10-22","PrimaryLocation":"Tampa, FL, United States","secondaryLocations":[]},
+{"Id":"213001","Title":"Senior GRC Analyst","PostedDate":"2026-10-20","PrimaryLocation":"Remote, United States","WorkplaceTypeCode":"ORA_REMOTE"},
+{"Id":"215007","Title":"Cyber Security Threat Management Associate","PostedDate":"2026-10-23","PrimaryLocation":"New York, NY, United States"}
+]}],"count":1,"hasMore":false,"limit":25,"offset":0}

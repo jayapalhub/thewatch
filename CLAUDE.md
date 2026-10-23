@@ -26,7 +26,7 @@ Jerome Jayapal's multi city cybersecurity events calendar, jobs board and Sunday
 - `tools/city-launch/` research to seed tooling and the playbook.
 
 ## Known open items
-- Workday HTTP 422 has two causes (found 2026-10-23): a tenant that moved data center host (fix the host with POST /admin/workdayprobe {boards:[{tenant,site}]}), and tenants that want the careers page headers (now sent). Boards whose tenant answers on no host (Dell, Citrix, DTCC, Exelon, ICE and others, see job_sources.notes) have moved off Workday or renamed the site and stay paused until someone finds the current careers URL.
+- Workday HTTP 422 has two causes (found 2026-10-23): a tenant that moved data center host (fix the host with POST /admin/workdayprobe {boards:[{tenant,site}]}), and tenants that want the careers page headers (now sent). Boards whose tenant answers on no host had moved off Workday; their current careers system is at the start of each paused row's job_sources.notes. bp, Cloud Software Group, Exelon, ICE and Phillips 66 were moved to working adapters on 2026-10-23. Dell (3 rows), DTCC and Providence are on Oracle Recruiting (kind `oracle`, config {host, site}). Still unsupported: Avature (Maximus, probably Jacobs), Taleo (Hyatt), PeopleSoft (Northwestern), Jobvite (FirstBank).
 - Meetup returns 403 for a few groups' iCal feeds (Indy 2600, TEHC/DC443); paused.
 - Database point in time restore was rehearsed on 2026-10-23 with scripts/dr-restore-rehearsal.sh: 4 second restore, counts matched (doc 171). Rerun it quarterly.
 - External uptime monitor on `/api/health` not yet set up.

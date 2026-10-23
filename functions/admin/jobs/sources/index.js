@@ -16,6 +16,7 @@ function boardUrl(s) {
   if (s.kind === "smartrecruiters" && c.company) return `https://careers.smartrecruiters.com/${c.company}`;
   if (s.kind === "phenom" && c.host) return `https://${c.host}/${c.path || "us/en"}/search-results`;
   if (s.kind === "icims" && c.host) return `https://${c.host}/careers-home/jobs`;
+  if (s.kind === "oracle" && c.host) return `https://${c.host}/hcmUI/CandidateExperience/en/sites/${c.site || "CX_1"}/jobs`;
   if (s.kind === "successfactors" && c.host) return `https://${c.host}${c.base ? "/" + c.base : ""}/search/`;
   return "";
 }
