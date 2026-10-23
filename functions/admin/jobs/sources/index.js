@@ -18,6 +18,7 @@ function boardUrl(s) {
   if (s.kind === "icims" && c.host) return `https://${c.host}/careers-home/jobs`;
   if (s.kind === "icims_classic" && c.host) return `https://${c.host}/jobs/search?ss=1`;
   if (s.kind === "oracle" && c.host) return `https://${c.host}/hcmUI/CandidateExperience/en/sites/${c.site || "CX_1"}/jobs`;
+  if (s.kind === "jobvite" && c.company) return `https://jobs.jobvite.com/${c.company}/jobs`;
   if (s.kind === "successfactors" && c.host) return `https://${c.host}${c.base ? "/" + c.base : ""}/search/`;
   return "";
 }
@@ -71,7 +72,7 @@ function parseConfig(kind, text) {
   if (kind === "icims" || kind === "icims_classic") { if (!parts.length) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }; }
   if (kind === "phenom") { if (!parts.length) return null; const c = { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""), path: (parts[1] || "us/en").replace(/^\/|\/$/g, "") }; if (parts[2]) c.state = parts.slice(2).join(" "); return c; }
   if (!parts.length) return null;
-  return kind === "lever" || kind === "smartrecruiters" ? { company: parts[0] } : { board: parts[0] };
+  return kind === "lever" || kind === "smartrecruiters" || kind === "jobvite" ? { company: parts[0] } : { board: parts[0] };
 }
 
 export async function onRequestPost({ request, env }) {
