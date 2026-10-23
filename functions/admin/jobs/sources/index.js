@@ -49,7 +49,7 @@ export async function onRequestGet({ request, env, data }) {
       <label>Board<select name="kind">${Object.entries(SOURCE_KINDS).map(([k, v]) => html`<option value="${k}">${v}</option>`)}</select></label>
     </div>
     <div class="a-grid-2">
-      <label>Board details <small>(Workday: tenant, host, site from the URL tenant.host.myworkdayjobs.com/site. Greenhouse or Ashby: the board name. Lever or SmartRecruiters: the company name. Eightfold: the careers host and the company domain it passes to its API. Radancy: the careers host. Phenom: the careers host, the locale path from its URLs such as us/en, and optionally a state name such as California to narrow big boards. iCIMS: the careers host of a careers-home portal. SuccessFactors: the careers host and, when the site URLs carry one, the path prefix such as kus.)</small><input name="config" required maxlength="300" placeholder='icwgroup, wd5, ICW  or  sonyinteractiveentertainmentglobal  or  careers.qualcomm.com, qualcomm.com'></label>
+      <label>Board details <small>(Workday: tenant, host, site from the URL tenant.host.myworkdayjobs.com/site, and a fourth value only when the API wants a different tenant name, such as osv_amerisure. Greenhouse or Ashby: the board name. Lever or SmartRecruiters: the company name. Eightfold: the careers host and the company domain it passes to its API. Radancy: the careers host. Phenom: the careers host, the locale path from its URLs such as us/en, and optionally a state name such as California to narrow big boards. iCIMS: the careers host of a careers-home portal. SuccessFactors: the careers host and, when the site URLs carry one, the path prefix such as kus.)</small><input name="config" required maxlength="300" placeholder='icwgroup, wd5, ICW  or  sonyinteractiveentertainmentglobal  or  careers.qualcomm.com, qualcomm.com'></label>
       <label>Location must include <small>(comma separated; any one is enough)</small><input name="location_terms" required maxlength="600" placeholder="San Diego, Carlsbad, Poway"></label>
     </div>
     <div class="a-grid-2">
@@ -63,7 +63,7 @@ export async function onRequestGet({ request, env, data }) {
 
 function parseConfig(kind, text) {
   const parts = String(text || "").split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
-  if (kind === "workday") { if (parts.length < 3) return null; return { tenant: parts[0].toLowerCase(), host: parts[1].toLowerCase(), site: parts[2] }; }
+  if (kind === "workday") { if (parts.length < 3) return null; const c = { tenant: parts[0].toLowerCase(), host: parts[1].toLowerCase(), site: parts[2] }; if (parts[3]) c.cxsTenant = parts[3]; return c; }
   if (kind === "radancy") { if (!parts.length) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }; }
   if (kind === "eightfold") { if (parts.length < 2) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""), company: parts[1].toLowerCase() }; }
   if (kind === "successfactors") { if (!parts.length) return null; const c = { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }; if (parts[1]) c.base = parts[1].replace(/^\/|\/$/g, ""); return c; }

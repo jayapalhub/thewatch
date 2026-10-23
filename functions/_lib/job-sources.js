@@ -126,14 +126,18 @@ export function excerptOf(raw) {
 // ---------- adapters: each returns [{ key, title, url, location, posted_at (YYYY-MM-DD or null), salary_text, remote, excerpt }] ----------
 const WORKDAY_MAX_DETAILS = 25; // detail fetches per run; a Worker invocation has a small subrequest budget
 
+// The cxs API path normally repeats the tenant from the host name, but a few tenants answer only to another spelling
+// (osv-amerisure.wd5 wants osv_amerisure and returns 422 otherwise). Config { cxsTenant } names it; the host keeps tenant.
+const cxsBase = (cfg) => `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com/wday/cxs/${cfg.cxsTenant || cfg.tenant}/${cfg.site}`;
+
 export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []) {
-  const base = `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com`;
+  const base = `https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com`, cxs = cxsBase(cfg);
   const out = [];
   let details = 0;
   for (let offset = 0; offset < 300 && details < WORKDAY_MAX_DETAILS; offset += 20) {
     // The headers a browser sends from the careers page itself. Some tenants answer a bare POST with HTTP 422 while the
     // same request from the careers page succeeds (checked in Chrome on 2026-10-23 for Cotality).
-    const page = await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}/jobs`, { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9", Origin: base, Referer: `${base}/${cfg.site}` }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
+    const page = await fetcher(`${cxs}/jobs`, { method: "POST", headers: { "Content-Type": "application/json", "Accept-Language": "en-US,en;q=0.9", Origin: base, Referer: `${base}/${cfg.site}` }, body: JSON.stringify({ appliedFacets: {}, limit: 20, offset, searchText }) });
     const list = page.jobPostings || [];
     for (const p of list) {
       if (!isOurRole(p.title)) continue;
@@ -141,7 +145,7 @@ export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []
       if (terms.length && p.locationsText && !/\d+ Locations/i.test(p.locationsText) && !inCity(p.locationsText, terms)) continue;
       if (details++ >= WORKDAY_MAX_DETAILS) { out.partial = true; break; }
       let info = {};
-      try { info = (await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}${p.externalPath}`)).jobPostingInfo || {}; } catch { continue; }
+      try { info = (await fetcher(`${cxs}${p.externalPath}`)).jobPostingInfo || {}; } catch { continue; }
       const locs = [info.location, ...(info.additionalLocations || [])].filter(Boolean).join("; ") || p.locationsText || "";
       out.push({ key: info.jobReqId || (p.bulletFields || [])[0] || p.externalPath, title: info.title || p.title, url: info.externalUrl || `${base}/${cfg.site}${p.externalPath}`,
         location: locs, posted_at: /^\d{4}-\d{2}-\d{2}$/.test(info.startDate || "") ? info.startDate : null, salary_text: payText(info.jobDescription), remote: inferRemote(locs), excerpt: excerptOf(info.jobDescription) });
@@ -155,7 +159,7 @@ export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []
 async function workdayStillOpen(cfg, url, fetcher) {
   const m = String(url).match(/myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?[^/]+(\/job\/.+)$/);
   if (!m) return true;
-  try { const j = await fetcher(`https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com/wday/cxs/${cfg.tenant}/${cfg.site}${m[1].split("?")[0]}`); return !!(j && j.jobPostingInfo); }
+  try { const j = await fetcher(`${cxsBase(cfg)}${m[1].split("?")[0]}`); return !!(j && j.jobPostingInfo); }
   // A removed posting answers 404, or 403 with Workday's S22 "permission denied" body (Ingram Micro, 2026-10-23: the
   // careers page said the job no longer exists). Any other failure is network trouble or blocking: keep the role.
   catch (e) { return !/HTTP 404|HTTP 410|HTTP 403 \(.*(?:S22|permission denied)/i.test(String(e && e.message)); }
