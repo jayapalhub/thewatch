@@ -89,6 +89,12 @@ export async function sendPreview(env, issue, city) {
     To change the note, subject or picks, edit it at <a href="${siteUrl}/admin/issues/${issue.id}">${siteUrl}/admin/issues/${issue.id}</a> any time before then. To stop it, press Cancel this send on that page. If you do nothing, it goes out as shown.<br>
     ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}.${picksNote} The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.${data.jobs && data.jobs.length ? ` Hiring this week shows three of the ${data.jobs.length} live roles, matched to each subscriber's level; this preview shows the default pick.` : ""}</div>`;
   const to = env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai";
+  // A city with no subscribers yet gets no preview email of its own (nineteen plus cities would mean nineteen plus
+  // Saturday emails). The issue still builds, is marked, and shows up in the one Saturday digest sent by previewDigest.
+  if (!issue.force_preview && n === 0) {
+    const c = await env.DB.prepare("UPDATE issues SET preview_sent_at=datetime('now'), preview_skipped=1, subject=COALESCE(subject, ?), updated_at=datetime('now') WHERE id=? AND preview_sent_at IS NULL").bind(subject, issue.id).run();
+    return c.meta && c.meta.changes === 1 ? { skipped: "no subscribers", events: data.events.length, subject } : { skipped: "preview already sent" };
+  }
   // Claim the preview so two ticks at once cannot both send it (forced previews from the admin pass issue.force_preview).
   if (!issue.force_preview) {
     const c = await env.DB.prepare("UPDATE issues SET preview_sent_at=datetime('now') WHERE id=? AND preview_sent_at IS NULL").bind(issue.id).run();
@@ -152,6 +158,26 @@ export async function dispatchIssue(env, issue, city) {
   return { done: false, sent };
 }
 
+// Saturday digest: one email listing the cities whose preview was skipped for lack of subscribers, sent once per week
+// after the last time zone (Pacific) has passed the preview hour, so every city's issue has been built.
+export async function previewDigest(env, weekStart) {
+  const db = env.DB;
+  const { results } = await db.prepare("SELECT i.id, i.city, i.subject, (SELECT COUNT(*) FROM events e WHERE e.city=i.city AND e.status='published' AND substr(e.start_at,1,10) BETWEEN i.week_start AND date(i.week_start,'+6 days')) n FROM issues i WHERE i.week_start=? AND i.preview_skipped=1 ORDER BY i.city").bind(weekStart).all();
+  if (!results.length) return { skipped: "nothing to digest" };
+  const claim = await db.prepare("INSERT OR IGNORE INTO weekend_digests (week_start) VALUES (?)").bind(weekStart).run();
+  if (!claim.meta || claim.meta.changes !== 1) return { skipped: "digest already sent" };
+  const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
+  const rows = results.map((r) => { const c = CITIES[r.city] || { name: r.city }; return `<tr><td style="padding:6px 10px 6px 0;"><a href="${siteUrl}/admin/issues/${r.id}">${c.name}</a></td><td style="padding:6px 10px;">${r.n} event${r.n === 1 ? "" : "s"}</td><td style="padding:6px 0;color:#555;">${String(r.subject || "").replace(/</g, "&lt;")}</td></tr>`; }).join("");
+  const html = `<div style="font-family:Helvetica,Arial,sans-serif;max-width:640px;margin:0 auto;font-size:14px;line-height:1.5;color:#0E1B2E;">
+    <p><strong>Saturday digest.</strong> These ${results.length} cities have no subscribers yet, so their issues were built and archived without a preview email. Each goes out Sunday at ${SEND_HOUR}:00 AM local time to nobody, and lands in the archive. Open any one to edit it before then.</p>
+    <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows}</table>
+    <p style="color:#555;">Cities with subscribers got their own preview as usual.</p></div>`;
+  try { await resend(env, "/emails", { from: "The Watch <watch@bettersecurity.ai>", reply_to: replyToFor(env), to: env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai", subject: `[Saturday digest] ${results.length} city issues built, no subscribers yet`, html }); }
+  catch (e) { await db.prepare("DELETE FROM weekend_digests WHERE week_start=?").bind(weekStart).run(); throw e; }
+  await db.prepare("UPDATE weekend_digests SET body=? WHERE week_start=?").bind(results.map((r) => r.city).join(","), weekStart).run();
+  return { sent: results.length };
+}
+
 // Called every few minutes on weekends (cron) and lazily from page views. Idempotent.
 export async function newsletterTick(env) {
   const out = [];
@@ -168,6 +194,9 @@ export async function newsletterTick(env) {
       if (["draft", "sending"].includes(issue.status)) { try { out.push({ city: city.slug, send: await dispatchIssue(env, issue, city) }); } catch (e) { out.push({ city: city.slug, error: String(e.message) }); } }
     }
   }
+  // After the loop, so the Pacific cities (the last zone) are marked before the digest is composed.
+  const pacific = localNow("America/Los_Angeles");
+  if (pacific.weekday === "Sat" && pacific.hour >= PREVIEW_HOUR) { try { out.push({ digest: await previewDigest(env, upcomingWeekStart(pacific.date)) }); } catch (e) { out.push({ digest: "error", error: String(e.message) }); } }
   return out;
 }
 
