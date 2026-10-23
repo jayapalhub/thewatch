@@ -51,7 +51,7 @@ test("preview vars restate every production var, and the two environments name t
   assert.equal(prod.values.ENVIRONMENT, "production");
   assert.equal(pre.values.ENVIRONMENT, "preview");
   assert.equal(prod.values.DEV_MODE, "0");
-  assert.equal(pre.values.DEV_MODE, "1");
+  assert.equal(pre.values.DEV_MODE, "0"); // previews are public URLs: never bypass the admin check there
   for (const k of ["SITE_URL", "FROM_EMAIL", "NOTIFY_EMAIL", "ACCESS_TEAM_DOMAIN", "ACCESS_AUD"]) assert.equal(pre.values[k], prod.values[k], k);
 });
 

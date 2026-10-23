@@ -7,7 +7,7 @@ The Watch runs in three places. Each has its own database, and only one of them 
 | Where | `npm run dev` on your machine | the Pages deployment of every pull request (`*.thewatch.pages.dev`) | bettersecurity.ai, deployed from `main` |
 | Database | local D1 in `.wrangler/` | `thewatch-staging` (D1 id `f4236033-993f-4427-945b-e7b9eaa4777d`) | `thewatch` |
 | `ENVIRONMENT` var | unset | `preview` | `production` |
-| `/admin` | open (`DEV_MODE=1`) | open (`DEV_MODE=1`), so keep preview links private | Cloudflare Access |
+| `/admin` | open (`DEV_MODE=1`) | closed: `DEV_MODE=0` and no Access session on `pages.dev`, so protected routes answer 401 (add the hostname to the Access application to use it) | Cloudflare Access |
 | Email, LinkedIn | sent if a key is set locally | never sent, logged as skipped | sent |
 | Lazy jobs on page visits | run | skipped | run |
 
