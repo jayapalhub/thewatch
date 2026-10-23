@@ -19,9 +19,13 @@ export function isOurRole(title) {
   const t = String(title || "");
   return SECURITY_RE.test(t) && !NOT_OURS_RE.test(t);
 }
+// A posting matches when one of its listed locations names a city term and that location is not abroad.
+// Checked location by location, so "Melbourne, Victoria, Australia" no longer matches Melbourne, Florida and
+// "Novi Sad, RS" no longer matches Novi, Michigan, while a US location listed beside a foreign one still counts.
+const FOREIGN_RE = /\b(australia|new south wales|queensland|new zealand|united kingdom|england|scotland|wales|canada|ontario|quebec|british columbia|alberta|india|serbia|germany|france|ireland|israel|netherlands|poland|romania|singapore|japan|philippines|brazil|costa rica|mexico|taiwan|china)\b|,\s*(?:au|rs|uk|mx|tw)\b/i;
 export function inCity(locationText, terms) {
-  const loc = String(locationText || "").toLowerCase();
-  return terms.some((t) => t && loc.includes(t.toLowerCase()));
+  const parts = String(locationText || "").toLowerCase().split(/;|\||\n|<br\s*\/?>|\s{3,}/);
+  return parts.some((p) => !FOREIGN_RE.test(p) && terms.some((t) => t && p.includes(t.toLowerCase())));
 }
 export function parseTerms(s) { return String(s || "").split(",").map((x) => x.trim()).filter(Boolean); }
 
