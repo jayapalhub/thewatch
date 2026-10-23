@@ -27,5 +27,5 @@ Jerome Jayapal's multi city cybersecurity events calendar, jobs board and Sunday
 ## Known open items
 - Workday returns HTTP 422 for a few tenants (Dell, Atmos, Citrix, SSM Health) even with confirmed site names; those boards are paused. A browser request to the same endpoint works.
 - Meetup returns 403 for a few groups' iCal feeds (Indy 2600, TEHC/DC443); paused.
-- Database point in time restore has not been tested (doc 171).
+- Database point in time restore was rehearsed on 2026-10-23 with scripts/dr-restore-rehearsal.sh: 4 second restore, counts matched (doc 171). Rerun it quarterly.
 - External uptime monitor on `/api/health` not yet set up.

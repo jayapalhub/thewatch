@@ -198,7 +198,7 @@ export const SECTIONS = {
 <ul>
 <li><strong>Code rollback:</strong> exercised in practice several times during the first week (reverting and redeploying), each under five minutes.</li>
 <li><strong>Stale page fallback:</strong> tested the day it was built, with a forced failure, and observed during INC-2026-001 once deployed.</li>
-<li><strong>Database point in time restore:</strong> not yet tested. Scheduled as the next exercise: restore to a bookmark from the previous hour into the same database during a quiet window, confirm counts, and record the time taken. Until that is done this plan's one hour recovery time is an expectation, not a measurement.</li>
+<li><strong>Database point in time restore:</strong> rehearsed on production on October 23, 2026 with a scripted runbook. A safety export was taken first (6.1 MB), the database was restored to a bookmark taken seconds earlier, and row counts for events, organizations, jobs, subscribers, job boards and feeds matched before and after. The restore took 4 seconds and the site answered healthy 5 seconds after it began. The one hour recovery time now has a measured restore inside it; the rest of that hour is diagnosis and choosing the right bookmark.</li>
 </ul>`,
   },
 };
