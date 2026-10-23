@@ -10,10 +10,10 @@ import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/consta
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
 
 export async function onRequestGet({ request, env, params, waitUntil }) {
-  lazyAutoPublish(env.DB, waitUntil);
+  lazyAutoPublish(env.DB, waitUntil, env);
   lazyNewsletterTick(env, waitUntil);
   lazyReminders(env, waitUntil);
-  lazyJobs(env.DB, waitUntil);
+  lazyJobs(env.DB, waitUntil, env);
   const city = CITIES[params.city];
   if (!city) return notFound("Calendar not found");
   const url = new URL(request.url);

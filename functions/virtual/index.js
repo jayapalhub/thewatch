@@ -21,7 +21,7 @@ export const BODIES = [
 ];
 
 export async function onRequestGet({ request, env, waitUntil }) {
-  lazyAutoPublish(env.DB, waitUntil);
+  lazyAutoPublish(env.DB, waitUntil, env);
   lazyNewsletterTick(env, waitUntil);
   const u = new URL(request.url); const q = u.searchParams;
   const f = {

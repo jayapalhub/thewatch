@@ -1,6 +1,8 @@
 // Publish by default. Pending rows whose auto_publish_at has passed go live on their own,
 // unless they are held, rejected, missing a registration link, or already in the past.
 // Called from a daily cron and lazily from calendar page views, so it works even if the cron is down.
+import { isPreview } from "./env.js";
+
 export const DEFAULT_HOLD_HOURS = 24;
 
 export function autoPublishAt(hours = DEFAULT_HOLD_HOURS, from = new Date()) {
@@ -18,7 +20,9 @@ export async function runAutoPublish(db) {
 
 // Cheap lazy trigger for page views: at most one check per worker instance per 10 minutes.
 let lastLazy = 0;
-export function lazyAutoPublish(db, waitUntil) {
+// env is optional for older callers; pages pass it so a preview deployment never publishes on a visit.
+export function lazyAutoPublish(db, waitUntil, env = null) {
+  if (isPreview(env)) return;
   const now = Date.now();
   if (now - lastLazy < 600000) return;
   lastLazy = now;

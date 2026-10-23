@@ -12,6 +12,7 @@ import { CITIES, SHOW_BS_EVENTS } from "./constants.js";
 import { weekday3, month3, dayNum, fmtTime, addDays, mondayOf, todayKey } from "./dates.js";
 import { notifyJerome } from "./integrations.js";
 import { localNow } from "./dispatch.js";
+import { isPreview, previewSkip } from "./env.js";
 
 export const LI_VERSION = "202509";
 export const SCOPES = "w_organization_social r_organization_social";
@@ -183,6 +184,11 @@ export async function queuePost(db, env, citySlug, kind, weekStart) {
 export async function sendQueued(db, env, row, auth) {
   const claim = await db.prepare("UPDATE linkedin_posts SET status='sending' WHERE id=? AND status='queued'").bind(row.id).run();
   if (!claim.meta || claim.meta.changes !== 1) return { skipped: "already handled" };
+  // A preview never posts to the page or the webhook. The row is marked so the staging admin shows what would have gone out.
+  if (isPreview(env)) {
+    await db.prepare("UPDATE linkedin_posts SET status='skipped', error='preview environment: not posted' WHERE id=?").bind(row.id).run();
+    return previewSkip("LinkedIn post", `${row.city} ${row.kind} week of ${row.week_start}`);
+  }
   try {
     const res = auth && tokenState(auth) !== "none" && tokenState(auth) !== "expired" ? await publishAsOrg(auth, row.text, row.link) : env.LINKEDIN_WEBHOOK_URL ? await publishViaWebhook(env, row) : null;
     if (!res) { await db.prepare("UPDATE linkedin_posts SET status='queued' WHERE id=?").bind(row.id).run(); return { skipped: "not connected" }; }

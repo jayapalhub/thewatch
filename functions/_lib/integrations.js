@@ -1,6 +1,8 @@
 // Resend (transactional email and the newsletter). Keys come from env secrets and are never logged or returned to the browser.
+import { isPreview, previewSkip } from "./env.js";
 
 export async function sendEmail(env, { to, subject, html, replyTo, from, headers }) {
+  if (isPreview(env)) return previewSkip("email", `subject ${JSON.stringify(String(subject || "").slice(0, 80))} to ${Array.isArray(to) ? to.length : 1} recipient${Array.isArray(to) && to.length !== 1 ? "s" : ""}`);
   if (!env.RESEND_API_KEY) { console.error("resend: RESEND_API_KEY not set"); return { ok: false, skipped: true }; }
   try {
     const resp = await fetch("https://api.resend.com/emails", {

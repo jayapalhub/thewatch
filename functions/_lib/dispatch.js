@@ -6,6 +6,7 @@ import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobs
 import { TOPICS } from "./constants.js";
 import { mondayOf, addDays } from "./dates.js";
 import { shareLineHtml } from "./referrals.js";
+import { isPreview, previewSkip } from "./env.js";
 
 export const SEND_HOUR = 8;           // local time, Sunday
 export const PREVIEW_HOUR = 8;        // local time, Saturday
@@ -40,6 +41,7 @@ export function fromFor(city) { return `The Watch ${city.name} <watch@bettersecu
 export function replyToFor(env) { return env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai"; }
 
 async function resend(env, path, body) {
+  if (isPreview(env)) { previewSkip("newsletter email", `${path} subject ${JSON.stringify(String(body && body.subject || "").slice(0, 80))}`); return {}; }
   const r = await fetch(`https://api.resend.com${path}`, { method: "POST", headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const text = await r.text();
   if (!r.ok) throw new Error(`resend ${r.status}: ${text.slice(0, 300)}`);
@@ -111,6 +113,7 @@ export async function sendPreview(env, issue, city) {
 // Resend gets an idempotency key per batch as a second guard. The HTML is built once, on the first run, and every
 // later run reuses it so the whole list (and the archive) get the same issue. Cancel stops it before the next batch.
 async function resendBatch(env, emails, key) {
+  if (isPreview(env)) { previewSkip("newsletter batch", `${emails.length} emails, key ${key}`); return; }
   const r = await fetch("https://api.resend.com/emails/batch", { method: "POST", headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": key }, body: JSON.stringify(emails) });
   const text = await r.text();
   if (!r.ok) throw new Error(`resend ${r.status}: ${text.slice(0, 300)}`);
@@ -202,6 +205,7 @@ export async function newsletterTick(env) {
 
 let lastLazy = 0;
 export function lazyNewsletterTick(env, waitUntil) {
+  if (isPreview(env)) return;
   const now = Date.now(); const dow = new Date().getUTCDay();
   if (dow === 2 || dow === 3 || dow === 4) return; // Friday to Monday UTC covers Saturday and Sunday mornings in every zone
   if (now - lastLazy < 300000) return;

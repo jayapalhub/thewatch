@@ -7,6 +7,7 @@ import { cityOf, eventPath, CITIES, DEFAULT_CITY, cityListText, liveNewsletterCi
 import { toUtc, addDays, nowLocalIso, fmtDateLong, fmtTimeRange } from "./dates.js";
 import { googleCalendarUrl } from "./calendar.js";
 import { eventById } from "./events.js";
+import { isPreview } from "./env.js";
 
 export const MAX_QUEUED_PER_EMAIL = 5;
 const SEND_HOUR = 6; // local time, the day before. The daily cron runs at 6 AM PST / 7 AM PDT.
@@ -120,6 +121,7 @@ export async function runReminders(env, { limit = 50 } = {}) {
 // Page-view trigger: at most one pass per worker instance every 10 minutes.
 let lastLazy = 0;
 export function lazyReminders(env, waitUntil) {
+  if (isPreview(env)) return;
   const now = Date.now();
   if (now - lastLazy < 600000) return;
   lastLazy = now;

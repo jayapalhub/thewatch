@@ -7,7 +7,7 @@ import { liveJobs, jobRow, lazyJobs, REMOTE, POSTER_KINDS, JOB_DAYS } from "../.
 export async function onRequestGet({ params, request, env, waitUntil }) {
   const city = CITIES[params.city];
   if (!city) return notFound("Calendar not found");
-  lazyJobs(env.DB, waitUntil);
+  lazyJobs(env.DB, waitUntil, env);
   const q = new URL(request.url).searchParams;
   const f = {
     seniority: SENIORITY[q.get("seniority")] ? q.get("seniority") : "",
