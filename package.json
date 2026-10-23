@@ -3,13 +3,15 @@
   "private": true,
   "version": "0.1.0",
   "description": "The Watch San Diego: cybersecurity events calendar and weekly email by Better Security",
+  "type": "module",
   "scripts": {
     "dev": "wrangler pages dev public --d1 DB=thewatch --binding DEV_MODE=1 --port 8788",
     "db:migrate:local": "wrangler d1 migrations apply thewatch --local",
     "db:migrate:remote": "wrangler d1 migrations apply thewatch --remote",
     "db:seed:local": "node scripts/seed.mjs > scripts/seed.sql && wrangler d1 execute thewatch --local --file scripts/seed.sql",
     "db:seed:remote": "node scripts/seed.mjs > scripts/seed.sql && wrangler d1 execute thewatch --remote --file scripts/seed.sql",
-    "deploy": "wrangler pages deploy public"
+    "deploy": "wrangler pages deploy public",
+    "test": "node --test \"test/**/*.test.js\""
   },
   "devDependencies": {
     "wrangler": "^4"
