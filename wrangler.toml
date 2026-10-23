@@ -28,8 +28,9 @@ DEV_MODE = "0"
 # Preview deployments (one per pull request) run against the staging database, never production. Pages treats vars and
 # bindings as non inheritable, so everything a preview needs is restated here in full. See docs/environments.md.
 # Apply migrations and the sample data with:
-#   npx wrangler d1 migrations apply thewatch-staging --remote
-#   npx wrangler d1 execute thewatch-staging --remote --file tools/staging/seed.sql
+#   npx wrangler d1 migrations apply thewatch-staging --remote --env preview
+#   npx wrangler d1 execute thewatch-staging --remote --env preview --file tools/staging/seed.sql
+# (--env preview is needed because the staging binding lives only under env.preview.)
 [[env.preview.d1_databases]]
 binding = "DB"
 database_name = "thewatch-staging"

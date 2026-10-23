@@ -24,6 +24,10 @@ describe("staging seed", () => {
     assert.deepEqual({ events: one("SELECT COUNT(*) n FROM events").n, orgs: one("SELECT COUNT(*) n FROM organizations").n, jobs: one("SELECT COUNT(*) n FROM jobs").n, sources: one("SELECT COUNT(*) n FROM job_sources").n }, before);
   });
 
+  test("no UNION: D1 refuses compound SELECTs that Node's SQLite allows, so rows go in VALUES lists", () => {
+    assert.doesNotMatch(seed.replace(/--.*$/gm, ""), /\bUNION\b/i);
+  });
+
   test("two active cities, San Diego from the migration and Dallas from the seed", () => {
     assert.deepEqual(all("SELECT slug FROM cities WHERE active=1 ORDER BY sort").map((r) => r.slug), ["sandiego", "dallas"]);
     assert.equal(one("SELECT timezone FROM cities WHERE slug='dallas'").timezone, "America/Chicago");
