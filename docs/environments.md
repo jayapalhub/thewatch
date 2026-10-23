@@ -39,23 +39,33 @@ Secrets, Preview). The guards are the second line; an empty key is the first.
 ## Keeping staging current
 
 Every new migration is applied to both databases. Production is applied by hand as before; staging the same way, with
-the staging name:
+the staging name. The staging binding is defined only under `env.preview` in `wrangler.toml`, so wrangler needs
+`--env preview` to find it:
 
 ```bash
-npx wrangler d1 migrations apply thewatch-staging --remote
+npx wrangler d1 migrations apply thewatch-staging --remote --env preview
 ```
+
+The D1 connector in Claude is the dependable route: on 2026-10-23 wrangler on Jerome's machine returned error 7403
+("The given account is not valid or is not authorized to access this service") for the staging database, so staging was
+loaded through the connector instead, with each migration recorded in `d1_migrations` by name exactly as wrangler
+would, so either route can be used next time.
 
 Then, when the sample data should be refreshed or the calendar has run out of upcoming events (the seed's dates are
 relative to the day it is loaded):
 
 ```bash
-npx wrangler d1 execute thewatch-staging --remote --file tools/staging/seed.sql
+npx wrangler d1 execute thewatch-staging --remote --env preview --file tools/staging/seed.sql
 ```
 
 The seed is idempotent, so loading it again adds nothing new; it is also run by `test/staging-seed.test.js` against every
 migration, so a migration that breaks it fails CI. The data is fictional: made up organizers and employers on `.test`
-hosts, no subscribers and no real person's address. Migration 0016 also leaves ten real San Diego job boards in the
-table; running one from the staging admin reads that employer's public board and writes only to staging.
+hosts, no subscribers and no real person's address. When staging was first loaded, the production data that some
+migrations insert (the ten real job boards in 0016, the feed sources in 0003, the sweep targets in 0008, the LinkedIn
+page id in 0017) was left out, so staging holds only the three sample boards. A fresh `migrations apply` on an empty
+database would add them; running one from the staging admin reads that employer's public board and writes only to
+staging. D1 refuses a compound SELECT with many terms, which Node's SQLite allows, so the seed uses `VALUES` lists and
+`test/staging-seed.test.js` fails on any `UNION`.
 
 Never load `tools/staging/seed.sql` into production. The slugs all start with `staging-` so a mistake would be visible,
 but the guard is to read the database name before pressing enter.
