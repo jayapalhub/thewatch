@@ -110,7 +110,7 @@ export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
   });
 }
 export async function pullLever(cfg, _search, fetcher = getJson) {
-  const j = await fetcher(`https://api.lever.co/v0/postings/${cfg.company}?mode=json`);
+  const j = await fetcher(`https://api.${cfg.region === "eu" ? "eu." : ""}lever.co/v0/postings/${cfg.company}?mode=json`); // {"region":"eu"} for jobs.eu.lever.co boards
   if (!Array.isArray(j)) throw new Error("unexpected response from Lever");
   return j.filter((x) => isOurRole(x.text)).map((x) => {
     const c = x.categories || {}; const loc = Array.from(new Set([c.location, ...(c.allLocations || [])].filter(Boolean))).join("; ");
