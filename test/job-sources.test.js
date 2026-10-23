@@ -23,15 +23,12 @@ const fixed = (file) => recordingFetcher(() => fixtureJson(`jobs/${file}.json`))
 describe("isOurRole title filter", () => {
   const ours = ["Senior Security Engineer", "Cyber Threat Analyst", "GRC Analyst", "Privacy Counsel", "IT Audit Manager", "Information Security Officer",
     "Third-Party Risk Analyst", "SOC Analyst II", "Identity and Access Engineer", "Application Security Engineer", "DevSecOps Engineer", "CISO",
-    "Risk Analyst (IT)", "Penetration Tester", "Detection Engineering Manager", "Compliance Analyst"];
+    "Risk Analyst (IT)", "Cryptography Engineer", "Applied Cryptographer", "Penetration Tester", "Detection Engineering Manager", "Compliance Analyst"];
   const notOurs = ["Security Guard", "Security Officer", "Physical Security Manager", "Account Executive, Security", "Sales Engineer, Security",
     "Customer Success Manager, Security", "Security Intern", "Social Security Specialist", "Securities Analyst", "Trade Compliance Manager",
     "Marketing Manager, Cybersecurity", "Recruiter, Security", "Software Engineer", "Office Manager", "", null];
   for (const t of ours) test(`keeps ${t}`, () => assert.equal(isOurRole(t), true));
   for (const t of notOurs) test(`drops ${JSON.stringify(t)}`, () => assert.equal(isOurRole(t), false));
-  // Known gap: SECURITY_RE ends in "cryptograph)\b", and there is no word boundary inside "Cryptography" or
-  // "Cryptographer", so these titles are dropped today. Marked todo so the suite stays green until the filter is fixed.
-  for (const t of ["Cryptography Engineer", "Applied Cryptographer"]) test(`keeps ${t}`, { todo: "SECURITY_RE word boundary after cryptograph" }, () => assert.equal(isOurRole(t), true));
 });
 
 describe("location and inference helpers", () => {
