@@ -90,6 +90,50 @@ describe("runJobSource", () => {
   });
 });
 
+describe("runJobSource suspect status", () => {
+  const src = { id: 9, kind: "lever", employer_name: "Example Corp", organization_id: 3, config: '{"company":"examplecorp"}', search_text: "security", location_terms: "San Diego", city: "sandiego" };
+  const live = (n) => Array.from({ length: n }, (_, i) => ({ id: 200 + i, source_key: `k${i}`, url: `https://jobs.lever.co/examplecorp/k${i}`, title: i === 0 ? "Office Manager" : "Security Engineer" }));
+  const dbWith = (n) => fakeDb([{ match: /SELECT id, source_key, url, title FROM jobs/, reply: () => ({ results: live(n) }) }]);
+  const statusOf = (db) => db.find(/UPDATE job_sources SET last_run_at/)[0].args[0];
+
+  test("a board that reads nothing while three or more roles are live closes nothing and is flagged", async () => {
+    const db = dbWith(3);
+    const run = await runJobSource(db, src, { fetcher: recordingFetcher(() => []), now: NOW });
+    assert.equal(run.closed, 0);
+    assert.equal(run.suspect, "read nothing but 3 roles are live; none closed, check the board");
+    assert.equal(statusOf(db), "suspect: read nothing but 3 roles are live; none closed, check the board");
+    assert.equal(db.find(/SET status='closed'/).length, 0);
+    assert.equal(db.find(/SET status='rejected'/).length, 0); // the out of scope title waits too
+  });
+
+  test("with fewer than three live roles an empty read is a real wind down and they close", async () => {
+    const db = dbWith(2);
+    const run = await runJobSource(db, src, { fetcher: recordingFetcher(() => []), now: NOW });
+    assert.equal(run.suspect, undefined);
+    assert.deepEqual(updatesTo(db, /SET status='closed'/), [201]);
+    assert.deepEqual(updatesTo(db, /SET status='rejected'/), [200]);
+    assert.equal(statusOf(db), "0 matched, 0 added, 1 closed");
+  });
+
+  test("a board that read roles, even none in this city, closes missing roles as usual", async () => {
+    const db = dbWith(3);
+    const fetcher = recordingFetcher(() => [{ id: "x1", text: "Security Engineer", hostedUrl: "https://jobs.lever.co/examplecorp/x1", categories: { location: "Austin, TX" } }]);
+    const run = await runJobSource(db, src, { fetcher, now: NOW });
+    assert.equal(run.fetched, 1);
+    assert.equal(run.suspect, undefined);
+    assert.equal(run.closed, 2);
+  });
+
+  test("Workday is exempt: each missing role is still checked one by one", async () => {
+    const wsrc = { ...src, kind: "workday", config: '{"tenant":"examplecorp","host":"wd5","site":"External"}' };
+    const db = fakeDb([{ match: /SELECT id, source_key, url, title FROM jobs/, reply: () => ({ results: Array.from({ length: 3 }, (_, i) => ({ id: 300 + i, source_key: `R${i}`, title: "Security Engineer", url: `https://examplecorp.wd5.myworkdayjobs.com/External/job/San-Diego-CA/Security-Engineer_R${i}` })) }) }]);
+    const fetcher = recordingFetcher((url, init, body) => { if (body) return { total: 0, jobPostings: [] }; throw new Error("HTTP 404"); });
+    const run = await runJobSource(db, wsrc, { fetcher, now: NOW });
+    assert.equal(run.suspect, undefined);
+    assert.equal(run.closed, 3);
+  });
+});
+
 describe("Workday still open check", () => {
   const src = { id: 8, kind: "workday", employer_name: "Example Corp", organization_id: 3, config: '{"tenant":"examplecorp","host":"wd5","site":"External"}', search_text: "security", location_terms: "San Diego", city: "sandiego" };
   const base = "https://examplecorp.wd5.myworkdayjobs.com";
@@ -202,6 +246,36 @@ describe("runSource (feeds)", () => {
     assert.equal(a.cpe_body, "ISC2");
     assert.equal(a.topics, '["threat_intel"]'); // empty topics fall back
     assert.equal(a.speakers, "Jordan Example; Sam Sample");
+  });
+
+  test("titles are tidied into house style before they are filed", async () => {
+    const ics = ["BEGIN:VCALENDAR", "BEGIN:VEVENT", "UID:tidy@example.test", "SUMMARY:**Cloud Security Night!!** - Lightning Talks | November 2026", "DTSTART:20261112T020000Z", "URL:https://example.test/night", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    stub = stubGlobalFetch(() => ({ body: ics }));
+    const db = fakeDb();
+    await runSource(db, icalSrc(), { now: NOW });
+    const [row] = db.find(/INSERT INTO events/).map(insertRow);
+    assert.equal(row.title, "Cloud Security Night: Lightning Talks");
+    assert.equal(row.slug, "cloud-security-night-lightning-talks-2026-11-11");
+  });
+
+  test("a UTC TZID is read as local time only for the WiCyS hosts", async () => {
+    const ics = ["BEGIN:VCALENDAR", "BEGIN:VEVENT", "UID:wicys@example.test", "SUMMARY:Lunch and Learn", "DTSTART;TZID=UTC+0:20261112T113000", "DTEND;TZID=UTC+0:20261112T130000", "URL:https://example.test/lunch", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    const startFor = async (url) => {
+      stub = stubGlobalFetch(() => ({ body: ics }));
+      const db = fakeDb();
+      await runSource(db, icalSrc({ url }), { now: NOW });
+      stub.restore();
+      return insertRow(db.find(/INSERT INTO events/)[0]);
+    };
+    for (const host of ["www.wicys.org", "wicys.org"]) {
+      const row = await startFor(`https://${host}/events/?ical=1`);
+      assert.equal(row.start_at, "2026-11-12T11:30:00", host);
+      assert.equal(row.start_utc, "2026-11-12T19:30:00.000Z", host);
+      assert.equal(row.end_at, "2026-11-12T13:00:00", host);
+    }
+    const other = await startFor("https://www.meetup.com/example-group/events/ical/");
+    assert.equal(other.start_at, "2026-11-12T03:30:00");
+    assert.equal(other.start_utc, "2026-11-12T11:30:00.000Z");
   });
 
   test("an HTTP error is logged on the source and nothing is inserted", async () => {

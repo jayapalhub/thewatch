@@ -2,7 +2,7 @@
 // the aggregator page follow through. Fixtures are handcrafted in the shape of each source; no network is used.
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseBrightTalk, parseIcal, parseSans, parseAggregatorPage, firstSentence, plainText, utcToLocalIso } from "../functions/_lib/feeds.js";
+import { parseBrightTalk, parseIcal, parseSans, parseAggregatorPage, firstSentence, plainText, utcToLocalIso, tidyTitle } from "../functions/_lib/feeds.js";
 import { fixtureText, fixtureJson } from "./helpers.js";
 
 // The common event shape every adapter hands to runSource.
@@ -101,6 +101,32 @@ describe("parseIcal", () => {
   });
 });
 
+describe("parseIcal with a UTC TZID", () => {
+  // An 11:30 meetup whose organizer left the event zone at UTC but typed local wall clock times.
+  const ics = (dtstart, dtend = "") => ["BEGIN:VCALENDAR", "BEGIN:VEVENT", "UID:utc-tzid@example.test", "SUMMARY:Lunch and Learn", dtstart, dtend, "URL:https://example.test/lunch", "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n");
+  const start = (text, opts) => parseIcal(text, "America/Los_Angeles", opts)[0].startUtc.toISOString();
+
+  test("a UTC TZID is read as UTC by default", () => {
+    for (const tz of ["UTC+0", "UTC", "GMT", "Etc/UTC", "Etc/GMT", "UTC-00"]) assert.equal(start(ics(`DTSTART;TZID=${tz}:20261112T113000`)), "2026-11-12T11:30:00.000Z", tz);
+  });
+
+  test("with utcTzidIsLocal a UTC TZID is read as the feed's own zone, start and end alike", () => {
+    const [e] = parseIcal(ics("DTSTART;TZID=UTC+0:20261112T113000", "DTEND;TZID=UTC+0:20261112T130000"), "America/Los_Angeles", { utcTzidIsLocal: true });
+    assert.equal(e.startUtc.toISOString(), "2026-11-12T19:30:00.000Z"); // 11:30 Pacific standard time
+    assert.equal(e.endUtc.toISOString(), "2026-11-12T21:00:00.000Z");
+    assert.equal(start(ics('DTSTART;TZID="Etc/UTC":20261112T113000'), { utcTzidIsLocal: true }), "2026-11-12T19:30:00.000Z");
+  });
+
+  test("utcTzidIsLocal leaves a trailing Z and real zone names alone", () => {
+    assert.equal(start(ics("DTSTART:20261112T113000Z"), { utcTzidIsLocal: true }), "2026-11-12T11:30:00.000Z");
+    assert.equal(start(ics("DTSTART;TZID=America/New_York:20261112T113000"), { utcTzidIsLocal: true }), "2026-11-12T16:30:00.000Z");
+  });
+
+  test("an unknown TZID falls back to the feed's zone instead of failing the feed", () => {
+    assert.equal(start(ics("DTSTART;TZID=Not/A_Zone:20261112T113000")), "2026-11-12T19:30:00.000Z");
+  });
+});
+
 describe("parseSans", () => {
   const items = parseSans(fixtureJson("feeds/sans.json"));
 
@@ -142,6 +168,31 @@ describe("parseAggregatorPage", () => {
 
   test("returns nulls when the page has no Events Calendar blocks", () => {
     assert.deepEqual(parseAggregatorPage("<html><body>Nothing here</body></html>"), { registrationUrl: null, organizerName: null, organizerUrl: null });
+  });
+});
+
+describe("tidyTitle", () => {
+  const cases = [
+    ["CISO Roundtable - Cloud Risk", "CISO Roundtable: Cloud Risk"], // first separator becomes a colon
+    ["Cloud Risk \u2013 Lessons Learned \u2014 Part 2", "Cloud Risk: Lessons Learned, Part 2"], // en and em dashes, later ones commas
+    ["Threat Briefing: Q4 - Ransomware | Identity", "Threat Briefing: Q4, Ransomware, Identity"], // a colon already present
+    ["CISO Roundtable | October 2026", "CISO Roundtable"], // trailing month and year
+    ["CISO Roundtable | Sept. 2026", "CISO Roundtable"],
+    ["AppSec Meetup - TBD", "AppSec Meetup"],
+    ["**Hack the Box!!!** Night", "Hack the Box Night"], // asterisks and exclamation runs
+    ["Cloud Security Office Hours!", "Cloud Security Office Hours"], // trailing exclamation
+    ["Yahoo! Security Day", "Yahoo! Security Day"], // a single brand "!" stays
+    ['Panel "AI Risk" Session', 'Panel "AI Risk" Session'], // balanced quotes stay
+    ['Panel "AI Risk Session', "Panel AI Risk Session"], // an unmatched quote goes
+    ["  Spaced   out  \u2013  title ", "Spaced out: title"],
+    ["Cyber-Security 101", "Cyber-Security 101"], // a hyphen inside a word is not a separator
+    ["BSides|Talk", "BSides|Talk"], // a pipe without spaces is left alone
+  ];
+  for (const [input, want] of cases) test(JSON.stringify(input), () => assert.equal(tidyTitle(input), want));
+
+  test("empty input", () => {
+    assert.equal(tidyTitle(null), "");
+    assert.equal(tidyTitle("***"), "");
   });
 });
 
