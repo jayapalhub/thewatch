@@ -1,5 +1,6 @@
 // Feed adapters: pull BrightTALK Atom channels and iCal feeds into the review queue.
 // Everything lands as status='pending_review' with source='feed'; nothing publishes itself.
+import { readEventPage } from "./eventpage.js";
 import { slugify } from "./html.js";
 import { toUtc, TZ } from "./dates.js";
 import { autoPublishAt } from "./autopublish.js";
@@ -151,7 +152,7 @@ export function parseIcal(text, defaultTz = TZ, { utcTzidIsLocal = false } = {})
 
 // ---------- ingest ----------
 export async function fetchText(url) {
-  const r = await fetch(url, { headers: { "User-Agent": "TheWatchFeedBot/1.0 (+https://bettersecurity.ai)" }, cf: { cacheTtl: 0 } });
+  const r = await fetch(url, { headers: { "User-Agent": "TheWatchFeedBot/1.0 (+https://bettersecurity.ai)" }, cf: { cacheTtl: 0 }, signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return await r.text();
 }
@@ -231,6 +232,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
   }
   const horizon = new Date(now.getTime() + WINDOW_DAYS * 86400000);
   const defaultVenues = new Map(); // organization id -> default venue row, looked up once per run
+  let pageReads = 0; const MAX_PAGE_READS = 10;
   let topics = []; try { topics = JSON.parse(src.topics || "[]"); } catch {}
   // Whole-word keyword filter for mixed feeds ("AI" must not match "detail"). A list that starts with "title:" is
   // matched against the title only, for feeds whose descriptions mention everything (Free Live CPE).
@@ -261,7 +263,15 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     const clash = await db.prepare("SELECT id FROM events WHERE slug=?").bind(slug).first();
     if (clash) slug += "-" + Math.random().toString(36).slice(2, 6);
     const isSd = src.city !== "virtual";
-    const online = src.kind === "brighttalk" || src.kind === "sans" ? true : it.online;
+    let online = src.kind === "brighttalk" || src.kind === "sans" ? true : it.online;
+    // Meetup's iCal leaves the venue out of in person events. Read it from the event page's schema.org data, which also
+    // says when an event the feed did not mark is online. A few page reads per run at most.
+    let pv = null;
+    if (isSd && !online && !it.location && /meetup\.com\/[^/]+\/events\//.test(it.url || "") && pageReads < MAX_PAGE_READS) {
+      pageReads++;
+      pv = await readEventPage(it.url).catch(() => null);
+      if (pv && pv.online) online = true;
+    }
     // Meetup and Luma feeds often carry no venue. The organizer record can hold its usual one (default_venue_name
     // and default_venue_address on /admin/organizations); that fills the row so it does not arrive as "see the organizer's page".
     const orgId = it.organizationId || src.organization_id || null;
@@ -271,8 +281,9 @@ export async function runSource(db, src, { now = new Date() } = {}) {
       dv = defaultVenues.get(orgId);
       if (dv && !dv.default_venue_name) dv = null;
     }
-    const venueName = isSd && !online ? (it.location || (dv && dv.default_venue_name) || "See the organizer's page for the venue") : (online ? it.platform : null);
-    const venueAddress = isSd && !online ? (it.location || (dv && dv.default_venue_address) || null) : "Virtual";
+    const pageName = pv && !pv.online ? pv.name : null, pageAddress = pv && !pv.online ? pv.address : null;
+    const venueName = isSd && !online ? (it.location || pageName || (dv && dv.default_venue_name) || (pageAddress ? "Exact spot shown to those who RSVP" : "See the organizer's page for the venue")) : (online ? it.platform : null);
+    const venueAddress = isSd && !online ? (it.location || (pageName ? pageAddress : null) || (dv && dv.default_venue_address) || pageAddress || null) : "Virtual";
     const format = isSd ? (online ? "virtual" : "in_person") : "virtual";
     const cpe = src.cpe_default || it.cpeHint ? 1 : 0;
     const notes = `Feed import ${now.toISOString().slice(0, 10)} from ${src.name}.${it.aggregatorUrl ? ` Registration link and organizer taken from the organizer's own page via ${it.aggregatorUrl}.` : ""} Time taken from the feed (UTC ${it.startUtc.toISOString().slice(0, 16)}Z). Publishes automatically in 24 hours unless held or rejected.`;

@@ -68,5 +68,5 @@ export async function onRequestGet({ params, env }) {
   </div></section>
   ${raw(`<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, "\\u003c")}</script>`)}
   ${raw(`<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "ItemList", itemListElement: free.slice(0, 12).map((e, i) => ({ "@type": "ListItem", position: i + 1, item: { ...eventObject(e, siteUrl), "@context": undefined } })) }).replace(/</g, "\\u003c")}</script>`)}`;
-  return page(shell({ title: `How to earn CPE in ${city.name} this quarter`, description: `CPE eligible cybersecurity, audit and privacy events in ${city.region} for ISACA, ISC2, IIA and IAPP renewals: chapters, free sessions, hours and online options.`, body, city: city.slug, path: `/${city.slug}` }), 200, { "Cache-Control": "public, max-age=600" });
+  return page(shell({ title: `How to earn CPE in ${city.name} this quarter`, description: `CPE eligible cybersecurity, audit and privacy events in ${city.region} for ISACA, ISC2, IIA and IAPP renewals: chapters, free sessions, hours and online options.`, body, city: city.slug, path: `/${city.slug}`, canonical: `/${city.slug}/cpe` }), 200, { "Cache-Control": "public, max-age=600" });
 }

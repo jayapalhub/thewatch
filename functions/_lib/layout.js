@@ -7,13 +7,16 @@ export function mark(size = 36, cls = "") {
   return raw(`<svg class="mark ${cls}" width="${size}" height="${size}" viewBox="0 0 25400 25400" aria-hidden="true"><rect width="25400" height="25400" rx="5600" fill="#1FB6F0"/><g transform="translate(12700 12700) scale(1.42) translate(-12700 -12700)"><path fill="#1B4A8A" fill-rule="evenodd" d="${SHIELD_PATH}"/></g></svg>`);
 }
 
-export function signupForm({ source, compact = false, cta = "Get the Sunday email", chooseCity = false, city = DEFAULT_CITY }) {
+// city: the calendar the visitor is on. Every caller on a city page must pass it; when it is left out the form sends no
+// city and the server files the address by its source (calendar:<slug>) or the default, never by a silent San Diego.
+export function signupForm({ source, compact = false, cta = "Get the Sunday email", chooseCity = false, city = null }) {
+  const picked = CITIES[city] ? city : DEFAULT_CITY;
   return html`
   <form class="signup ${compact ? "signup-compact" : ""}" method="post" action="/api/subscribe" data-signup>
     <input type="hidden" name="source" value="${source}">
     <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
     ${!chooseCity && CITIES[city] ? html`<input type="hidden" name="city" value="${city}">` : ""}
-    ${chooseCity && Object.keys(CITIES).length > 1 ? html`<label class="signup-city">Your city <select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === city ? raw("selected") : ""}>${c.name}${c.newsletter === "sunday" ? "" : " (starting soon)"}</option>`)}</select></label>` : ""}
+    ${chooseCity && Object.keys(CITIES).length > 1 ? html`<label class="signup-city">Your city <select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === picked ? raw("selected") : ""}>${c.name}${c.newsletter === "sunday" ? "" : " (starting soon)"}</option>`)}</select></label>` : ""}
     <label class="sr-only" for="email-${source}">Email address</label>
     <div class="signup-row">
       <input id="email-${source}" type="email" name="email" placeholder="you@company.com" required autocomplete="email" inputmode="email">
@@ -24,7 +27,26 @@ export function signupForm({ source, compact = false, cta = "Get the Sunday emai
   </form>`;
 }
 
-export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null }) {
+// What the email is, in one line, for a city. Used at the top of a city calendar and in the city signup bands.
+export function emailValueLine(city) {
+  return city.newsletter === "sunday"
+    ? `Every security event in ${city.name}, in your inbox Sunday morning.`
+    : `Every security event in ${city.name}, in one calendar. Its Sunday email starts soon, and subscribers get the first issue.`;
+}
+
+// The navy signup band for a city page. id="subscribe" so a link near the top of the page can jump to it.
+// Everything in it depends only on the city and the page, never on the visitor, so the page stays edge cacheable.
+export function subscribeBand({ city, source, heading, text }) {
+  return html`<section class="band band-navy band-tight" id="subscribe"><div class="wrap split-center">
+    <div><h2>${heading || emailValueLine(city)}</h2>${text ? html`<p>${text}</p>` : ""}</div>
+    ${signupForm({ source, city: city.slug })}
+  </div></section>`;
+}
+
+// canonical: the one URL search engines should index for this page (a path). City pages pass it explicitly, because
+// `path` there only picks the highlighted nav item; site wide pages default to their own path. Query strings never
+// reach it, so a filtered, month or tracking URL points back at the plain page.
+export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null, canonical }) {
   const c = cityOf(city) || CITIES[DEFAULT_CITY];
   const isVirtual = c.slug === "virtual";
   const atRoot = !city && path === "/";
@@ -33,6 +55,8 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? "The Watch: cybersecurity events calendars by Better Security" : `${brandTitle}: cybersecurity events in ${c.name}`;
   const desc = description || (generic ? `Every cybersecurity, AI security, privacy and audit event in ${cityListText()}, in one calendar and one Sunday email. By Better Security.` : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
   const calHome = isVirtual ? "/virtual" : `/${c.slug}`;
+  const canonicalPath = canonical !== undefined ? canonical : generic ? path : null;
+  const canonicalUrl = canonicalPath ? `https://bettersecurity.ai${canonicalPath}` : null;
   // Up to three cities sit in the header by name. Past that the header shows the current city and an All cities link
   // to the chooser, so the navigation stays the same width however many cities there are.
   const cityList = Object.values(CITIES);
@@ -55,6 +79,8 @@ export function shell({ title, description, body, city = null, path = "/", wide 
 <meta property="og:title" content="${fullTitle}">
 <meta property="og:description" content="${desc}">
 <meta property="og:type" content="website">
+${canonicalUrl ? html`<link rel="canonical" href="${canonicalUrl}">
+<meta property="og:url" content="${canonicalUrl}">` : ""}
 <meta property="og:image" content="https://bettersecurity.ai${image || (atRoot ? "/og/city/sandiego.png" : `/og/city/${c.slug}.png`)}">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">

@@ -55,5 +55,5 @@ export async function onRequestGet({ params, env, request }) {
     ${past.length ? html`<h2>Recent</h2><ul class="event-list past">${past.map((e) => html`<li class="event-row"><div class="event-time">${e.start_at.slice(0, 10)}</div><div class="event-main"><h3 class="event-title"><a href="${eventPath(e)}">${e.title}</a></h3></div></li>`)}</ul>` : ""}
     <p><a class="btn btn-outline" href="/submit?org=${o.slug}">Submit an event for ${o.short_name || o.name}</a></p>
   </div>`;
-  return page(shell({ title: o.name, description: o.description, body, city: city.slug, path: `/${city.slug}` }), 200, { "Cache-Control": "public, max-age=300" });
+  return page(shell({ title: o.name, description: o.description, body, city: city.slug, path: `/${city.slug}`, canonical: `/${city.slug}/organizers/${o.slug}` }), 200, { "Cache-Control": "public, max-age=300" });
 }

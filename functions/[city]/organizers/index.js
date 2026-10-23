@@ -85,7 +85,7 @@ export async function onRequestGet({ params, env }) {
   </div>`;
 
   return page(
-    shell({ head: visible.length ? "" : '<meta name="robots" content="noindex">', title: `Organizers in ${city.name}`, description: `Every chapter, meetup, conference and company that runs cybersecurity, privacy and audit events in ${city.region || city.name}, with each one's next date.`, body, city: city.slug, path: `/${city.slug}/organizers` }),
+    shell({ head: visible.length ? "" : '<meta name="robots" content="noindex">', title: `Organizers in ${city.name}`, description: `Every chapter, meetup, conference and company that runs cybersecurity, privacy and audit events in ${city.region || city.name}, with each one's next date.`, body, city: city.slug, path: `/${city.slug}/organizers`, canonical: `/${city.slug}/organizers` }),
     200,
     { "Cache-Control": "public, max-age=300" }
   );

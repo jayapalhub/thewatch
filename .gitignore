@@ -8,3 +8,4 @@ scripts/seed.sql
 .DS_Store
 .scratch/
 __pycache__/
+backups/
