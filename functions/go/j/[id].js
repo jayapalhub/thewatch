@@ -1,6 +1,7 @@
 import { sha256 } from "../../_lib/html.js";
 import { cleanJobUrl } from "../../_lib/jobs.js";
 import { CITIES } from "../../_lib/constants.js";
+import { clickSubscriberId } from "../../_lib/clicks.js";
 
 // Click tracked apply link: /go/j/<job id>?i=<issue id>. Redirects only to the role's saved posting URL.
 export async function onRequestGet({ params, request, env, waitUntil }) {
@@ -16,7 +17,8 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
     try {
       await env.DB.prepare("UPDATE jobs SET apply_clicks = apply_clicks + 1 WHERE id=?").bind(j.id).run();
       const uaHash = (await sha256(request.headers.get("user-agent") || "")).slice(0, 16);
-      await env.DB.prepare("INSERT INTO link_clicks (event_id, issue_id, target, target_url, referrer, ua_hash) VALUES (NULL,?,?,?,?,?)").bind(issue, "job", j.url, (request.headers.get("referer") || "").slice(0, 300), uaHash).run();
+      const subscriberId = await clickSubscriberId(env.DB, request);
+      await env.DB.prepare("INSERT INTO link_clicks (event_id, issue_id, target, target_url, referrer, ua_hash, subscriber_id) VALUES (NULL,?,?,?,?,?,?)").bind(issue, "job", j.url, (request.headers.get("referer") || "").slice(0, 300), uaHash, subscriberId).run();
     } catch (err) { console.error("job click log failed", err && err.message); }
   })();
   if (typeof waitUntil === "function") waitUntil(log); else await log;

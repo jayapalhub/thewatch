@@ -1,4 +1,5 @@
 import { sha256 } from "../../_lib/html.js";
+import { clickSubscriberId } from "../../_lib/clicks.js";
 
 // Click tracked link for the sponsor block set on an individual issue. /go/is/<issue id>
 // Redirects only to that issue's saved sponsor URL and logs the click as target 'sponsor'.
@@ -10,8 +11,9 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
   const log = (async () => {
     try {
       const uaHash = (await sha256(request.headers.get("user-agent") || "")).slice(0, 16);
-      await env.DB.prepare("INSERT INTO link_clicks (event_id, issue_id, target, target_url, referrer, ua_hash) VALUES (NULL,?,?,?,?,?)")
-        .bind(issue.id, "sponsor", issue.sponsor_url, (request.headers.get("referer") || "").slice(0, 300), uaHash).run();
+      const subscriberId = await clickSubscriberId(env.DB, request);
+      await env.DB.prepare("INSERT INTO link_clicks (event_id, issue_id, target, target_url, referrer, ua_hash, subscriber_id) VALUES (NULL,?,?,?,?,?,?)")
+        .bind(issue.id, "sponsor", issue.sponsor_url, (request.headers.get("referer") || "").slice(0, 300), uaHash, subscriberId).run();
     } catch (err) { console.error("issue sponsor click log failed", err && err.message); }
   })();
   if (typeof waitUntil === "function") waitUntil(log); else await log;

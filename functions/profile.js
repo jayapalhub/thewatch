@@ -32,6 +32,7 @@ export async function onRequestGet({ request, env }) {
         </div>
         <label>LinkedIn <input type="url" name="linkedin_url" value="${sub.linkedin_url || ""}" placeholder="https://linkedin.com/in/"></label>
       </details>
+      <label class="chip" style="display:block;margin:14px 0 6px;"><input type="hidden" name="personalize_set" value="1"><input type="checkbox" name="personalize" value="1" ${Number(sub.personalize === undefined || sub.personalize === null ? 1 : sub.personalize) ? raw("checked") : ""}> Personalize my Sunday email <span class="hint">Links in your email carry a private code so we can see which events and roles you open and pick better ones for you. Untick it and your links are plain; you still get every Sunday email.</span></label>
       <button class="btn btn-primary" type="submit">Save</button> <a class="btn btn-ghost" href="/${sub.city || "sandiego"}">Skip, show me the calendar</a>
       <p class="form-msg" role="status" aria-live="polite"></p>
     </form>

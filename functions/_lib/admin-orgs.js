@@ -10,6 +10,7 @@ export function parseOrgForm(p) {
     contact_name: str(p.contact_name, 100) || null, contact_email: str(p.contact_email, 200) || null, linkedin_url: str(p.linkedin_url, 300) || null,
     logo_url: str(p.logo_url, 300) || null, description: str(p.description, 2000) || null,
     usual_cadence_text: str(p.usual_cadence_text, 200) || null, cadence_rule: str(p.cadence_rule, 200) || null,
+    default_venue_name: str(p.default_venue_name, 140) || null, default_venue_address: str(p.default_venue_address, 200) || null,
     cost_notes: str(p.cost_notes, 300) || null, cpe_notes: str(p.cpe_notes, 300) || null, notes: str(p.notes, 4000) || null,
     trusted: str(p.trusted) === "1" ? 1 : 0,
   };

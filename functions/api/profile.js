@@ -16,8 +16,10 @@ export async function onRequestPost({ request, env, waitUntil }) {
   const interests = list(p.interests).filter((k) => TOPICS[k]).slice(0, 6);
   const linkedin = str(p.linkedin_url, 200);
   const now = new Date().toISOString();
-  await env.DB.prepare("UPDATE subscribers SET first_name=?, last_name=?, company=?, role_title=?, seniority=?, interests=?, linkedin_url=?, profile_completed_at=?, updated_at=? WHERE id=?")
-    .bind(first || null, last || null, company || null, role || null, seniority, JSON.stringify(interests), linkedin || null, now, now, sub.id).run();
+  // Personalized links: the form always sends personalize_set, so an unticked box means off. Older forms leave it alone.
+  const personalize = str(p.personalize_set) === "1" ? (str(p.personalize) === "1" ? 1 : 0) : (sub.personalize === undefined || sub.personalize === null ? 1 : Number(sub.personalize));
+  await env.DB.prepare("UPDATE subscribers SET first_name=?, last_name=?, company=?, role_title=?, seniority=?, interests=?, linkedin_url=?, personalize=?, profile_completed_at=?, updated_at=? WHERE id=?")
+    .bind(first || null, last || null, company || null, role || null, seniority, JSON.stringify(interests), linkedin || null, personalize, now, now, sub.id).run();
   return json({ success: true, message: "Saved. Thanks for telling us a bit about yourself." });
 }
 export async function onRequest() { return json({ success: false, error: "method_not_allowed" }, 405); }

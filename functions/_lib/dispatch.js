@@ -1,6 +1,7 @@
 // Newsletter dispatch: one issue per city per week, previewed Saturday 8 AM local to Jerome,
 // sent Sunday 8 AM local to that city's subscribers through Resend, with no human step required.
 import { CITIES, MAIL_ADDRESS } from "./constants.js";
+import { tagLinks } from "./clicks.js";
 import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobsBlock, picksBlock, parseInterests } from "./newsletter.js";
 import { TOPICS } from "./constants.js";
 import { mondayOf, addDays } from "./dates.js";
@@ -60,7 +61,9 @@ function personalize(html, siteUrl, sub, ctx = {}) {
   const share = shareLineHtml(siteUrl, sub.ref_code); // "Share The Watch" line in the footer, with this subscriber's own link
   const unsub = `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`;
   // Function replacers: a "$" in an event title or job must never be read as a replacement pattern like "$&".
-  return html.replace(/\{\{SHARE\}\}/g, () => share).replace(/\{\{UNSUB\}\}/g, () => unsub).replace(/\{\{PROFILE_NUDGE\}\}/g, () => nudge).replace(/\{\{JOBS\}\}/g, () => jobs).replace(/\{\{PICKS\}\}/g, () => picks);
+  const out = html.replace(/\{\{SHARE\}\}/g, () => share).replace(/\{\{UNSUB\}\}/g, () => unsub).replace(/\{\{PROFILE_NUDGE\}\}/g, () => nudge).replace(/\{\{JOBS\}\}/g, () => jobs).replace(/\{\{PICKS\}\}/g, () => picks);
+  // Last: every /go/ link gets this subscriber's click token, unless they turned personalization off on /profile.
+  return tagLinks(out, siteUrl, sub);
 }
 
 // For previews: how many subscribers in a city have interests, and the most common ones (used as the sample).
@@ -123,7 +126,7 @@ export async function dispatchIssue(env, issue, city) {
   const html = issue.generated_html, subject = issue.subject;
   let lastId = issue.last_sent_subscriber_id || 0, sent = 0, batches = 0;
   while (batches < MAX_BATCHES_PER_RUN) {
-    const { results } = await db.prepare("SELECT id, email, unsub_token, profile_token, ref_code, profile_completed_at, seniority, interests FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
+    const { results } = await db.prepare("SELECT id, email, unsub_token, profile_token, ref_code, profile_completed_at, seniority, interests, personalize, click_token FROM subscribers WHERE status='active' AND city=? AND id>? ORDER BY id LIMIT ?").bind(city.slug, lastId, BATCH).all();
     if (!results.length) {
       await db.prepare("UPDATE issues SET status='sent', completed_at=datetime('now'), updated_at=datetime('now') WHERE id=? AND status='sending' AND last_sent_subscriber_id=?").bind(issue.id, lastId).run();
       return { done: true, sent };

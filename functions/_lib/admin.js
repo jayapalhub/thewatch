@@ -129,6 +129,10 @@ export function orgForm(o, { action, isNew = false } = {}) {
       <label>Cadence rule (RRULE)<input name="cadence_rule" value="${o.cadence_rule || ""}" placeholder="FREQ=MONTHLY;BYDAY=2TU"></label>
     </div>
     <div class="a-grid-2">
+      <label>Default venue <small>(used when a Meetup or Luma feed item names none)</small><input name="default_venue_name" value="${o.default_venue_name || ""}" maxlength="140" placeholder="HeatSync Labs"></label>
+      <label>Default venue address<input name="default_venue_address" value="${o.default_venue_address || ""}" maxlength="200" placeholder="108 W Main St, Mesa, AZ 85201"></label>
+    </div>
+    <div class="a-grid-2">
       <label>Cost notes<input name="cost_notes" value="${o.cost_notes || ""}"></label>
       <label>CPE notes<input name="cpe_notes" value="${o.cpe_notes || ""}"></label>
     </div>

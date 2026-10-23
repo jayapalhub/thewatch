@@ -1,11 +1,12 @@
 import { eventPath } from "../_lib/constants.js";
 import { eventById } from "../_lib/events.js";
 import { sha256 } from "../_lib/html.js";
+import { clickSubscriberId } from "../_lib/clicks.js";
 
 // Click tracked redirect used by the newsletter and the site.
 // /go/123?t=register  -> organizer registration page
 // /go/123?t=page      -> our event page
-// &i=<issue id> attributes the click to a newsletter issue.
+// &i=<issue id> attributes the click to a newsletter issue; &s=<click token> to a subscriber who has personalization on.
 export async function onRequestGet({ params, request, env, waitUntil }) {
   const id = parseInt(params.id, 10);
   const url = new URL(request.url);
@@ -19,8 +20,9 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
   const log = (async () => {
     try {
       const uaHash = (await sha256(ua)).slice(0, 16);
-      await env.DB.prepare("INSERT INTO link_clicks (event_id, issue_id, target, target_url, referrer, ua_hash) VALUES (?,?,?,?,?,?)")
-        .bind(e.id, issue, t, target, ref.slice(0, 300), uaHash).run();
+      const subscriberId = await clickSubscriberId(env.DB, request);
+      await env.DB.prepare("INSERT INTO link_clicks (event_id, issue_id, target, target_url, referrer, ua_hash, subscriber_id) VALUES (?,?,?,?,?,?,?)")
+        .bind(e.id, issue, t, target, ref.slice(0, 300), uaHash, subscriberId).run();
     } catch (err) { console.error("click log failed", err && err.message); }
   })();
   if (typeof waitUntil === "function") waitUntil(log); else await log;

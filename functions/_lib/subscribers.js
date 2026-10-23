@@ -32,14 +32,14 @@ export async function upsertSubscriber(db, env, { email, source, tags = [], requ
     // Already on the list: add tags only. The city stays as the subscriber set it; an anonymous form cannot move them.
     const mergedTags = Array.from(new Set([...list(existing.tags), ...tags]));
     const profileToken = existing.profile_token || token();
-    await db.prepare("UPDATE subscribers SET tags=?, profile_token=?, consented_at=COALESCE(consented_at, ?), consent_text_version=COALESCE(consent_text_version, ?), city=COALESCE(city, ?, ?), unsub_token=COALESCE(unsub_token, ?), ref_code=COALESCE(ref_code, ?), updated_at=? WHERE id=?")
-      .bind(JSON.stringify(mergedTags), profileToken, now, CONSENT_VERSION, city, DEFAULT_CITY, token(), token(10), now, existing.id).run();
+    await db.prepare("UPDATE subscribers SET tags=?, profile_token=?, consented_at=COALESCE(consented_at, ?), consent_text_version=COALESCE(consent_text_version, ?), city=COALESCE(city, ?, ?), unsub_token=COALESCE(unsub_token, ?), ref_code=COALESCE(ref_code, ?), click_token=COALESCE(click_token, ?), updated_at=? WHERE id=?")
+      .bind(JSON.stringify(mergedTags), profileToken, now, CONSENT_VERSION, city, DEFAULT_CITY, token(), token(10), token(20), now, existing.id).run();
     row = { ...existing, tags: mergedTags, profile_token: profileToken };
   } else {
     const profileToken = token();
     const referredBy = await referrerFor(db, request, email); // from a /r/<code> visit in the last 30 days
-    const res = await db.prepare("INSERT INTO subscribers (email, status, source, consent_text_version, consented_at, ip_hash, tags, profile_token, company, first_name, city, unsub_token, ref_code, referred_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
-      .bind(email, "active", source || null, CONSENT_VERSION, now, ipHash, JSON.stringify(tags), profileToken, extra.company || null, extra.first_name || null, city || DEFAULT_CITY, token(), token(10), referredBy).run();
+    const res = await db.prepare("INSERT INTO subscribers (email, status, source, consent_text_version, consented_at, ip_hash, tags, profile_token, company, first_name, city, unsub_token, ref_code, referred_by, click_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .bind(email, "active", source || null, CONSENT_VERSION, now, ipHash, JSON.stringify(tags), profileToken, extra.company || null, extra.first_name || null, city || DEFAULT_CITY, token(), token(10), referredBy, token(20)).run();
     row = { id: res.meta.last_row_id, email, status: "active", source, tags, profile_token: profileToken, referred_by: referredBy, isNew: true };
   }
   // Welcome email from the site, for new subscribers only (returning ones get it when they confirm at /resubscribe).

@@ -201,6 +201,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     return stats;
   }
   const horizon = new Date(now.getTime() + WINDOW_DAYS * 86400000);
+  const defaultVenues = new Map(); // organization id -> default venue row, looked up once per run
   let topics = []; try { topics = JSON.parse(src.topics || "[]"); } catch {}
   // Whole-word keyword filter for mixed feeds ("AI" must not match "detail"). A list that starts with "title:" is
   // matched against the title only, for feeds whose descriptions mention everything (Free Live CPE).
@@ -231,6 +232,17 @@ export async function runSource(db, src, { now = new Date() } = {}) {
     if (clash) slug += "-" + Math.random().toString(36).slice(2, 6);
     const isSd = src.city !== "virtual";
     const online = src.kind === "brighttalk" || src.kind === "sans" ? true : it.online;
+    // Meetup and Luma feeds often carry no venue. The organizer record can hold its usual one (default_venue_name
+    // and default_venue_address on /admin/organizations); that fills the row so it does not arrive as "see the organizer's page".
+    const orgId = it.organizationId || src.organization_id || null;
+    let dv = null;
+    if (isSd && !online && !it.location && orgId) {
+      if (!defaultVenues.has(orgId)) defaultVenues.set(orgId, await db.prepare("SELECT default_venue_name, default_venue_address FROM organizations WHERE id=?").bind(orgId).first().catch(() => null));
+      dv = defaultVenues.get(orgId);
+      if (dv && !dv.default_venue_name) dv = null;
+    }
+    const venueName = isSd && !online ? (it.location || (dv && dv.default_venue_name) || "See the organizer's page for the venue") : (online ? it.platform : null);
+    const venueAddress = isSd && !online ? (it.location || (dv && dv.default_venue_address) || null) : "Virtual";
     const format = isSd ? (online ? "virtual" : "in_person") : "virtual";
     const cpe = src.cpe_default || it.cpeHint ? 1 : 0;
     const notes = `Feed import ${now.toISOString().slice(0, 10)} from ${src.name}.${it.aggregatorUrl ? ` Registration link and organizer taken from the organizer's own page via ${it.aggregatorUrl}.` : ""} Time taken from the feed (UTC ${it.startUtc.toISOString().slice(0, 16)}Z). Publishes automatically in 24 hours unless held or rejected.`;
@@ -239,7 +251,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
         status, source, source_url, reviewer_notes, feed_uid, auto_publish_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(slug, src.city, it.title.slice(0, 140), it.organizationId || src.organization_id || null,
-        isSd && !online ? (it.location || "See the organizer's page for the venue") : (online ? it.platform : null), isSd && !online ? (it.location || null) : "Virtual",
+        venueName, venueAddress,
         startLocal, endLocal, it.startUtc.toISOString(), it.endUtc.toISOString(), tz, format, online ? it.platform : null, it.speakers,
         firstSentence(it.summary, 200) || it.title, it.summary ? plainText(it.summary).slice(0, 4000) : null, it.url,
         src.kind === "brighttalk" || src.kind === "sans" ? "free" : "unknown", src.kind === "brighttalk" || src.kind === "sans" ? 0 : null, src.kind === "brighttalk" || src.kind === "sans" ? 0 : null,
