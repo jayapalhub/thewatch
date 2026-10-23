@@ -58,11 +58,12 @@ export async function onRequestGet({ params, request, env }) {
         ${posted ? html`<div><dt>Posted</dt><dd>${fmtDateLong(posted)}<br><small>${agoLabel(posted, today)}</small></dd></div>` : ""}
         ${byline ? html`<div><dt>Posted by</dt><dd>${byline}</dd></div>` : ""}
       </dl>
+      ${j.excerpt ? html`<section class="job-excerpt"><h2>From ${j.employer}'s posting</h2><p>${j.excerpt}</p></section>` : ""}
       <div class="cta-row">
         <a class="btn btn-primary job-apply" href="${apply}" rel="noopener nofollow" target="_blank" ping="/go/j/${j.id}">Apply on the employer's site</a>
         <a class="btn btn-outline" href="/${city.slug}/jobs">More roles in ${city.name}</a>
       </div>
-      <p class="source">The full description and the application are on ${j.employer}'s own careers page. ${j.posted_by_name ? `${j.posted_by_name} posted about this role publicly, so you know who to reach out to. ` : ""}Listings come down after ${JOB_DAYS} days or as soon as the employer's posting closes. <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Correction: " + j.title + " at " + j.employer)}">Report a correction</a>.</p>
+      <p class="source">${j.excerpt ? "The rest of the description" : "The full description"} and the application are on ${j.employer}'s own careers page. ${j.posted_by_name ? `${j.posted_by_name} posted about this role publicly, so you know who to reach out to. ` : ""}Listings come down after ${JOB_DAYS} days or as soon as the employer's posting closes. <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Correction: " + j.title + " at " + j.employer)}">Report a correction</a>.</p>
     </div>
   </article>
   ${jobJsonLd(j, city, siteUrl, today)}

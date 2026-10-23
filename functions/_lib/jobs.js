@@ -181,7 +181,8 @@ export function jobPosting(j, city, siteUrl, today = todayKey()) {
   return {
     "@context": "https://schema.org", "@type": "JobPosting",
     title: j.title,
-    description: `${j.title} at ${j.employer}${loc ? `, ${loc}` : ""}${SENIORITY[j.seniority] ? ` (${SENIORITY[j.seniority]})` : ""}. Listed on The Watch ${city.name}, the security events calendar and jobs board for ${region}; the full description and application are on ${j.employer}'s own careers page.`,
+    // The employer's opening paragraph when the board gave us one, then where to read the rest and apply.
+    description: `${j.excerpt ? `${j.excerpt} ` : ""}${j.title} at ${j.employer}${loc ? `, ${loc}` : ""}${SENIORITY[j.seniority] ? ` (${SENIORITY[j.seniority]})` : ""}. Listed on The Watch ${city.name}, the security events calendar and jobs board for ${region}; the ${j.excerpt ? "rest of the" : "full"} description and application are on ${j.employer}'s own careers page.`,
     datePosted: j.posted_at || String(j.created_at || "").slice(0, 10) || today,
     validThrough: j.expires_at ? `${j.expires_at}T23:59:59` : undefined,
     employmentType: "FULL_TIME",

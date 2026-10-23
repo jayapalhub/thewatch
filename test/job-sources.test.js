@@ -4,11 +4,11 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import {
   isOurRole, inCity, parseTerms, inferTopics, inferSeniority, inferRemote,
-  pullWorkday, pullGreenhouse, pullLever, pullAshby, pullEightfold, pullSmartRecruiters, pullRadancy, pullPhenom, pullIcims, pullSuccessFactors, pullOracle,
+  pullWorkday, pullGreenhouse, pullLever, pullAshby, pullEightfold, pullSmartRecruiters, pullRadancy, pullPhenom, pullIcims, pullSuccessFactors, pullOracle, excerptOf,
 } from "../functions/_lib/job-sources.js";
 import { fixtureJson, fixtureText, recordingFetcher } from "./helpers.js";
 
-const ROLE_KEYS = ["key", "title", "url", "location", "posted_at", "salary_text", "remote"];
+const ROLE_KEYS = ["key", "title", "url", "location", "posted_at", "salary_text", "remote", "excerpt"];
 function assertRoleShape(r) {
   assert.deepEqual(Object.keys(r).sort(), [...ROLE_KEYS].sort());
   assert.equal(typeof r.key, "string");
@@ -17,6 +17,7 @@ function assertRoleShape(r) {
   assert.equal(typeof r.location, "string");
   assert.ok(r.posted_at === null || /^\d{4}-\d{2}-\d{2}$/.test(r.posted_at), `posted_at ${r.posted_at}`);
   assert.ok(["onsite", "hybrid", "remote"].includes(r.remote));
+  assert.ok(r.excerpt === null || (typeof r.excerpt === "string" && r.excerpt.length >= 60), `excerpt ${r.excerpt}`);
 }
 const fixed = (file) => recordingFetcher(() => fixtureJson(`jobs/${file}.json`));
 
@@ -456,5 +457,52 @@ describe("pullOracle", () => {
   test("throws on a response without items", async () => {
     const f = recordingFetcher(() => ({ error: "nope" }));
     await assert.rejects(pullOracle({ host: "h.test", site: "CX_1" }, "security", f), /unexpected response from Oracle/);
+  });
+});
+
+describe("excerptOf", () => {
+  const body = "We protect the world's payments. Our security team keeps the platform safe for millions of customers every day. "
+    + "You will lead the GRC program across SOC 2, ISO 27001 and PCI. You will partner with engineering on control design. "
+    + "You will report to the CISO and manage two analysts. You will own the risk register and the audit calendar. You will build the third party risk program.";
+  test("keeps whole sentences up to about 420 characters", () => {
+    const e = excerptOf(body);
+    assert.ok(e.length <= 420 && e.length >= 120, `length ${e.length}`);
+    assert.match(e, /^We protect/);
+    assert.match(e, /\.$/);
+  });
+  test("strips tags and escaped HTML, and skips a leading heading", () => {
+    const gh = "&lt;h2&gt;About the Role&lt;/h2&gt;&lt;p&gt;Join our team as a Security Engineer. You will harden our cloud platform and lead incident response for a growing company.&lt;/p&gt;";
+    assert.equal(excerptOf(gh), "Join our team as a Security Engineer. You will harden our cloud platform and lead incident response for a growing company.");
+    assert.equal(excerptOf("<p><b>Job Summary:</b> The analyst runs vendor risk reviews for the bank and tracks remediation with business owners across the enterprise.</p>"),
+      "The analyst runs vendor risk reviews for the bank and tracks remediation with business owners across the enterprise.");
+  });
+  test("prefers the section under a role heading to the company pitch above it", () => {
+    const wd = "<p>Are you looking to make a difference? At Example Insurance we are hiring people who want to transform the industry and grow with us.</p>"
+      + "<p><b>PURPOSE OF THE JOB</b></p><p>The Lead Security Engineer monitors, defends and drives improvements for the information security program. This person leads complex security work across the company.</p>"
+      + "<p><b>ESSENTIAL DUTIES</b></p><ul><li>Runs incident response</li></ul>";
+    assert.equal(excerptOf(wd), "The Lead Security Engineer monitors, defends and drives improvements for the information security program. This person leads complex security work across the company.");
+  });
+  test("without a heading, takes the first paragraph about the role", () => {
+    const h = "<p>Example Bank has served Texas families for a century and is proud of its people and its communities across the state.</p>"
+      + "<p>We are seeking a GRC Analyst to run our vendor risk reviews. You will track remediation with business owners and report to the CISO.</p>";
+    assert.equal(excerptOf(h), "We are seeking a GRC Analyst to run our vendor risk reviews. You will track remediation with business owners and report to the CISO.");
+  });
+  test("bullets under a role heading become sentences", () => {
+    const h = "<h3>What you'll do</h3><ul><li>Lead SOC 2 and ISO 27001 audits for the platform</li><li>Own the risk register and the policy library</li><li>Partner with engineering on control design</li></ul><h3>Who you are</h3>";
+    assert.equal(excerptOf(h), "Lead SOC 2 and ISO 27001 audits for the platform. Own the risk register and the policy library. Partner with engineering on control design.");
+  });
+  test("headings end with a colon or say day to day", () => {
+    const h = "<h3>Your day-to-day:</h3><ul><li>Lead red team operations against the consumer platform</li><li>Run adversary simulations with the detection team</li><li>Report findings to engineering leaders</li></ul>";
+    assert.match(excerptOf(h), /^Lead red team operations against the consumer platform[.] Run adversary/);
+  });
+  test("leaves prose that only mentions the role alone", () => {
+    const t = "The role reports to the CISO and sits in the Plano office. It covers audit, risk and policy work for the whole company and its subsidiaries.";
+    assert.equal(excerptOf(t), t);
+  });
+  test("returns null for short text, empty input, or no sentence ending early enough", () => {
+    assert.equal(excerptOf(""), null);
+    assert.equal(excerptOf(null), null);
+    assert.equal(excerptOf("Security Analyst, Plano."), null);
+    assert.equal(excerptOf("word ".repeat(200)), null);
   });
 });
