@@ -6,7 +6,8 @@ compatibility_date = "2026-09-01"
 # The newsletter tick runs every 10 minutes from Friday through Sunday UTC: Saturday 8 AM and Sunday 8 AM fall inside that
 # window for every time zone on earth (UTC+14 to UTC-12), so a new city in any zone needs no cron change. The tick is cheap and idempotent.
 [triggers]
-crons = ["0 13 * * THU", "0 * * * *", "*/10 * * * FRI,SAT,SUN"]
+# At :20 and :40 every hour: extra job board windows, so the boards are read every two days.
+crons = ["0 13 * * THU", "0 * * * *", "20,40 * * * *", "*/10 * * * FRI,SAT,SUN"]
 
 [vars]
 SITE_URL = "https://bettersecurity.ai"
