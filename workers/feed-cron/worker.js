@@ -1,11 +1,13 @@
 // Scheduled Worker for The Watch.
 //   Thursday 13:00 UTC: ask the Pages site to pull all feeds.
 //   Every hour:         publish pending rows whose 24 hour hold has passed, and send due event reminders.
+//   At :20 and :40:     read the job boards that are due (the hourly tick only has time for a few).
 //   Friday to Sunday UTC, every 10 minutes: newsletter previews (Saturday 8 AM local) and sends (Sunday 8 AM local) in every city zone.
 // Deploy once from the repo root:  cd workers/feed-cron && npx wrangler deploy && npx wrangler secret put ADMIN_TOKEN
 export default {
   async scheduled(event, env, ctx) {
-    const path = event.cron === "0 13 * * THU" ? "/api/feeds/pull" : event.cron === "0 * * * *" ? "/api/events/autopublish" : "/api/newsletter/tick";
+    const path = event.cron === "0 13 * * THU" ? "/api/feeds/pull" : event.cron === "0 * * * *" ? "/api/events/autopublish"
+      : event.cron === "20,40 * * * *" ? "/api/jobs/boards" : "/api/newsletter/tick";
     ctx.waitUntil(call(env, path));
   },
   async fetch(request, env) {
