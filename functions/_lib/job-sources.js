@@ -10,7 +10,7 @@ import { slugify } from "./html.js";
 const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT (?:internal )?audit\w*|technology audit\w*|IS audit\w*|information systems audit\w*|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph\w*)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems? )security officer|physical security|corporate security|regional security|global security|event security|workplace security|workplace (?:&|and) security|real estate|safety (?:&|and) security|personal security|K9|cargo security|security (?:supervisor|assistant manager|shift|operator|officers|technology technician)|supervisor,? security|shift supervisor|concierge|trade compliance|security valuation|lecturer|professor|faculty|employee relations|political law|hackathon|solution consultant|success architect|customer engineering|escalations? engineer|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|account director|customer success|customer advocacy|business development|marketing|communications|public relations|public affairs|go[- ]to[- ]market|GTM|partnerships?|partner manager|evangelist|developer advocate|community manager|technical writer|content (?:writer|strategist|lead|marketer)|copywriter|demand generation|revenue|field CTO|recruiter|intern(?:ships?)?|industrial security|personnel security|PERSEC|security rep|ACSSO|AFSO|FSO|maritime security|treaty|join noblis|program security|special programs security|activity security|security representative|security cooperation|international security|security dispatch|dispatcher|security communication|sergeant|police|public safety|building security|security observation|TSCM|fire alarm|DC security|bancorp security|category manager|proposal|law enforcement|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", icims_classic: "iCIMS classic", successfactors: "SuccessFactors", oracle: "Oracle Recruiting", jobvite: "Jobvite" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", icims_classic: "iCIMS classic", successfactors: "SuccessFactors", oracle: "Oracle Recruiting", jobvite: "Jobvite", taleo: "Taleo" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -462,7 +462,45 @@ export async function pullJobvite(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, icims_classic: pullIcimsClassic, oracle: pullOracle, jobvite: pullJobvite };
+// Oracle Taleo career sections (hyatt.taleo.net/careersection/10780): the JSON search the section's own page posts to
+// /careersection/rest/jobboard/searchjobs. Config { host, section, portal }: the portal number is in the section's
+// jobsearch.ftl page. Each requisition has contestNo (the public job number) and column, whose layout the employer
+// chooses; the title comes first, the places are the column holding a JSON list ("US-IL-Chicago"), and the posted
+// date is the column shaped like "Oct 22, 2026". Pages hold up to 25 but often fewer, so paging follows totalCount.
+function taleoPlace(code) {
+  const p = String(code || "").trim().split("-");
+  if (p.length >= 3 && /^[A-Z]{2}$/.test(p[0])) return `${p.slice(2).join("-").trim()}, ${p[1]}${p[0] === "US" ? "" : `, ${p[0]}`}`;
+  if (p.length === 2 && /^[A-Z]{2}$/.test(p[0])) return `${p[1].trim()}${p[0] === "US" ? "" : `, ${p[0]}`}`;
+  return String(code || "").trim();
+}
+export async function pullTaleo(cfg, searchText, fetcher = getJson) {
+  const host = String(cfg.host || "").replace(/^https?:\/\//, "").replace(/\/.*$/, ""), section = String(cfg.section || "").trim(), portal = String(cfg.portal || "").trim();
+  if (!host || !section || !portal) throw new Error("Taleo board needs host, section and portal");
+  const out = []; const seen = new Set(); let read = 0;
+  for (let page = 1; page <= 8; page++) {
+    const body = { multilineEnabled: false, sortingSelection: { sortBySelectionParam: "3", ascendingSortingOrder: "false" }, fieldData: { fields: { KEYWORD: String(searchText || "security"), LOCATION: "", CATEGORY: "" }, valid: true },
+      filterSelectionParam: { searchFilterSelections: [] }, advancedSearchFiltersSelectionParam: { searchFilterSelections: [] }, pageNo: page };
+    const j = await fetcher(`https://${host}/careersection/rest/jobboard/searchjobs?lang=en&portal=${encodeURIComponent(portal)}`, { method: "POST", headers: { "Content-Type": "application/json", tz: "GMT+00:00" }, body: JSON.stringify(body) });
+    if (!j || !Array.isArray(j.requisitionList)) throw new Error("unexpected response from Taleo");
+    const list = j.requisitionList; read += list.length;
+    for (const x of list) {
+      const key = String(x.contestNo || x.jobId || ""); if (!key || seen.has(key)) continue; seen.add(key);
+      const cols = Array.isArray(x.column) ? x.column.map((c) => String(c == null ? "" : c)) : [];
+      const title = decodeEntities(cols[0] || "").replace(/\s+/g, " ").trim();
+      if (!title || !isOurRole(title)) continue;
+      let places = [];
+      for (const c of cols.slice(1)) { if (/^\s*\[/.test(c)) { try { const a = JSON.parse(c); if (Array.isArray(a)) { places = a; break; } } catch {} } }
+      const location = [...new Set(places.map(taleoPlace).filter(Boolean))].join("; ");
+      const posted = sfDate((cols.find((c, i) => i > 0 && /^[A-Z][a-z]{2} \d{1,2}, \d{4}$/.test(c.trim())) || "").trim());
+      out.push({ key, title, url: `https://${host}/careersection/${section}/jobdetail.ftl?job=${encodeURIComponent(key)}&lang=en`, location, posted_at: posted, salary_text: null,
+        remote: /\bremote\b/i.test(title) ? "remote" : inferRemote(location), excerpt: null });
+    }
+    const total = j.pagingData && Number(j.pagingData.totalCount);
+    if (!list.length || !total || read >= total) break;
+  }
+  return out;
+}
+export const ADAPTERS = { taleo: pullTaleo, successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, icims_classic: pullIcimsClassic, oracle: pullOracle, jobvite: pullJobvite };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
@@ -535,7 +573,7 @@ async function finish(db, src, run) {
 // to a subrequest budget. On Workers Paid (10,000 subrequests per invocation) the tick gives boards a budget of 300,
 // so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
-const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, icims_classic: 5, oracle: 4, jobvite: 4 };
+const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, icims_classic: 5, oracle: 4, jobvite: 4, taleo: 4 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40, deadline = null } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"

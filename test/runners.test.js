@@ -85,8 +85,8 @@ describe("runJobSource", () => {
   });
 
   test("an unknown kind is an error", async () => {
-    const run = await runJobSource(fakeDb(), { ...greenhouseSrc(), kind: "taleo" }, { fetcher: recordingFetcher(() => null), now: NOW });
-    assert.equal(run.error, "unknown kind taleo");
+    const run = await runJobSource(fakeDb(), { ...greenhouseSrc(), kind: "peoplesoft" }, { fetcher: recordingFetcher(() => null), now: NOW });
+    assert.equal(run.error, "unknown kind peoplesoft");
   });
 });
 
