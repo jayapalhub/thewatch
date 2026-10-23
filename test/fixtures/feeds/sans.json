@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "hits": [
+        {
+          "objectID": "obj-1",
+          "webcastId": "wc-101",
+          "title": "  Cloud Incident Response in Practice ",
+          "utcStartDate": "2026-11-05",
+          "utcStartTime": "18:00:00",
+          "utcEndDate": "2026-11-05",
+          "utcEndTime": "19:00:00",
+          "url": "/webcasts/cloud-incident-response-in-practice/",
+          "description": "How responders scope a cloud incident. ",
+          "speakers": [{ "name": "Jordan Example" }, { "title": "Sam Sample" }, null],
+          "cpesGiven": "1"
+        },
+        {
+          "objectID": "obj-2",
+          "title": "Missing Start Time",
+          "utcStartDate": "2026-11-06"
+        },
+        {
+          "objectID": "obj-3",
+          "uid": "uid-303",
+          "title": "Purple Team Basics",
+          "utcStartDate": "2026-11-07",
+          "utcStartTime": "17:30:00",
+          "url": "https://www.sans.org/webcasts/purple-team-basics/",
+          "speakers": ["Casey Sample"],
+          "cpesGiven": "0"
+        }
+      ]
+    }
+  ]
+}
