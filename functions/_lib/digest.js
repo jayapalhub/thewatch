@@ -19,7 +19,7 @@ export async function weeklyNumbers(db) {
   const topJobs = await all(`SELECT title, employer_name, city, apply_clicks FROM jobs WHERE status='published' AND apply_clicks > 0 ORDER BY apply_clicks DESC LIMIT 5`);
   const events = await all(`SELECT city, SUM(status='published' AND published_at >= ${since}) published, SUM(status='pending_review' AND hold=1) held, SUM(status='pending_review' AND hold=0) clocked, SUM(status='rejected' AND updated_at >= ${since}) rejected, SUM(status='published' AND start_at >= date('now') AND start_at < date('now','+70 days')) upcoming FROM events GROUP BY city`);
   const jobs = await all(`SELECT city, SUM(status='published' AND published_at >= ${since}) published, SUM(status='published') live, SUM(status='closed' AND updated_at >= ${since}) closed, SUM(status='pending_review') pending, SUM(status='published' AND posted_by_name IS NOT NULL AND posted_by_name != '') named FROM jobs GROUP BY city`);
-  const boardsBad = await all(`SELECT employer_name, city, last_status FROM job_sources WHERE active=1 AND last_status LIKE 'error%' ORDER BY city, employer_name`);
+  const boardsBad = await all(`SELECT employer_name, city, last_status FROM job_sources WHERE active=1 AND (last_status LIKE 'error%' OR last_status LIKE 'suspect%') ORDER BY city, employer_name`);
   const feedsBad = await all(`SELECT name, last_status FROM feed_sources WHERE active=1 AND last_status IS NOT NULL AND last_status NOT LIKE 'ok%' ORDER BY id`);
   const linkedin = await all(`SELECT city, kind, status FROM linkedin_posts WHERE created_at >= ${since} ORDER BY id`);
   const sponsors = await all(`SELECT COUNT(*) n FROM sponsor_inquiries WHERE created_at >= ${since}`);

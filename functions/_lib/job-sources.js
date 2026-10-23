@@ -7,8 +7,8 @@ import { cleanJobUrl, JOB_DAYS } from "./jobs.js";
 import { slugify } from "./html.js";
 
 // What counts as one of our roles. Title must match SECURITY_RE and must not match NOT_OURS_RE.
-const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph)\b/i;
-const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems )security officer|physical security|corporate security|regional security|global security|event security|workplace security|workplace (?:&|and) security|real estate|safety (?:&|and) security|personal security|K9|cargo security|security (?:supervisor|assistant manager|shift|operator|officers|technology technician)|supervisor,? security|shift supervisor|concierge|trade compliance|security valuation|lecturer|professor|faculty|employee relations|political law|hackathon|solution consultant|success architect|customer engineering|escalations? engineer|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|account director|customer success|customer advocacy|business development|marketing|communications|public relations|public affairs|go[- ]to[- ]market|GTM|partnerships?|partner manager|evangelist|developer advocate|community manager|technical writer|content (?:writer|strategist|lead|marketer)|copywriter|demand generation|revenue|field CTO|recruiter|intern(?:ship)?|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
+const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph\w*)\b/i;
+const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems )security officer|physical security|corporate security|regional security|global security|event security|workplace security|workplace (?:&|and) security|real estate|safety (?:&|and) security|personal security|K9|cargo security|security (?:supervisor|assistant manager|shift|operator|officers|technology technician)|supervisor,? security|shift supervisor|concierge|trade compliance|security valuation|lecturer|professor|faculty|employee relations|political law|hackathon|solution consultant|success architect|customer engineering|escalations? engineer|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|account director|customer success|customer advocacy|business development|marketing|communications|public relations|public affairs|go[- ]to[- ]market|GTM|partnerships?|partner manager|evangelist|developer advocate|community manager|technical writer|content (?:writer|strategist|lead|marketer)|copywriter|demand generation|revenue|field CTO|recruiter|intern(?:ships?)?|industrial security|personnel security|PERSEC|security rep|ACSSO|AFSO|FSO|maritime security|treaty|join noblis|program security|special programs security|activity security|security representative|security cooperation|international security|security dispatch|dispatcher|security communication|sergeant|police|public safety|building security|security observation|TSCM|fire alarm|DC security|bancorp security|category manager|proposal|law enforcement|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
 export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", successfactors: "SuccessFactors" };
 
@@ -19,9 +19,14 @@ export function isOurRole(title) {
   const t = String(title || "");
   return SECURITY_RE.test(t) && !NOT_OURS_RE.test(t);
 }
+// A posting matches when one of its listed locations names a city term and that location is not abroad.
+// Checked location by location, so "Melbourne, Victoria, Australia" no longer matches Melbourne, Florida and
+// "Novi Sad, RS" no longer matches Novi, Michigan, while a US location listed beside a foreign one still counts.
+const FOREIGN_RE = /\b(australia|new south wales|queensland|new zealand|united kingdom|england|scotland|wales|canada|ontario|quebec|british columbia|alberta|india|serbia|germany|france|ireland|israel|netherlands|poland|romania|singapore|japan|philippines|brazil|costa rica|mexico|taiwan|china)\b|,\s*(?:au|rs|uk|mx|tw)\b/i;
 export function inCity(locationText, terms) {
-  const loc = String(locationText || "").toLowerCase();
-  return terms.some((t) => t && loc.includes(t.toLowerCase()));
+  const parts = String(locationText || "").toLowerCase().split(/;|\||\n|<br\s*\/?>|\s{3,}/);
+  // Whole words only, so "Spring" (a Houston suburb) does not match "Colorado Springs".
+  return parts.some((p) => !FOREIGN_RE.test(p) && terms.some((t) => t && new RegExp(`(^|[^a-z0-9])${t.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9])`).test(p)));
 }
 export function parseTerms(s) { return String(s || "").split(",").map((x) => x.trim()).filter(Boolean); }
 
@@ -58,7 +63,7 @@ export function inferRemote(locationText) {
 }
 function payText(html) { const m = strip(html).match(PAY_RE); if (!m) return null; let s = m[0].replace(/\s+/g, " ").replace(/\$\s/g, "$"); if (!s.includes("$")) s = s.replace(/([\d,.]+)\s*USD/g, "$$$1"); return s; }
 
-async function getJson(url, init = {}) {
+export async function getJson(url, init = {}) {
   const { text, ...rest } = init;
   const r = await fetch(url, { ...rest, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: text ? "text/html,application/json" : "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 } });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -172,8 +177,12 @@ export async function pullRadancy(cfg, searchText, fetcher = getJson) {
       const attrs = m[1] + m[3], inner = m[4];
       const id = (/data-job-id="([^"]+)"/.exec(attrs) || [])[1] || m[2].split("?")[0].split("/").pop();
       if (seen.has(id)) continue; seen.add(id); added++;
-      const title = clean((/<h2[^>]*>([\s\S]*?)<\/h2>/i.exec(inner) || [])[1]);
-      const loc = clean((/class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(inner) || [])[1]);
+      // Two layouts: older sites wrap the <h2> title and the location span inside the link; newer ones put the link
+      // inside the <h2> (the link text is the title) with the location span just after it in the same list item.
+      const h2 = (/<h2[^>]*>([\s\S]*?)<\/h2>/i.exec(inner) || [])[1];
+      const title = clean(h2 != null ? h2 : inner);
+      const after = html.slice(re.lastIndex, re.lastIndex + 800).split(/<li\b/i)[0];
+      const loc = clean((/class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(inner) || /class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(after) || [])[1]);
       if (!title || !isOurRole(title)) continue;
       out.push({ key: String(id), title, url: `https://${cfg.host}${m[2].split("?")[0]}`, location: loc, posted_at: null, salary_text: null, remote: inferRemote(loc) });
     }
@@ -278,7 +287,7 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
+export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
@@ -320,6 +329,14 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
   // cleanly but matched nothing still counts: an employer's last security role closing is the common case, not an error.
   if (!run.error) {
     const { results } = await db.prepare("SELECT id, source_key, url, title FROM jobs WHERE source_id=? AND status IN ('published','pending_review')").bind(src.id).all();
+    // A board that suddenly reads nothing while several of its roles are live is far more likely to be a changed page
+    // layout or a blocked request than every role closing at once (the Radancy layout change of October 2026 read as
+    // zero). Keep the roles and flag the board instead of closing them; a real wind-down still closes one or two.
+    // Workday is exempt: below, each missing Workday role is asked for directly and closed only on a clear answer.
+    if (run.fetched === 0 && results.length >= 3 && src.kind !== "workday") {
+      run.suspect = `read nothing but ${results.length} roles are live; none closed, check the board`;
+      return finish(db, src, run);
+    }
     let checks = 0;
     for (const r of results) {
       if (seen.has(String(r.source_key))) continue;
@@ -334,19 +351,19 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
   return finish(db, src, run);
 }
 async function finish(db, src, run) {
-  const status = run.error ? `error: ${run.error}` : `${run.fetched} matched, ${run.added} added, ${run.closed} closed`;
+  const status = run.error ? `error: ${run.error}` : run.suspect ? `suspect: ${run.suspect}` : `${run.fetched} matched, ${run.added} added, ${run.closed} closed`;
   await db.prepare("UPDATE job_sources SET last_run_at=datetime('now'), last_status=?, last_added=? WHERE id=?").bind(status.slice(0, 200), run.added, src.id).run();
   return run;
 }
 
-// One board per call by default: a Worker invocation can only make a few dozen outbound requests, so the hourly cron
-// takes the board that has waited longest (never run first, then anything older than six days). Hundreds of boards
-// across many cities spread themselves over the week this way.
+// The hourly cron takes the boards that have waited longest (never run first, then anything older than two days), up
+// to a subrequest budget. On Workers Paid (10,000 subrequests per invocation) the tick gives boards a budget of 300,
+// so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
 const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40 } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
-    : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-6 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
+    : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
     : "SELECT * FROM job_sources WHERE active=1 ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?";
   const { results } = await db.prepare(sql).bind(...(onlyId ? [onlyId] : [max])).all();
   const out = [];

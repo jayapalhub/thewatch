@@ -113,11 +113,14 @@ export function jobRow(j, today = todayKey()) {
 export async function runJobMaintenance(db, { recheck = 8, fetcher = fetch } = {}) {
   const out = { published: 0, expired: 0, checked: 0, closed: 0 };
   try {
-    const due = await db.prepare(`SELECT id FROM jobs WHERE status='pending_review' AND hold=0 AND auto_publish_at IS NOT NULL AND auto_publish_at <= datetime('now') LIMIT 100`).all();
-    for (const r of due.results) {
-      await db.prepare(`UPDATE jobs SET status='published', published_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), expires_at=COALESCE(expires_at, date('now', '+${JOB_DAYS} days')),
-        reviewer_notes=COALESCE(reviewer_notes,'') || ' Auto published ' || date('now') || '.', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND status='pending_review'`).bind(r.id).run();
-      out.published++;
+    // Up to 600 a run, written 100 to a batch, so a large release (a city launch, a reviewed backlog) goes live within
+    // the hour instead of trickling out over a working day.
+    const due = await db.prepare(`SELECT id FROM jobs WHERE status='pending_review' AND hold=0 AND auto_publish_at IS NOT NULL AND auto_publish_at <= datetime('now') LIMIT 600`).all();
+    const pub = db.prepare(`UPDATE jobs SET status='published', published_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), expires_at=COALESCE(expires_at, date('now', '+${JOB_DAYS} days')),
+        reviewer_notes=COALESCE(reviewer_notes,'') || ' Auto published ' || date('now') || '.', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND status='pending_review'`);
+    for (let i = 0; i < due.results.length; i += 100) {
+      await db.batch(due.results.slice(i, i + 100).map((r) => pub.bind(r.id)));
+      out.published += Math.min(100, due.results.length - i);
     }
     const exp = await db.prepare(`UPDATE jobs SET status='expired', closed_reason='Expired after ${JOB_DAYS} days', updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE status='published' AND expires_at IS NOT NULL AND expires_at < date('now', '-1 day')`).run(); // a day of slack: the page already hides it once the local date passes
     out.expired = (exp.meta && exp.meta.changes) || 0;

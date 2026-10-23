@@ -10,7 +10,7 @@ export function autoPublishAt(hours = DEFAULT_HOLD_HOURS, from = new Date()) {
 export async function runAutoPublish(db) {
   const { results } = await db.prepare(
     `SELECT id, title, city FROM events WHERE status='pending_review' AND hold=0 AND auto_publish_at IS NOT NULL AND auto_publish_at <= datetime('now')
-       AND registration_url IS NOT NULL AND start_utc > strftime('%Y-%m-%dT%H:%M:%fZ','now') LIMIT 200`).all();
+       AND registration_url IS NOT NULL AND start_utc > strftime('%Y-%m-%dT%H:%M:%fZ','now') LIMIT 600`).all();
   if (!results.length) return { published: 0, items: [] };
   await db.batch(results.map((r) => db.prepare("UPDATE events SET status='published', published_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'), reviewer_notes=COALESCE(reviewer_notes,'') || ' Auto published ' || date('now') || '.' WHERE id=? AND status='pending_review'").bind(r.id)));
   return { published: results.length, items: results };

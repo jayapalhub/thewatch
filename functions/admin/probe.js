@@ -19,7 +19,7 @@ const ALIASES = {
   orangecounty: ["Orange County", "Newport Beach", "Costa Mesa", "Anaheim"], newyork: ["New York", "NYC", "Manhattan"],
   washington: ["Washington, DC", "Washington DC", "Washington D.C.", "Arlington, VA", "Tysons", "Reston", "McLean", "Bethesda"],
   dallas: ["Dallas", "Fort Worth", "Irving", "Plano", "Frisco"], minneapolis: ["Minneapolis", "St. Paul", "Twin Cities", "Bloomington, MN"],
-  saltlake: ["Salt Lake", "Lehi"], kansascity: ["Kansas City", "Overland Park"], stlouis: ["St. Louis", "Saint Louis"], tampa: ["Tampa", "St. Petersburg"],
+  saltlake: ["Salt Lake", "Lehi", "Provo"], phoenix: ["Phoenix", "Scottsdale", "Tempe", "Chandler", "Tucson"], boston: ["Boston", "Cambridge, MA", "Waltham", "Worcester"], kansascity: ["Kansas City", "Overland Park"], stlouis: ["St. Louis", "Saint Louis"], tampa: ["Tampa", "St. Petersburg"],
   raleigh: ["Raleigh", "Durham", "Research Triangle", "Cary, NC"], miami: ["Miami", "Fort Lauderdale", "Boca Raton"],
 };
 
