@@ -37,7 +37,7 @@ CITIES = {
    sweep_extra="Meetup search within 20 miles of New York; Eventbrite searches for New York and Jersey City; Luma for AI security meetups, which are many in New York."),
  "boston": dict(name="Boston", region="Boston and New England", tz="America/New_York", sort=170, state="Massachusetts",
    places="Boston, Cambridge, Somerville, Waltham, Burlington, Lexington, Bedford, Woburn, Quincy, Newton, Needham, Marlborough, Framingham, Andover, Wilmington, Providence, Nashua, Manchester",
-   geo="Boston, Cambridge, Waltham, Burlington, Lexington, Bedford and the 128 belt, plus Providence and southern New Hampshire.",
+   geo="Boston, Cambridge, Waltham, Burlington, Lexington, Bedford and the 128 belt, plus Providence and southern New Hampshire, and as a satellite Worcester and MetroWest (Framingham, Marlborough, Westborough).",
    sweep_extra="Meetup search within 30 miles of Boston; Eventbrite searches for Boston and Cambridge; Luma for AI security meetups."),
  "portland": dict(name="Portland", region="Portland and Oregon", tz="America/Los_Angeles", sort=180, state="Oregon",
    places="Portland, Beaverton, Hillsboro, Lake Oswego, Tigard, Tualatin, Wilsonville, Gresham, Vancouver, Salem",
