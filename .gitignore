@@ -7,3 +7,4 @@ node_modules/
 scripts/seed.sql
 .DS_Store
 .scratch/
+__pycache__/
