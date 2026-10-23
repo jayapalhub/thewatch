@@ -13,7 +13,9 @@ database_id = "1239087e-c235-43d1-b760-bb5723e358b9"
 migrations_dir = "migrations"
 
 # Non-secret settings. Secrets (RESEND_API_KEY, ADMIN_TOKEN) are set in the Cloudflare dashboard, never here.
+# Top level values are the production environment. ENVIRONMENT tells the code which one it is running in.
 [vars]
+ENVIRONMENT = "production"
 SITE_URL = "https://bettersecurity.ai"
 FROM_EMAIL = "The Watch San Diego <watch@bettersecurity.ai>"
 NOTIFY_EMAIL = "jerome.jayapal@bettersecurity.ai"
@@ -21,4 +23,27 @@ NOTIFY_EMAIL = "jerome.jayapal@bettersecurity.ai"
 ACCESS_TEAM_DOMAIN = "crimson-recipe-50a5.cloudflareaccess.com"
 ACCESS_AUD = "8e779167a92ab15b535bd5a8efd9a755efcadf1842abce85e8a79e9befd1bed3"
 # Set to "1" only in local dev to bypass Access on /admin
+DEV_MODE = "0"
+
+# Preview deployments (one per pull request) run against the staging database, never production. Pages treats vars and
+# bindings as non inheritable, so everything a preview needs is restated here in full. See docs/environments.md.
+# Apply migrations and the sample data with:
+#   npx wrangler d1 migrations apply thewatch-staging --remote
+#   npx wrangler d1 execute thewatch-staging --remote --file tools/staging/seed.sql
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "thewatch-staging"
+database_id = "f4236033-993f-4427-945b-e7b9eaa4777d"
+migrations_dir = "migrations"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+SITE_URL = "https://bettersecurity.ai"
+FROM_EMAIL = "The Watch San Diego <watch@bettersecurity.ai>"
+NOTIFY_EMAIL = "jerome.jayapal@bettersecurity.ai"
+ACCESS_TEAM_DOMAIN = "crimson-recipe-50a5.cloudflareaccess.com"
+ACCESS_AUD = "8e779167a92ab15b535bd5a8efd9a755efcadf1842abce85e8a79e9befd1bed3"
+# Previews keep the admin check on. DEV_MODE = "1" would treat every visitor as an admin on every protected route
+# (/admin, /api/events/autopublish, /api/jobs/boards, the seed runner), and preview URLs are public. To use /admin on a
+# preview, add the pages.dev hostname to the Cloudflare Access application instead.
 DEV_MODE = "0"

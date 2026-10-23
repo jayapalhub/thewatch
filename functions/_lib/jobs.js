@@ -3,6 +3,7 @@
 import { html, raw, slugify } from "./html.js";
 import { TOPICS, SENIORITY, cityOf } from "./constants.js";
 import { todayKey, addDays } from "./dates.js";
+import { isPreview } from "./env.js";
 
 export const JOB_DAYS = 30;
 
@@ -143,7 +144,9 @@ export async function runJobMaintenance(db, { recheck = 8, fetcher = fetch } = {
 }
 
 let lastLazy = 0;
-export function lazyJobs(db, waitUntil) {
+// env is optional for older callers; pages pass it so a preview deployment never publishes or expires roles on a visit.
+export function lazyJobs(db, waitUntil, env = null) {
+  if (isPreview(env)) return;
   const now = Date.now();
   if (now - lastLazy < 600000) return;
   lastLazy = now;
