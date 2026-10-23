@@ -10,7 +10,7 @@ import { slugify } from "./html.js";
 const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph\w*)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems )security officer|physical security|corporate security|regional security|global security|event security|workplace security|workplace (?:&|and) security|real estate|safety (?:&|and) security|personal security|K9|cargo security|security (?:supervisor|assistant manager|shift|operator|officers|technology technician)|supervisor,? security|shift supervisor|concierge|trade compliance|security valuation|lecturer|professor|faculty|employee relations|political law|hackathon|solution consultant|success architect|customer engineering|escalations? engineer|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|account director|customer success|customer advocacy|business development|marketing|communications|public relations|public affairs|go[- ]to[- ]market|GTM|partnerships?|partner manager|evangelist|developer advocate|community manager|technical writer|content (?:writer|strategist|lead|marketer)|copywriter|demand generation|revenue|field CTO|recruiter|intern(?:ships?)?|industrial security|personnel security|PERSEC|security rep|ACSSO|AFSO|FSO|maritime security|treaty|join noblis|program security|special programs security|activity security|security representative|security cooperation|international security|security dispatch|dispatcher|security communication|sergeant|police|public safety|building security|security observation|TSCM|fire alarm|DC security|bancorp security|category manager|proposal|law enforcement|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", icims_classic: "iCIMS classic", successfactors: "SuccessFactors" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", icims_classic: "iCIMS classic", oracle: "Oracle Recruiting Cloud", successfactors: "SuccessFactors" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -335,7 +335,35 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, icims_classic: pullIcimsClassic };
+// Oracle Recruiting Cloud (Oracle HCM Candidate Experience: American Express, BNY, Delta Dental of California):
+// config { host, site } where host is the pod, such as eeho.fa.us2.oraclecloud.com, and site the CX site number from
+// the careers URL (/hcmUI/CandidateExperience/en/sites/CX_1/). The site's own pages read a public REST finder that
+// answers 25 requisitions a page with the total; paging stops at the total, a short page, or 200 rows.
+const ORACLE_PAGE = 25;
+export async function pullOracle(cfg, searchText, fetcher = getJson) {
+  const host = String(cfg.host || "").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const site = String(cfg.site || "CX_1");
+  const out = []; const seen = new Set();
+  for (let offset = 0; offset < 200; offset += ORACLE_PAGE) {
+    const finder = `findReqs;siteNumber=${site},keyword=${encodeURIComponent(searchText || "security")},limit=${ORACLE_PAGE},offset=${offset},sortBy=POSTING_DATES_DESC`;
+    const j = await fetcher(`https://${host}/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=${finder}`);
+    const block = j && Array.isArray(j.items) ? j.items[0] || { requisitionList: [] } : null;
+    if (!block || !Array.isArray(block.requisitionList || [])) throw new Error("unexpected response from Oracle Recruiting Cloud");
+    const list = block.requisitionList || [];
+    for (const x of list) {
+      const id = String(x.Id || x.RequisitionNumber || ""); if (!id || seen.has(id)) continue; seen.add(id);
+      if (!isOurRole(x.Title)) continue;
+      const loc = Array.from(new Set([x.PrimaryLocation, ...(x.secondaryLocations || []).map((l) => l && l.Name)].filter(Boolean))).join("; ");
+      const wp = String(x.WorkplaceTypeCode || x.WorkplaceType || "").toLowerCase();
+      out.push({ key: id, title: String(x.Title).trim(), url: `https://${host}/hcmUI/CandidateExperience/en/sites/${site}/job/${id}`, location: loc,
+        posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.PostedDate || "") ? x.PostedDate.slice(0, 10) : null, salary_text: payText(x.ShortDescriptionStr),
+        remote: /remote/.test(wp) ? "remote" : /hybrid/.test(wp) ? "hybrid" : inferRemote(loc) });
+    }
+    if (list.length < ORACLE_PAGE || offset + ORACLE_PAGE >= (Number(block.TotalJobsCount) || 0)) break;
+  }
+  return out;
+}
+export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, icims_classic: pullIcimsClassic, oracle: pullOracle };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
@@ -408,7 +436,7 @@ async function finish(db, src, run) {
 // to a subrequest budget. On Workers Paid (10,000 subrequests per invocation) the tick gives boards a budget of 300,
 // so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
-const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, icims_classic: 5 };
+const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, icims_classic: 5, oracle: 4 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40, deadline = null } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"

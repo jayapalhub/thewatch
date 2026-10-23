@@ -16,6 +16,8 @@ function largestArray(v, depth = 0) {
 }
 function reportedTotal(v) {
   if (!v || typeof v !== "object") return null;
+  // Oracle Recruiting Cloud first: its outer "count" is the number of search blocks (1), not of postings.
+  if (Array.isArray(v.items) && v.items[0] && typeof v.items[0].TotalJobsCount === "number") return v.items[0].TotalJobsCount;
   for (const k of ["total", "totalCount", "totalHits", "count", "totalJobs", "jobCount"]) if (typeof v[k] === "number") return v[k];
   for (const k of ["data", "meta", "refineSearch", "eagerLoadRefineSearch"]) if (v[k] && typeof v[k] === "object") { const t = reportedTotal(v[k]); if (t != null) return t; }
   return null;
@@ -33,7 +35,11 @@ export async function onRequestPost({ request, env }) {
       const res = await getJson(url, init);
       if (body.debug && r.calls === 1) r.first = (typeof res === "string" ? res : JSON.stringify(res)).replace(/\s+/g, " ").slice(0, 600);
       if (typeof res === "string") r.html_bytes += res.length;
-      else { r.raw += largestArray(res); const t = reportedTotal(res); if (t != null && r.total == null) r.total = t; }
+      else {
+        // Oracle Recruiting Cloud nests its postings one level down: items[0].requisitionList.
+        const orc = res && Array.isArray(res.items) && res.items[0] && Array.isArray(res.items[0].requisitionList) ? res.items[0].requisitionList.length : null;
+        r.raw += orc != null ? orc : largestArray(res); const t = reportedTotal(res); if (t != null && r.total == null) r.total = t;
+      }
       return res;
     };
     let cfg; try { cfg = JSON.parse(src.config || "{}"); } catch { cfg = {}; }

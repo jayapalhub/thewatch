@@ -1,0 +1,339 @@
+{
+  "pages": [
+    {
+      "items": [
+        {
+          "SearchId": 1,
+          "Keyword": "security",
+          "TotalJobsCount": 27,
+          "requisitionList": [
+            {
+              "Id": "300001",
+              "Title": "Senior Information Security Engineer",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "Protect member data. The salary range is $150,000 - $185,000.",
+              "secondaryLocations": [
+                {
+                  "Name": "Rancho Cordova, CA, United States",
+                  "CountryCode": "US"
+                },
+                {
+                  "Name": "San Diego, CA, United States",
+                  "CountryCode": "US"
+                }
+              ]
+            },
+            {
+              "Id": "300002",
+              "Title": "Sales Executive, Cyber Insurance",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "300003",
+              "Title": "Cyber Threat Intelligence Analyst",
+              "PostedDate": "2026-10-01T00:00:00+00:00",
+              "PrimaryLocation": "United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "Remote",
+              "WorkplaceTypeCode": "ORA_REMOTE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "300004",
+              "Title": "IT Audit Manager ",
+              "PostedDate": null,
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "Hybrid",
+              "WorkplaceTypeCode": "ORA_HYBRID",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310000",
+              "Title": "Claims Processor",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310001",
+              "Title": "Dental Hygienist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310002",
+              "Title": "Actuarial Analyst",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310003",
+              "Title": "Customer Service Representative",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310004",
+              "Title": "Benefits Specialist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310005",
+              "Title": "Claims Processor",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310006",
+              "Title": "Dental Hygienist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310007",
+              "Title": "Actuarial Analyst",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310008",
+              "Title": "Customer Service Representative",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310009",
+              "Title": "Benefits Specialist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310010",
+              "Title": "Claims Processor",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310011",
+              "Title": "Dental Hygienist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310012",
+              "Title": "Actuarial Analyst",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310013",
+              "Title": "Customer Service Representative",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310014",
+              "Title": "Benefits Specialist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310015",
+              "Title": "Claims Processor",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310016",
+              "Title": "Dental Hygienist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310017",
+              "Title": "Actuarial Analyst",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310018",
+              "Title": "Customer Service Representative",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310019",
+              "Title": "Benefits Specialist",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "310020",
+              "Title": "Claims Processor",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            }
+          ]
+        }
+      ],
+      "count": 1,
+      "hasMore": false,
+      "limit": 25,
+      "offset": 0
+    },
+    {
+      "items": [
+        {
+          "SearchId": 1,
+          "Keyword": "security",
+          "TotalJobsCount": 27,
+          "requisitionList": [
+            {
+              "Id": "300001",
+              "Title": "Senior Information Security Engineer",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "San Diego, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "WorkplaceType": "On-site",
+              "WorkplaceTypeCode": "ORA_ON_SITE",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": []
+            },
+            {
+              "Id": "300005",
+              "Title": "Privacy Analyst",
+              "PostedDate": "2026-10-15",
+              "PrimaryLocation": "Sacramento, CA, United States",
+              "PrimaryLocationCountry": "US",
+              "ShortDescriptionStr": "",
+              "secondaryLocations": [],
+              "RequisitionNumber": "R-5"
+            }
+          ]
+        }
+      ],
+      "count": 1,
+      "hasMore": false,
+      "limit": 25,
+      "offset": 0
+    }
+  ]
+}

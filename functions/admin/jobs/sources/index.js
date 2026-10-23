@@ -17,6 +17,7 @@ function boardUrl(s) {
   if (s.kind === "phenom" && c.host) return `https://${c.host}/${c.path || "us/en"}/search-results`;
   if (s.kind === "icims" && c.host) return `https://${c.host}/careers-home/jobs`;
   if (s.kind === "icims_classic" && c.host) return `https://${c.host}/jobs/search?ss=1`;
+  if (s.kind === "oracle" && c.host) return `https://${c.host}/hcmUI/CandidateExperience/en/sites/${c.site || "CX_1"}/requisitions`;
   if (s.kind === "successfactors" && c.host) return `https://${c.host}${c.base ? "/" + c.base : ""}/search/`;
   return "";
 }
@@ -49,7 +50,7 @@ export async function onRequestGet({ request, env, data }) {
       <label>Board<select name="kind">${Object.entries(SOURCE_KINDS).map(([k, v]) => html`<option value="${k}">${v}</option>`)}</select></label>
     </div>
     <div class="a-grid-2">
-      <label>Board details <small>(Workday: tenant, host, site from the URL tenant.host.myworkdayjobs.com/site, and a fourth value only when the API wants a different tenant name, such as osv_amerisure. Greenhouse or Ashby: the board name. Lever or SmartRecruiters: the company name. Eightfold: the careers host and the company domain it passes to its API. Radancy: the careers host. Phenom: the careers host, the locale path from its URLs such as us/en, and optionally a state name such as California to narrow big boards. iCIMS: the careers host of a careers-home portal. iCIMS classic: the portal host, such as careers-peraton.icims.com. SuccessFactors: the careers host and, when the site URLs carry one, the path prefix such as kus.)</small><input name="config" required maxlength="300" placeholder='icwgroup, wd5, ICW  or  sonyinteractiveentertainmentglobal  or  careers.qualcomm.com, qualcomm.com'></label>
+      <label>Board details <small>(Workday: tenant, host, site from the URL tenant.host.myworkdayjobs.com/site, and a fourth value only when the API wants a different tenant name, such as osv_amerisure. Greenhouse or Ashby: the board name. Lever or SmartRecruiters: the company name. Eightfold: the careers host and the company domain it passes to its API. Radancy: the careers host. Phenom: the careers host, the locale path from its URLs such as us/en, and optionally a state name such as California to narrow big boards. iCIMS: the careers host of a careers-home portal. iCIMS classic: the portal host, such as careers-peraton.icims.com. Oracle Recruiting Cloud: the pod host, such as eeho.fa.us2.oraclecloud.com, and the site number from the careers URL, such as CX_1. SuccessFactors: the careers host and, when the site URLs carry one, the path prefix such as kus.)</small><input name="config" required maxlength="300" placeholder='icwgroup, wd5, ICW  or  sonyinteractiveentertainmentglobal  or  careers.qualcomm.com, qualcomm.com'></label>
       <label>Location must include <small>(comma separated; any one is enough)</small><input name="location_terms" required maxlength="600" placeholder="San Diego, Carlsbad, Poway"></label>
     </div>
     <div class="a-grid-2">
@@ -68,6 +69,7 @@ function parseConfig(kind, text) {
   if (kind === "eightfold") { if (parts.length < 2) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""), company: parts[1].toLowerCase() }; }
   if (kind === "successfactors") { if (!parts.length) return null; const c = { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }; if (parts[1]) c.base = parts[1].replace(/^\/|\/$/g, ""); return c; }
   if (kind === "icims" || kind === "icims_classic") { if (!parts.length) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") }; }
+  if (kind === "oracle") { if (!parts.length) return null; return { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""), site: parts[1] || "CX_1" }; }
   if (kind === "phenom") { if (!parts.length) return null; const c = { host: parts[0].toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, ""), path: (parts[1] || "us/en").replace(/^\/|\/$/g, "") }; if (parts[2]) c.state = parts.slice(2).join(" "); return c; }
   if (!parts.length) return null;
   return kind === "lever" || kind === "smartrecruiters" ? { company: parts[0] } : { board: parts[0] };
