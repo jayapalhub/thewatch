@@ -152,7 +152,7 @@ export function parseIcal(text, defaultTz = TZ, { utcTzidIsLocal = false } = {})
 
 // ---------- ingest ----------
 export async function fetchText(url) {
-  const r = await fetch(url, { headers: { "User-Agent": "TheWatchFeedBot/1.0 (+https://bettersecurity.ai)" }, cf: { cacheTtl: 0 } });
+  const r = await fetch(url, { headers: { "User-Agent": "TheWatchFeedBot/1.0 (+https://bettersecurity.ai)" }, cf: { cacheTtl: 0 }, signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return await r.text();
 }

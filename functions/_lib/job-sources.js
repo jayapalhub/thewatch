@@ -65,7 +65,8 @@ function payText(html) { const m = strip(html).match(PAY_RE); if (!m) return nul
 
 export async function getJson(url, init = {}) {
   const { text, ...rest } = init;
-  const r = await fetch(url, { ...rest, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: text ? "text/html,application/json" : "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 } });
+  // A 15 second limit per request: one hung connection (a Workday tenant on 2026-10-23) otherwise stalls the whole hourly run.
+  const r = await fetch(url, { ...rest, headers: { "User-Agent": "TheWatchJobsBot/1.0 (+https://bettersecurity.ai/about)", Accept: text ? "text/html,application/json" : "application/json", ...(init.headers || {}) }, cf: { cacheTtl: 0 }, signal: rest.signal || AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return text ? r.text() : r.json(); // init.text: the caller wants the body as a string (HTML career pages)
 }
@@ -361,7 +362,7 @@ async function finish(db, src, run) {
 // so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
 const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3 };
-export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40 } = {}) {
+export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40, deadline = null } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"
     : "SELECT * FROM job_sources WHERE active=1 ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?";
@@ -373,6 +374,7 @@ export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, m
   for (const src of results) {
     const cost = REQUEST_COST[src.kind] || 8;
     if (out.length && spent + cost > budget) break;
+    if (out.length && deadline && Date.now() > deadline) break; // leave the rest for the next hour
     out.push(await runJobSource(db, src, { fetcher }));
     spent += cost;
   }
