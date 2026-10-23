@@ -135,12 +135,30 @@ export function dayList(events, { empty = "Nothing on the calendar yet for these
 
 export function longDate(e) { return fmtDateLong(e.start_at); }
 
+// The venue address as schema.org PostalAddress, so search engines get the street, city, state and ZIP as fields
+// rather than one string. Addresses are stored as text ("3650 N Nevada Ave, Colorado Springs, CO 80907"); this reads
+// them at render time. A trailing note in parentheses and "USA" are dropped. Leading parts become the street only from
+// the first part with a number on, so a neighborhood ("SoHo") or a note ("Address shared on registration") is not
+// passed off as a street. Text that does not end in a city and a two letter state is handed over as written.
+export function postalAddress(text) {
+  const t = String(text || "").replace(/\s*\([^)]*\)\s*$/, "").replace(/,?\s*(?:USA|U\.S\.A\.|United States)$/i, "").trim();
+  if (!t) return undefined;
+  const m = /^(?:(.*),\s*)?([^,]+?),\s*([A-Z]{2})(?:\s+(\d{5})(?:-\d{4})?)?$/.exec(t);
+  if (!m) return t;
+  const parts = (m[1] || "").split(",").map((x) => x.trim()).filter((x) => x && !/shared|registration|\bTB[AD]\b|confirm|undisclosed/i.test(x));
+  const first = parts.findIndex((x) => /\d/.test(x));
+  const street = first < 0 ? "" : parts.slice(first).join(", ");
+  return { "@type": "PostalAddress", streetAddress: street || undefined, addressLocality: m[2].trim(), addressRegion: m[3], postalCode: m[4] || undefined, addressCountry: "US" };
+}
+
 // Event structured data for search results: dates carry the zone offset, offers carry the price or free, the OG
 // image doubles as the event image. eventObject() is the bare object, used on its own page and in city lists.
 export function eventObject(e, siteUrl) {
   const tz = e.timezone || "America/Los_Angeles";
   const free = ["free", "members_free", "donation"].includes(e.cost_type);
   const offers = e.cost_type && e.cost_type !== "unknown" ? { "@type": "Offer", url: e.registration_url || `${siteUrl}${eventPath(e)}`, price: free ? 0 : (e.cost_min != null ? +e.cost_min : undefined), priceCurrency: "USD", availability: "https://schema.org/InStock", validFrom: e.published_at ? String(e.published_at).slice(0, 10) : undefined } : undefined;
+  const online = { "@type": "VirtualLocation", url: e.registration_url || `${siteUrl}${eventPath(e)}` };
+  const place = { "@type": "Place", name: e.venue_display || e.venue_name || undefined, address: postalAddress(e.venue_address_display || e.venue_address) };
   return {
     "@context": "https://schema.org", "@type": "Event", name: e.title,
     startDate: isoWithOffset(e.start_utc, tz) || e.start_at, endDate: isoWithOffset(e.end_utc, tz) || e.end_at || undefined,
@@ -150,7 +168,9 @@ export function eventObject(e, siteUrl) {
     image: e.slug ? `${siteUrl}/og/event/${e.slug}.png` : undefined,
     url: `${siteUrl}${eventPath(e)}`,
     organizer: e.org_name ? { "@type": "Organization", name: e.org_name, url: e.org_website || undefined } : undefined,
-    location: e.format === "virtual" ? { "@type": "VirtualLocation", url: e.registration_url || `${siteUrl}${eventPath(e)}` } : { "@type": "Place", name: e.venue_display || e.venue_name || undefined, address: e.venue_address_display || e.venue_address || undefined },
+    // A hybrid event has both a place and an online location, as Google asks for mixed attendance.
+    location: e.format === "virtual" ? online
+      : e.format === "hybrid" || e.also_virtual ? [place, online] : place,
     offers,
   };
 }
