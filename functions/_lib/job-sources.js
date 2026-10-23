@@ -156,7 +156,9 @@ async function workdayStillOpen(cfg, url, fetcher) {
   const m = String(url).match(/myworkdayjobs\.com\/(?:[a-z]{2}-[A-Z]{2}\/)?[^/]+(\/job\/.+)$/);
   if (!m) return true;
   try { const j = await fetcher(`https://${cfg.tenant}.${cfg.host}.myworkdayjobs.com/wday/cxs/${cfg.tenant}/${cfg.site}${m[1].split("?")[0]}`); return !!(j && j.jobPostingInfo); }
-  catch (e) { return !/HTTP 404/.test(String(e && e.message)); } // network trouble: keep it
+  // A removed posting answers 404, or 403 with Workday's S22 "permission denied" body (Ingram Micro, 2026-10-23: the
+  // careers page said the job no longer exists). Any other failure is network trouble or blocking: keep the role.
+  catch (e) { return !/HTTP 404|HTTP 410|HTTP 403 \(.*(?:S22|permission denied)/i.test(String(e && e.message)); }
 }
 export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
   const j = await fetcher(`https://boards-api.greenhouse.io/v1/boards/${cfg.board}/jobs?content=true`);

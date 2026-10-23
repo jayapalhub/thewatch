@@ -146,6 +146,8 @@ describe("Workday still open check", () => {
       { id: 62, source_key: "R3", title: "GRC Analyst", url: `${base}/External/job/San-Diego-CA/GRC-Analyst_R3` },
       { id: 63, source_key: "R4", title: "Privacy Analyst", url: `${base}/External/job/San-Diego-CA/Privacy-Analyst_R4` },
       { id: 64, source_key: "R5", title: "Threat Analyst", url: "https://example.test/careers/R5" },
+      { id: 65, source_key: "R6", title: "Cyber Risk Analyst", url: `${base}/External/job/San-Diego-CA/Risk-Analyst_R6` },
+      { id: 66, source_key: "R7", title: "IT Audit Manager", url: `${base}/External/job/San-Diego-CA/Audit-Analyst_R7` },
     ]);
     const fetcher = recordingFetcher((url, init, body) => {
       if (body) return { total: 0, jobPostings: [] };
@@ -153,6 +155,8 @@ describe("Workday still open check", () => {
       if (url.endsWith("_R2")) throw new Error("HTTP 404");
       if (url.endsWith("_R3")) throw new Error("network connection lost");
       if (url.endsWith("_R4")) return {};
+      if (url.endsWith("_R6")) throw new Error('HTTP 403 ({"errorCode":"S22","errorCaseId":"0191","httpStatus":403,"message":"permission denied"})');
+      if (url.endsWith("_R7")) throw new Error("HTTP 403 (Access denied by firewall)");
       throw new Error("unexpected " + url);
     });
     const run = await runJobSource(db, src, { fetcher, now: NOW });
@@ -162,10 +166,12 @@ describe("Workday still open check", () => {
       `${base}/wday/cxs/examplecorp/External/job/San-Diego-CA/Security-Analyst_R2`,
       `${base}/wday/cxs/examplecorp/External/job/San-Diego-CA/GRC-Analyst_R3`,
       `${base}/wday/cxs/examplecorp/External/job/San-Diego-CA/Privacy-Analyst_R4`,
+      `${base}/wday/cxs/examplecorp/External/job/San-Diego-CA/Risk-Analyst_R6`,
+      `${base}/wday/cxs/examplecorp/External/job/San-Diego-CA/Audit-Analyst_R7`,
     ]);
-    assert.deepEqual(updatesTo(db, /SET status='closed'/), [61, 63]); // 404 and an answer without jobPostingInfo
-    assert.deepEqual(updatesTo(db, /UPDATE jobs SET last_checked_at/), [60, 62, 64]); // open, network trouble, not a Workday URL
-    assert.equal(run.closed, 2);
+    assert.deepEqual(updatesTo(db, /SET status='closed'/), [61, 63, 65]); // 404, an answer without jobPostingInfo, Workday's S22 403
+    assert.deepEqual(updatesTo(db, /UPDATE jobs SET last_checked_at/), [60, 62, 64, 66]); // open, network trouble, not a Workday URL, a firewall 403
+    assert.equal(run.closed, 3);
   });
 
   test("checks at most twelve roles per run and leaves the rest for the next one", async () => {
