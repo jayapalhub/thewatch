@@ -93,18 +93,26 @@ export function parseBrightTalk(xml) {
 // ---------- iCal ----------
 function unfold(text) { return String(text).replace(/\r\n/g, "\n").replace(/\n[ \t]/g, ""); }
 function icsUnescape(s) { return String(s || "").replace(/\\n/gi, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\"); }
-function parseIcsDate(value, params, defaultTz) {
+// Some sites export an event with TZID=UTC+0 when the organizer left the event's time zone at UTC but typed local wall
+// clock times (seen on wicys.org: an 11:30 am San Diego meetup exported as 11:30 UTC). For these hosts a UTC TZID is read
+// as the feed's own time zone. A trailing Z, or a UTC TZID from any other host, is still read as UTC.
+const UTC_TZID_IS_LOCAL_HOSTS = ["www.wicys.org", "wicys.org"];
+const hostOf = (u) => { try { return new URL(u).hostname; } catch { return ""; } };
+const UTC_TZID = /^(?:UTC|GMT|Etc\/UTC|Etc\/GMT)(?:[+-]0{1,2}(?::?00)?)?$/i;
+function parseIcsDate(value, params, defaultTz, utcTzidIsLocal = false) {
   // 20261105T160000Z | 20261105T110000 (with TZID or floating) | 20261105 (all day)
   const m = String(value).match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
   if (!m) return null;
   if (!m[4]) return { allDay: true, date: `${m[1]}-${m[2]}-${m[3]}` };
   const iso = `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6] || "00"}`;
   if (m[7] === "Z") return { utc: new Date(`${iso}Z`) };
-  const tz = (params.match(/TZID=([^;:]+)/) || [])[1] || defaultTz;
-  const d = toUtc(iso, tz.replace(/^"|"$/g, ""));
+  let tz = ((params.match(/TZID=([^;:]+)/) || [])[1] || defaultTz).replace(/^"|"$/g, "");
+  if (UTC_TZID.test(tz)) tz = utcTzidIsLocal ? defaultTz : "UTC";
+  let d = null;
+  try { d = toUtc(iso, tz); } catch { d = toUtc(iso, defaultTz); } // an unknown TZID falls back to the feed's zone instead of failing the feed
   return d ? { utc: d } : null;
 }
-export function parseIcal(text, defaultTz = TZ) {
+export function parseIcal(text, defaultTz = TZ, { utcTzidIsLocal = false } = {}) {
   const out = [];
   const blocks = unfold(text).split("BEGIN:VEVENT").slice(1);
   for (const b of blocks) {
@@ -116,9 +124,9 @@ export function parseIcal(text, defaultTz = TZ) {
       const name = left.split(";")[0].toUpperCase();
       props[name] = { params: left.slice(name.length), value: val };
     }
-    const ds = props.DTSTART && parseIcsDate(props.DTSTART.value, props.DTSTART.params, defaultTz);
+    const ds = props.DTSTART && parseIcsDate(props.DTSTART.value, props.DTSTART.params, defaultTz, utcTzidIsLocal);
     if (!ds || ds.allDay) continue; // no confirmed start time
-    const de = props.DTEND && parseIcsDate(props.DTEND.value, props.DTEND.params, defaultTz);
+    const de = props.DTEND && parseIcsDate(props.DTEND.value, props.DTEND.params, defaultTz, utcTzidIsLocal);
     const endUtc = de && de.utc ? de.utc : new Date(ds.utc.getTime() + 3600000);
     const desc = stripHtml(icsUnescape(props.DESCRIPTION?.value || "")).replace(/^[^\n]{0,80}\n+(?=#+\s|\S)/, (m) => (/meetup|group|chapter/i.test(m) ? "" : m)).replace(/^#+\s*/gm, "").trim();
     let location = icsUnescape(props.LOCATION?.value || "").trim();
@@ -215,7 +223,7 @@ export async function runSource(db, src, { now = new Date() } = {}) {
   let items = [];
   try {
     if (src.kind === "sans") items = await fetchSans(src.url, now);
-    else { const text = await fetchText(src.url); items = src.kind === "brighttalk" ? parseBrightTalk(text) : parseIcal(text, src.timezone || TZ); }
+    else { const text = await fetchText(src.url); items = src.kind === "brighttalk" ? parseBrightTalk(text) : parseIcal(text, src.timezone || TZ, { utcTzidIsLocal: UTC_TZID_IS_LOCAL_HOSTS.includes(hostOf(src.url)) }); }
   } catch (e) {
     stats.error = String(e && e.message || e);
     await logRun(db, src, stats);
