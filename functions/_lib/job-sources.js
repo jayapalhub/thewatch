@@ -78,7 +78,52 @@ export async function getJson(url, init = {}) {
 const ENT = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", ndash: "\u2013", mdash: "\u2014", rsquo: "\u2019", lsquo: "\u2018", rdquo: "\u201d", ldquo: "\u201c" };
 function decodeEntities(t) { return String(t).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => e[0] === "#" ? String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)) : (ENT[e.toLowerCase()] ?? m)); }
 
-// ---------- adapters: each returns [{ key, title, url, location, posted_at (YYYY-MM-DD or null), salary_text, remote }] ----------
+// The opening of an employer's description for the role page. Most descriptions start with the company's pitch, so in
+// order: the text under a role heading ("Purpose of the Job", "Job Summary", "About the Role"), then the first paragraph
+// that talks about the role ("you will", "this position"), then the start of the text. Whole sentences up to about 420
+// characters; null when nothing qualifies, so a page never shows a fragment cut mid sentence.
+const EXCERPT_MAX = 420;
+const ROLE_HEADING = /^(?:purpose of (?:the|this) (?:job|role|position)|(?:job|position|role) (?:summary|overview|description|purpose)|about (?:the|this) (?:role|job|position|opportunity)|(?:the|your) (?:role|opportunity)|overview(?: of (?:the|this) role)?|summary|what you(?:'|\u2019)ll (?:do|be doing)|what you will (?:do|be doing)|your day[- ]to[- ]day|day[- ]to[- ]day|in this role|your impact|the impact you(?:'|\u2019)ll have|(?:key |primary |job |role )?responsibilities|essential (?:duties|functions)(?: and responsibilities)?)$/i;
+const ROLE_PROSE = /\b(?:you will|you(?:'|\u2019)ll|this role|the role|this position|the position|responsible for|(?:is|are|we(?:'|\u2019)re) (?:seeking|looking for)|seeks an?)\b/i;
+const LEAD_IN = /\b(?:about (?:the|this) (?:role|job|position|opportunity)|(?:job|position|role) (?:summary|overview|description|purpose)|the (?:role|opportunity)|what you(?:'|\u2019)ll do|your role)\s*:?\s*/gi;
+function htmlText(h) {
+  return decodeEntities(String(h).replace(/<\/li>/gi, ". ").replace(/<\/(?:p|div|h[1-6]|ul|ol)>|<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ").replace(/\s+([.,;:!?])/g, "$1").replace(/([.!?:;])(?:\s*\.)+/g, "$1").trim();
+}
+function wholeSentences(t) {
+  if (!t || t.length < 60) return null;
+  if (t.length <= EXCERPT_MAX && /[.!?]$/.test(t)) return t;
+  const ends = [...t.slice(0, 600).matchAll(/[.!?](?=\s+[A-Z(])/g)].map((m) => m.index + 1).filter((i) => i >= 120);
+  if (!ends.length) return null;
+  const within = ends.filter((i) => i <= EXCERPT_MAX);
+  return t.slice(0, within.length ? within[within.length - 1] : ends[0]).trim();
+}
+export function excerptOf(raw) {
+  let h = String(raw || "");
+  if (/&lt;\/?[a-z]/i.test(h)) h = decodeEntities(h); // Greenhouse sends escaped HTML
+  if (/<[a-z][^>]*>/i.test(h)) {
+    for (const m of h.matchAll(/<(h[1-6]|strong|b)\b[^>]*>([\s\S]{1,160}?)<\/\1>/gi)) {
+      if (!ROLE_HEADING.test(htmlText(m[2]).replace(/[.:]+$/, "").trim())) continue;
+      const rest = h.slice(m.index + m[0].length, m.index + m[0].length + 5000);
+      const next = rest.search(/<h[1-6]\b|<p\b[^>]*>\s*<(?:strong|b)\b/i); // the section ends at the next heading
+      const out = wholeSentences(htmlText(next > 0 ? rest.slice(0, next) : rest));
+      if (out) return out;
+    }
+    for (const m of h.slice(0, 8000).matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
+      const t = htmlText(m[1]);
+      if (t.length >= 80 && ROLE_PROSE.test(t)) { const out = wholeSentences(t); if (out) return out; }
+    }
+    h = htmlText(h);
+  }
+  let t = decodeEntities(h).replace(/\s+/g, " ").trim();
+  for (const m of t.slice(0, 1500).matchAll(LEAD_IN)) {
+    const at = m.index + m[0].length; // a heading, not prose: the next word starts with a capital
+    if (/^[A-Z]/.test(t.slice(at, at + 1))) { t = t.slice(at); break; }
+  }
+  return wholeSentences(t);
+}
+
+// ---------- adapters: each returns [{ key, title, url, location, posted_at (YYYY-MM-DD or null), salary_text, remote, excerpt }] ----------
 const WORKDAY_MAX_DETAILS = 25; // detail fetches per run; a Worker invocation has a small subrequest budget
 
 export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []) {
@@ -99,7 +144,7 @@ export async function pullWorkday(cfg, searchText, fetcher = getJson, terms = []
       try { info = (await fetcher(`${base}/wday/cxs/${cfg.tenant}/${cfg.site}${p.externalPath}`)).jobPostingInfo || {}; } catch { continue; }
       const locs = [info.location, ...(info.additionalLocations || [])].filter(Boolean).join("; ") || p.locationsText || "";
       out.push({ key: info.jobReqId || (p.bulletFields || [])[0] || p.externalPath, title: info.title || p.title, url: info.externalUrl || `${base}/${cfg.site}${p.externalPath}`,
-        location: locs, posted_at: /^\d{4}-\d{2}-\d{2}$/.test(info.startDate || "") ? info.startDate : null, salary_text: payText(info.jobDescription), remote: inferRemote(locs) });
+        location: locs, posted_at: /^\d{4}-\d{2}-\d{2}$/.test(info.startDate || "") ? info.startDate : null, salary_text: payText(info.jobDescription), remote: inferRemote(locs), excerpt: excerptOf(info.jobDescription) });
     }
     if (list.length < 20 || offset + 20 >= (page.total || 0)) break;
   }
@@ -118,8 +163,13 @@ export async function pullGreenhouse(cfg, _search, fetcher = getJson) {
   if (!j || !Array.isArray(j.jobs)) throw new Error("unexpected response from Greenhouse");
   return (j.jobs || []).filter((x) => isOurRole(x.title)).map((x) => {
     const loc = (x.location && x.location.name) || (x.offices || []).map((o) => o.name).join("; ");
-    return { key: String(x.id), title: x.title, url: x.absolute_url, location: loc, posted_at: (x.updated_at || "").slice(0, 10) || null, salary_text: payText(x.content), remote: inferRemote(loc) };
+    return { key: String(x.id), title: x.title, url: x.absolute_url, location: loc, posted_at: (x.updated_at || "").slice(0, 10) || null, salary_text: payText(x.content), remote: inferRemote(loc), excerpt: excerptOf(x.content) };
   });
+}
+// Lever splits the company opening from the role text (descriptionBody) and keeps duties in titled lists.
+function leverExcerpt(x) {
+  const lists = (x.lists || []).map((l) => `<h3>${l.text || ""}</h3><ul>${l.content || ""}</ul>`).join("");
+  return excerptOf(x.descriptionBody) || excerptOf(lists) || excerptOf(x.description || x.descriptionPlain);
 }
 export async function pullLever(cfg, _search, fetcher = getJson) {
   const j = await fetcher(`https://api.${cfg.region === "eu" ? "eu." : ""}lever.co/v0/postings/${cfg.company}?mode=json`); // {"region":"eu"} for jobs.eu.lever.co boards
@@ -128,7 +178,7 @@ export async function pullLever(cfg, _search, fetcher = getJson) {
     const c = x.categories || {}; const loc = Array.from(new Set([c.location, ...(c.allLocations || [])].filter(Boolean))).join("; ");
     const wp = (x.workplaceType || "").toLowerCase();
     const title = String(x.text || "").replace(/\s*\((?:R|REQ|JR)?[-\s]?\d{3,}\)\s*$/i, "").trim(); // "(R5824)" requisition codes
-    return { key: x.id, title, url: x.hostedUrl, location: loc, posted_at: x.createdAt ? new Date(x.createdAt).toISOString().slice(0, 10) : null, salary_text: payText(x.descriptionPlain || x.description), remote: wp === "remote" ? "remote" : wp === "hybrid" ? "hybrid" : inferRemote(loc) };
+    return { key: x.id, title, url: x.hostedUrl, location: loc, posted_at: x.createdAt ? new Date(x.createdAt).toISOString().slice(0, 10) : null, salary_text: payText(x.descriptionPlain || x.description), remote: wp === "remote" ? "remote" : wp === "hybrid" ? "hybrid" : inferRemote(loc), excerpt: leverExcerpt(x) };
   });
 }
 export async function pullAshby(cfg, _search, fetcher = getJson) {
@@ -137,7 +187,7 @@ export async function pullAshby(cfg, _search, fetcher = getJson) {
   return (j.jobs || []).filter((x) => isOurRole(x.title)).map((x) => {
     const loc = [x.location, ...(x.secondaryLocations || []).map((l) => l.location)].filter(Boolean).join("; ");
     const comp = x.compensation && x.compensation.compensationTierSummary;
-    return { key: x.id, title: x.title, url: x.jobUrl, location: loc, posted_at: (x.publishedAt || "").slice(0, 10) || null, salary_text: comp && /\$/.test(comp) ? comp : payText(x.descriptionHtml), remote: x.isRemote ? (loc && !/remote/i.test(loc) ? "hybrid" : "remote") : inferRemote(loc) };
+    return { key: x.id, title: x.title, url: x.jobUrl, location: loc, posted_at: (x.publishedAt || "").slice(0, 10) || null, salary_text: comp && /\$/.test(comp) ? comp : payText(x.descriptionHtml), remote: x.isRemote ? (loc && !/remote/i.test(loc) ? "hybrid" : "remote") : inferRemote(loc), excerpt: excerptOf(x.descriptionHtml || x.descriptionPlain) };
   });
 }
 // Eightfold career sites (careers.qualcomm.com and many others): config { host, company } where company is the
@@ -154,7 +204,7 @@ export async function pullEightfold(cfg, searchText, fetcher = getJson, terms = 
   }
   return out.filter((p) => isOurRole(p.name)).map((p) => {
     const locs = Array.isArray(p.locations) ? p.locations.join("; ") : String(p.location || "");
-    return { key: String(p.id), title: p.name, url: `https://${cfg.host}${p.positionUrl || "/careers/job/" + p.id}`, location: locs, posted_at: p.postedTs ? new Date(p.postedTs * 1000).toISOString().slice(0, 10) : null, salary_text: null, remote: p.workLocationOption === "remote" ? "remote" : p.workLocationOption === "hybrid" ? "hybrid" : inferRemote(locs) };
+    return { key: String(p.id), title: p.name, url: `https://${cfg.host}${p.positionUrl || "/careers/job/" + p.id}`, location: locs, posted_at: p.postedTs ? new Date(p.postedTs * 1000).toISOString().slice(0, 10) : null, salary_text: null, remote: p.workLocationOption === "remote" ? "remote" : p.workLocationOption === "hybrid" ? "hybrid" : inferRemote(locs), excerpt: null };
   });
 }
 // SmartRecruiters public postings API: config { company } (the identifier in careers.smartrecruiters.com/<company>).
@@ -164,7 +214,7 @@ export async function pullSmartRecruiters(cfg, searchText, fetcher = getJson) {
   if (!j || !Array.isArray(j.content)) throw new Error("unexpected response from SmartRecruiters");
   return j.content.filter((x) => isOurRole(x.name)).map((x) => {
     const l = x.location || {}; const loc = [l.city, l.region, l.country].filter(Boolean).join(", ");
-    return { key: String(x.id), title: x.name, url: `https://jobs.smartrecruiters.com/${cfg.company}/${x.id}`, location: loc, posted_at: (x.releasedDate || "").slice(0, 10) || null, salary_text: null, remote: l.remote ? "remote" : inferRemote(loc) };
+    return { key: String(x.id), title: x.name, url: `https://jobs.smartrecruiters.com/${cfg.company}/${x.id}`, location: loc, posted_at: (x.releasedDate || "").slice(0, 10) || null, salary_text: null, remote: l.remote ? "remote" : inferRemote(loc), excerpt: null };
   });
 }
 // Radancy career sites (jobs.intuit.com, jobs.paloaltonetworks.com and many others): config { host }. The site's own
@@ -191,7 +241,7 @@ export async function pullRadancy(cfg, searchText, fetcher = getJson) {
       const after = html.slice(re.lastIndex, re.lastIndex + 800).split(/<li\b/i)[0];
       const loc = clean((/class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(inner) || /class="job-location"[^>]*>([\s\S]*?)<\/span>/i.exec(after) || [])[1]);
       if (!title || !isOurRole(title)) continue;
-      out.push({ key: String(id), title, url: `https://${cfg.host}${m[2].split("?")[0]}`, location: loc, posted_at: null, salary_text: null, remote: inferRemote(loc) });
+      out.push({ key: String(id), title, url: `https://${cfg.host}${m[2].split("?")[0]}`, location: loc, posted_at: null, salary_text: null, remote: inferRemote(loc), excerpt: null });
     }
     if (!added) break; // no new rows on this page: the list is exhausted
   }
@@ -214,7 +264,7 @@ export async function pullPhenom(cfg, searchText, fetcher = getJson) {
       const id = String(x.jobId || x.reqId || ""); if (!id || seen.has(id)) continue; seen.add(id);
       if (!isOurRole(x.title)) continue;
       const loc = Array.isArray(x.multi_location) && x.multi_location.length > 1 ? x.multi_location.join("; ") : (x.location || x.cityStateCountry || x.cityState || "");
-      out.push({ key: id, title: x.title, url: `https://${cfg.host}/${path}/job/${id}`, location: loc, posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.postedDate || "") ? x.postedDate.slice(0, 10) : null, salary_text: payText(x.descriptionTeaser), remote: String(x.checkRemote) === "true" ? (loc ? "hybrid" : "remote") : inferRemote(loc) });
+      out.push({ key: id, title: x.title, url: `https://${cfg.host}/${path}/job/${id}`, location: loc, posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.postedDate || "") ? x.postedDate.slice(0, 10) : null, salary_text: payText(x.descriptionTeaser), remote: String(x.checkRemote) === "true" ? (loc ? "hybrid" : "remote") : inferRemote(loc), excerpt: excerptOf(x.descriptionTeaser) });
     }
     if (jobs.length < 50 || from + 50 >= (rs.totalHits || 0)) break;
   }
@@ -235,7 +285,7 @@ export async function pullIcims(cfg, searchText, fetcher = getJson) {
       if (!isOurRole(x.title)) continue;
       const loc = x.full_location || x.short_location || [x.city, x.state].filter(Boolean).join(", ");
       const canonical = x.meta_data && x.meta_data.canonical_url ? String(x.meta_data.canonical_url).split("?")[0] : `https://${cfg.host}/jobs/${id}`;
-      out.push({ key: id, title: x.title, url: canonical, location: loc, posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.posted_date || "") ? x.posted_date.slice(0, 10) : null, salary_text: payText(x.description), remote: inferRemote(loc) });
+      out.push({ key: id, title: x.title, url: canonical, location: loc, posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.posted_date || "") ? x.posted_date.slice(0, 10) : null, salary_text: payText(x.description), remote: inferRemote(loc), excerpt: excerptOf(x.description) });
     }
     if (jobs.length < 100) break;
   }
@@ -255,7 +305,7 @@ function sfDate(s) {
 export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   const base = `https://${cfg.host}${cfg.base ? "/" + String(cfg.base).replace(/^\/|\/$/g, "") : ""}`;
   const out = []; const seen = new Set();
-  const push = (id, title, url, loc, posted) => { if (!id || seen.has(id)) return; seen.add(id); if (!isOurRole(title)) return; out.push({ key: String(id), title, url, location: loc, posted_at: posted, salary_text: null, remote: inferRemote(loc) }); };
+  const push = (id, title, url, loc, posted) => { if (!id || seen.has(id)) return; seen.add(id); if (!isOurRole(title)) return; out.push({ key: String(id), title, url, location: loc, posted_at: posted, salary_text: null, remote: inferRemote(loc), excerpt: null }); };
   const body = (pageNumber) => JSON.stringify({ locale: "en_US", pageNumber, sortBy: "", keywords: searchText || "security", location: "", facetFilters: {}, brand: "", skills: [], categoryId: 0, alertId: "", rcmCandidateId: "" });
   // Newer sites: JSON. A classic site answers this with an HTML page (or 404), which is the cue to fall back.
   let json = null;
@@ -314,7 +364,7 @@ export async function pullOracle(cfg, searchText, fetcher = getJson) {
       const wp = String(x.WorkplaceTypeCode || x.WorkplaceType || "").toLowerCase();
       out.push({ key: String(x.Id), title: x.Title, url: `https://${cfg.host}/hcmUI/CandidateExperience/en/sites/${site}/job/${x.Id}`, location: loc,
         posted_at: /^\d{4}-\d{2}-\d{2}/.test(x.PostedDate || "") ? x.PostedDate.slice(0, 10) : null, salary_text: null,
-        remote: /remote/.test(wp) ? "remote" : /hybrid/.test(wp) ? "hybrid" : inferRemote(loc) });
+        remote: /remote/.test(wp) ? "remote" : /hybrid/.test(wp) ? "hybrid" : inferRemote(loc), excerpt: excerptOf(x.ShortDescriptionStr || x.ExternalResponsibilitiesStr) });
     }
     if (list.length < 25 || offset + 25 >= ((block && block.TotalJobsCount) || 0)) break;
   }
@@ -348,12 +398,12 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
       if (twin) { seen.add(String(it.key)); run.skipped++; continue; }
     }
     if (existing) {
-      if (["published", "pending_review"].includes(existing.status)) await db.prepare("UPDATE jobs SET salary_text=COALESCE(?, salary_text), posted_at=COALESCE(posted_at, ?), last_checked_at=datetime('now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(it.salary_text, it.posted_at, existing.id).run();
+      if (["published", "pending_review"].includes(existing.status)) await db.prepare("UPDATE jobs SET salary_text=COALESCE(?, salary_text), posted_at=COALESCE(posted_at, ?), excerpt=COALESCE(excerpt, ?), last_checked_at=datetime('now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(it.salary_text, it.posted_at, it.excerpt || null, existing.id).run();
       continue;
     }
-    await db.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, seniority, topics, salary_text, posted_at, status, hold, auto_publish_at, source, source_id, source_key, reviewer_notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,'pending_review',0,?,'sweep',?,?,?)`)
-      .bind(src.city, src.organization_id, src.employer_name, String(it.title).slice(0, 140), url, String(it.location || "").slice(0, 120) || null, it.remote, inferSeniority(it.title), JSON.stringify(inferTopics(it.title)), it.salary_text, it.posted_at,
+    await db.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, seniority, topics, salary_text, posted_at, excerpt, status, hold, auto_publish_at, source, source_id, source_key, reviewer_notes)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending_review',0,?,'sweep',?,?,?)`)
+      .bind(src.city, src.organization_id, src.employer_name, String(it.title).slice(0, 140), url, String(it.location || "").slice(0, 120) || null, it.remote, inferSeniority(it.title), JSON.stringify(inferTopics(it.title)), it.salary_text, it.posted_at, it.excerpt || null,
         autoPublishAt(24, now), src.id, String(it.key), `From the ${SOURCE_KINDS[src.kind]} board on ${now.toISOString().slice(0, 10)}. Publishes in 24 hours unless held.`).run();
     run.added++;
   }

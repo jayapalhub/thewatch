@@ -167,3 +167,16 @@ test("edge cache: a role page is cached like other public pages, the apply redir
   assert.ok(puts.includes(PATH));
   assert.ok(!puts.includes("/go/j/42"));
 });
+
+test("excerpt: shown under the employer's name and leading the JobPosting description; absent when the board gave none", async () => {
+  const excerpt = "You will lead the GRC program across SOC 2 and ISO 27001. You will partner with engineering on control design.";
+  const { body } = await render(PATH, withJob({ ...JOB, excerpt }));
+  assert.match(body, /<section class="job-excerpt"><h2>From Example Co's posting<\/h2><p>You will lead the GRC program/);
+  assert.match(body, /The rest of the description and the application/);
+  const [posting] = ldBlocks(body).filter((b) => b["@type"] === "JobPosting");
+  assert.ok(posting.description.startsWith(excerpt), posting.description);
+  assert.match(posting.description, /rest of the description and application are on Example Co's own careers page/);
+  const plain = await render(PATH, withJob({ ...JOB, excerpt: null }));
+  assert.doesNotMatch(plain.body, /job-excerpt/);
+  assert.match(plain.body, /The full description and the application/);
+});

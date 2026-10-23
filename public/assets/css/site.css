@@ -453,6 +453,9 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .jobs-fine { margin-top: 22px; color: var(--muted); font-size: .85rem; }
 .job-page h1 { margin-bottom: 4px; }
 .job-employer { margin: 0 0 10px; font-size: 1.1rem; font-weight: 700; color: var(--muted); }
+.job-excerpt { margin: 4px 0 22px; }
+.job-excerpt h2 { font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 6px; }
+.job-excerpt p { margin: 0; line-height: 1.6; }
 @media (max-width: 560px) { .job-row { grid-template-columns: 1fr; } .job-apply { justify-self: start; } }
 
 /* CPE log */
