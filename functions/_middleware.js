@@ -1,5 +1,6 @@
 import { loadCities } from "./_lib/constants.js";
 import { meterDB, noteRequest, flushUsage, alertOnce } from "./_lib/ops.js";
+import { isPreview, rememberEnvironment } from "./_lib/env.js";
 
 // Runs before every function.
 // 1. Public pages are cached at the edge for a few minutes, so crawlers and repeat visitors do not each cost a set of
@@ -10,6 +11,9 @@ import { meterDB, noteRequest, flushUsage, alertOnce } from "./_lib/ops.js";
 //    a Cloudflare error screen.
 // 3. Keeps the city list in step with the D1 cities table and sets the security headers that public/_headers only
 //    applies to static files. The embed pages are the one place framing is allowed.
+// 4. Preview deployments (ENVIRONMENT = "preview", see docs/environments.md) must never be indexed or mistaken for the
+//    live site: every response carries X-Robots-Tag: noindex, nofollow, /robots.txt disallows everything, and nothing
+//    is put in or read from the edge cache, so a preview never serves or leaves behind a cached copy.
 const FRESH_SECONDS = 300;
 const STALE_SECONDS = 172800; // two days
 const PRIVATE = /^\/(admin|api|go|r|profile|unsubscribe|resubscribe|remind|cpe|subscribe|submit|casestudy)(\/|$)/;
@@ -33,17 +37,24 @@ function withHeaders(res, path, extra = {}) {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
-function notice(path) {
+const PREVIEW_HEADERS = { "X-Robots-Tag": "noindex, nofollow" };
+const PREVIEW_ROBOTS = "User-agent: *\nDisallow: /\n";
+
+function notice(path, extra = {}) {
   const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>The Watch</title>
 <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f7f8fa;color:#14213d;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center}main{max-width:520px;padding:32px 24px;text-align:center}h1{font-size:1.4rem;margin:0 0 12px}p{line-height:1.6;color:#3d4a63}</style></head>
 <body><main><h1>The Watch is taking a short break</h1><p>The calendar is temporarily unavailable while we catch up. Please check back in a little while. Thank you for your patience.</p></main></body></html>`;
-  return withHeaders(new Response(body, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "900", "Cache-Control": "no-store" } }), path);
+  return withHeaders(new Response(body, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Retry-After": "900", "Cache-Control": "no-store" } }), path, extra);
 }
 
 export async function onRequest(context) {
   const { request } = context;
   const path = new URL(request.url).pathname;
-  const useCache = cacheable(request, path) && typeof caches !== "undefined";
+  const preview = isPreview(context.env);
+  rememberEnvironment(context.env);
+  const extra = preview ? PREVIEW_HEADERS : {};
+  if (preview && path === "/robots.txt") return withHeaders(new Response(PREVIEW_ROBOTS, { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } }), path, extra);
+  const useCache = !preview && cacheable(request, path) && typeof caches !== "undefined";
   const cache = useCache ? caches.default : null;
 
   if (cache) {
@@ -77,12 +88,12 @@ export async function onRequest(context) {
     }
     if (!res || request.method === "GET") {
       const accept = request.headers.get("accept") || "";
-      if (!res || accept.includes("text/html")) return notice(path);
+      if (!res || accept.includes("text/html")) return notice(path, extra);
     }
-    return withHeaders(res, path);
+    return withHeaders(res, path, extra);
   }
 
-  const out = withHeaders(res, path);
+  const out = withHeaders(res, path, extra);
   // The only cookie a public page sets is the remembered city (watch_city); that one is dropped from the cached copy.
   const cookies = res.headers.get("set-cookie") || "";
   const onlyCityCookie = !cookies || cookies.split(/,(?=\s*[A-Za-z_]+=)/).every((c) => /^\s*watch_city=/.test(c));

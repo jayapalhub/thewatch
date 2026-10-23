@@ -3,6 +3,12 @@
 // never send email, post anywhere or run the background jobs that pages trigger on visit, so those paths ask here first.
 export function isPreview(env) { return String((env && env.ENVIRONMENT) || "").toLowerCase() === "preview"; }
 
+// ENVIRONMENT is the same for every request a deployment serves, so the middleware records it here once and code
+// that has no env of its own (the shared page layout) can ask. Tests call rememberEnvironment directly.
+let current = null;
+export function rememberEnvironment(env) { current = env || null; }
+export function previewRuntime() { return isPreview(current); }
+
 // One line in the deployment log for each thing a preview would have sent, with no recipients or bodies.
 export function previewSkip(what, detail = "") {
   console.log(`preview: skipped ${what}${detail ? ` (${detail})` : ""}`);

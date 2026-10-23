@@ -41,6 +41,11 @@ small { color: var(--muted); }
 
 /* Header */
 .site-header { background: var(--navy); color: var(--white); position: sticky; top: 0; z-index: 50; }
+/* Preview deployments only: a thin bar pinned above the header; the sticky header and day labels move down under it. */
+.preview-bar { position: sticky; top: 0; z-index: 60; height: 30px; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 12px; background: var(--warn-bg); color: var(--warn-ink); font-size: .82rem; font-weight: 600; text-align: center; border-bottom: 1px solid #F1D9B5; }
+.preview-bar a { color: var(--warn-ink); font-weight: 700; }
+body.preview .site-header { top: 30px; }
+body.preview .day-head { top: 106px; }
 .header-row { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: 16px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--white); }
 .brand-text { display: flex; flex-direction: column; line-height: 1; }

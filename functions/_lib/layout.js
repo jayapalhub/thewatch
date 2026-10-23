@@ -1,5 +1,6 @@
 import { html, raw } from "./html.js";
 import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS, cityListText } from "./constants.js";
+import { previewRuntime } from "./env.js";
 
 export const SHIELD_PATH = "M12699.99 19504.82l-4476.78 -2847.86c-440.67,-280.35 -871.71,-817.92 -871.71,-1701.16l0 -6890.42 5348.49 -2170.18 5348.48 2170.18 0 6890.42c0,883.24 -431.04,1420.81 -871.71,1701.16l-4476.77 2847.86zm0 -2838.35l2953.65 -1878.91 0 -1261.73 -1771.64 -1083.78 1771.64 -1083.74 0 -1680.18 -2953.65 -1198.49 -2953.66 1198.49 0 5109.43 2953.66 1878.91z";
 
@@ -46,8 +47,16 @@ export function subscribeBand({ city, source, heading, text }) {
 // canonical: the one URL search engines should index for this page (a path). City pages pass it explicitly, because
 // `path` there only picks the highlighted nav item; site wide pages default to their own path. Query strings never
 // reach it, so a filtered, month or tracking URL points back at the plain page.
+// On a preview deployment every page opens with a thin bar pinned to the top, so sample data is never taken for the
+// live calendar. The middleware records the environment; production renders nothing here.
+export const PREVIEW_BAR_TEXT = "Preview site with sample data. The live site is";
+export function previewBar() {
+  return previewRuntime() ? html`<div class="preview-bar" role="note">${PREVIEW_BAR_TEXT} <a href="https://bettersecurity.ai">bettersecurity.ai</a></div>` : "";
+}
+
 export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null, canonical }) {
   const c = cityOf(city) || CITIES[DEFAULT_CITY];
+  const preview = previewRuntime();
   const isVirtual = c.slug === "virtual";
   const atRoot = !city && path === "/";
   const generic = !city; // site wide pages (about, sponsor, subscribe, submit, legal) carry the brand, not a city
@@ -93,7 +102,8 @@ ${canonicalUrl ? html`<link rel="canonical" href="${canonicalUrl}">
 <link rel="alternate" type="text/calendar" title="${brandTitle} calendar feed" href="${calHome}/feed.ics">
 ${raw(head)}
 </head>
-<body>
+<body${preview ? raw(' class="preview"') : ""}>
+${previewBar()}
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header">
   <div class="wrap header-row">

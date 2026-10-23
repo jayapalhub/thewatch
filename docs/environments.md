@@ -33,6 +33,18 @@ The cron Worker only ever calls bettersecurity.ai, so it never reaches a preview
 against staging data, and their Run and Send now buttons go through the same guards. `test/preview-guards.test.js`
 covers each path.
 
+## What a preview looks like
+
+A preview is meant to be unmistakable and invisible to search engines, while production is untouched:
+
+- Every page built with the shared layout opens with a thin bar pinned to the top: "Preview site with sample data. The
+  live site is bettersecurity.ai". Emails and the embed widget do not carry it.
+- Every response carries `X-Robots-Tag: noindex, nofollow`, and `/robots.txt` answers `User-agent: *` with
+  `Disallow: /`. Production keeps `public/robots.txt` and its headers as they are.
+- Nothing is put in or read from the edge cache on a preview, so a preview never serves a cached copy.
+
+`test/preview-site.test.js` checks all three against the middleware, with the production path run alongside.
+
 The Resend key must also be absent from the Preview environment in the dashboard (Pages project, Settings, Variables and
 Secrets, Preview). The guards are the second line; an empty key is the first.
 
