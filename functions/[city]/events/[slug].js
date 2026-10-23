@@ -1,9 +1,9 @@
 import { html, page, notFound } from "../../_lib/html.js";
-import { shell, signupForm } from "../../_lib/layout.js";
+import { shell, signupForm, subscribeBand, emailValueLine } from "../../_lib/layout.js";
 import { eventBySlug, eventTags, upcomingEvents, eventRow, eventJsonLd, costLabel } from "../../_lib/events.js";
-import { fmtDateLong, fmtTimeRange } from "../../_lib/dates.js";
+import { fmtDateLong, fmtTimeRange, zoneLabel } from "../../_lib/dates.js";
 import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
-import { FORMATS, AUDIENCE, cityOf, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
+import { FORMATS, AUDIENCE, cityOf, cityTz, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
 import { toUtc } from "../../_lib/dates.js";
 import { lazyReminders } from "../../_lib/reminders.js";
 import { eventStarted } from "../../_lib/cpe.js";
@@ -33,7 +33,7 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
       <h1>${e.title}</h1>
       <div class="tags">${eventTags(e)}</div>
       <dl class="event-facts">
-        <div><dt>When</dt><dd>${fmtDateLong(e.start_at)}<br>${fmtTimeRange(e.start_at, e.end_at) || "Time to be announced"} Pacific${e.format !== "in_person" ? html`<br><small data-local-time data-start="${e.start_utc || (toUtc(e.start_at, e.timezone) || new Date()).toISOString()}" data-end="${e.end_utc || (e.end_at ? toUtc(e.end_at, e.timezone).toISOString() : "")}"></small>` : ""}</dd></div>
+        <div><dt>When</dt><dd>${fmtDateLong(e.start_at)}<br>${fmtTimeRange(e.start_at, e.end_at) ? `${fmtTimeRange(e.start_at, e.end_at)} ${zoneLabel(e.timezone || cityTz(e.city))}` : "Time to be announced"}${e.format !== "in_person" ? html`<br><small data-local-time data-start="${e.start_utc || (toUtc(e.start_at, e.timezone) || new Date()).toISOString()}" data-end="${e.end_utc || (e.end_at ? toUtc(e.end_at, e.timezone).toISOString() : "")}"></small>` : ""}</dd></div>
         <div><dt>Where</dt><dd>${where || "To be announced"}${mapsUrl ? html`<br><a href="${mapsUrl}" rel="noopener" target="_blank">Open in Maps</a>` : ""}${e.format === "hybrid" ? html`<br>Also available online` : ""}</dd></div>
         <div><dt>Cost</dt><dd>${costLabel(e) || "Not listed"}${e.cost_notes ? html`<br><small>${e.cost_notes}</small>` : ""}${e.member_price_notes ? html`<br><small>${e.member_price_notes}</small>` : ""}</dd></div>
         ${e.cpe_eligible ? html`<div><dt>CPE</dt><dd>Organizer reports ${e.cpe_hours ? `${e.cpe_hours} hours` : "credit"}${e.cpe_body ? ` (${e.cpe_body})` : ""}${e.cpe_notes ? html`<br><small>${e.cpe_notes}</small>` : ""}</dd></div>` : ""}
@@ -76,9 +76,13 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
       ${e.source_url ? html`<p class="source">Details from <a href="${e.source_url}" rel="noopener nofollow" target="_blank">the organizer's page</a>. Times and prices can change; the organizer's page is authoritative. <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Correction: " + e.title)}">Report a correction</a>.</p>` : ""}
     </div>
   </article>
+  ${e.city === "virtual"
+    ? html`<section class="band band-navy band-tight" id="subscribe"><div class="wrap split-center"><div><h2>Never miss the next one.</h2><p>The Sunday email picks the week's best online sessions with CPE, alongside every security event in your city.</p></div>${signupForm({ source: "event:" + e.slug, chooseCity: true })}</div></section>`
+    : subscribeBand({ city, source: "event:" + e.slug, heading: "Never miss the next one.", text: `${emailValueLine(city)}${e.org_display && city.newsletter === "sunday" ? ` That includes what ${e.org_display} has coming up.` : ""}` })}
   ${more.length ? html`<section class="band band-paper"><div class="wrap narrow"><h2>More from ${e.org_display}</h2><ul class="event-list">${more.map(eventRow)}</ul></div></section>` : ""}
-  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Never miss one.</h2><p>The Sunday email has the whole week.</p></div>${signupForm({ source: "event:" + e.slug })}</div></section>
   ${eventJsonLd(e, siteUrl)}`;
 
-  return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)}${e.city === "virtual" ? " online" : ` in ${city.name}`}`, body, city: e.city, path: calendarPath(e.city), image: `/og/event/${e.slug}.png` }), 200, { "Cache-Control": "public, max-age=300" });
+  // The date and place lead the description, so a search result answers when and where before anyone clicks.
+  const lead = `${fmtDateLong(e.start_at)} ${e.city === "virtual" ? "online" : `in ${city.name}`}${e.org_display ? `, hosted by ${e.org_display}` : ""}.`;
+  return page(shell({ title: e.title, description: e.description_short ? `${lead} ${e.description_short}` : lead, body, city: e.city, path: calendarPath(e.city), canonical: eventPath(e), image: `/og/event/${e.slug}.png` }), 200, { "Cache-Control": "public, max-age=300" });
 }

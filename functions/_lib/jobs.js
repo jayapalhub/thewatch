@@ -152,6 +152,17 @@ export function lazyJobs(db, waitUntil) {
 
 export function defaultExpiry(from = todayKey()) { return addDays(from, JOB_DAYS); }
 
+const STATES = { alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA", colorado: "CO", connecticut: "CT", delaware: "DE", "district of columbia": "DC", florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA", kansas: "KS", kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD", massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS", missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV", "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY", "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC", "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT", virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI", wyoming: "WY" };
+// The state in a posting's location ("Dallas, TX", "Austin, Texas, United States"), as a two letter code, or
+// undefined when the location does not say. Never guessed from the city, so a role is not filed in the wrong state.
+export function jobRegion(loc) {
+  const part = String(loc || "").split(";")[0].split(",")[1];
+  if (!part) return undefined;
+  const p = part.trim().replace(/\s+\d{5}(-\d{4})?$/, "");
+  if (/^[A-Z]{2}$/.test(p) && Object.values(STATES).includes(p)) return p;
+  return STATES[p.toLowerCase()];
+}
+
 // JobPosting structured data for a city's board: one object per live role, the employer's own posting as the
 // apply link (directApply false, since the application happens on the employer's site).
 export function jobsJsonLd(jobs, city, siteUrl, today = todayKey()) {
@@ -168,7 +179,7 @@ export function jobsJsonLd(jobs, city, siteUrl, today = todayKey()) {
       validThrough: j.expires_at ? `${j.expires_at}T23:59:59` : undefined,
       employmentType: "FULL_TIME",
       hiringOrganization: { "@type": "Organization", name: j.employer },
-      jobLocation: j.remote === "remote" ? undefined : { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: loc.split(",")[0] || city.name, addressRegion: "CA", addressCountry: "US" } },
+      jobLocation: j.remote === "remote" ? undefined : { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: loc.split(",")[0] || city.name, addressRegion: jobRegion(loc), addressCountry: "US" } },
       jobLocationType: j.remote === "remote" ? "TELECOMMUTE" : undefined,
       applicantLocationRequirements: j.remote === "remote" ? { "@type": "Country", name: "USA" } : undefined,
       baseSalary: salary.length ? { "@type": "MonetaryAmount", currency: "USD", value: salary.length > 1 ? { "@type": "QuantitativeValue", minValue: Math.min(...salary), maxValue: Math.max(...salary), unitText: "YEAR" } : { "@type": "QuantitativeValue", value: salary[0], unitText: "YEAR" } } : undefined,

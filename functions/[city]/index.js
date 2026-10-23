@@ -4,7 +4,7 @@ import { lazyReminders } from "../_lib/reminders.js";
 import { lazyJobs } from "../_lib/jobs.js";
 import { pageSponsor, clickUrl } from "../_lib/sponsors.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
-import { shell, signupForm } from "../_lib/layout.js";
+import { shell, subscribeBand, emailValueLine } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay, eventListJsonLd } from "../_lib/events.js";
 import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/constants.js";
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
@@ -37,8 +37,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
   let body;
   if (view === "month") {
     // Month pages are bounded (three months back to fifteen ahead) so crawlers following the arrows cannot walk forever.
-    const asked = /^\d{4}-\d{2}$/.test(q.get("month") || "") ? q.get("month") + "-01" : "";
-    const m = asked && asked >= addMonths(monthStart(today), -3) && asked <= addMonths(monthStart(today), 15) ? asked : monthStart(today);
+    const m = monthKeyOf(q, today);
     const from = monthStart(m), to = addDays(monthEnd(m), 1);
     const events = await queryEvents(env.DB, { city: city.slug, from, to: to + "T00:00", ...filters });
     body = html`${header(city, "month", filters, orgs, anyFilter, m)}${monthGrid(city, m, events, today, filters)}`;
@@ -63,16 +62,25 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       <a class="sponsor-link" href="${clickUrl("", sp, "page", { city: city.slug })}" rel="sponsored noopener" target="_blank">${sp.logo_url ? html`<img src="${sp.logo_url}" alt="${sp.name}" loading="lazy">` : html`<strong>${sp.name}</strong>`}</a>
       ${sp.tagline ? html`<span class="sponsor-tagline">${sp.tagline}</span>` : ""}
     </div></aside>` : ""}
-    <section class="band band-navy band-tight"><div class="wrap split-center">
-      ${city.newsletter === "sunday"
-        ? html`<div><h2>Get the week in your inbox on Sunday.</h2><p>Everything above, curated down to what's worth your time, with a note from Jerome.</p></div>`
-        : html`<div><h2>A ${city.name} email is on the way.</h2><p>Subscribe now and you're on the first send, the week it launches.</p></div>`}
-      ${signupForm({ source: `calendar:${city.slug}` })}
-    </div></section>`;
+    ${city.newsletter === "sunday"
+      ? subscribeBand({ city, source: `calendar:${city.slug}`, text: "Everything on this calendar, curated down to what's worth your time, with a short note from Jerome. One email at 8 AM your time, and one click to unsubscribe." })
+      : subscribeBand({ city, source: `calendar:${city.slug}`, heading: `A ${city.name} email is on the way.`, text: "Subscribe now and you're on the first send, the week it launches." })}`;
 
-  const res = page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
+  const title = view === "month" && !anyFilter ? `${city.name} cybersecurity events in ${monthName(monthKeyOf(q, today))} ${parts(monthKeyOf(q, today)).y}` : `${city.name} cybersecurity events calendar`;
+  const res = page(shell({ title, description: cityDescription(city), body: full, city: city.slug, path: `/${city.slug}`, canonical: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
   res.headers.append("Set-Cookie", `watch_city=${city.slug}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
   return res;
+}
+
+function monthKeyOf(q, today) {
+  const asked = /^\d{4}-\d{2}$/.test(q.get("month") || "") ? q.get("month") + "-01" : "";
+  return asked && asked >= addMonths(monthStart(today), -3) && asked <= addMonths(monthStart(today), 15) ? asked : monthStart(today);
+}
+
+// The meta description for a city calendar: what is on it, for where, and that there is a Sunday email. Written here
+// rather than read from cities.description so all 40 cities say it the same way and mention the email.
+export function cityDescription(city) {
+  return `Cybersecurity, AI security, privacy and audit events in ${city.region || city.name}: chapter meetings, meetups and conferences, with CPE and cost noted${city.newsletter === "sunday" ? ", plus a free Sunday email" : ""}. By Better Security.`;
 }
 
 function header(city, view, f, orgs, anyFilter, monthKey) {
@@ -89,6 +97,7 @@ function header(city, view, f, orgs, anyFilter, monthKey) {
         <div>
           <p class="kicker">${city.region}</p>
           <h1>${view === "month" ? `${monthName(monthKey)} ${parts(monthKey).y}` : "The next ten weeks"}</h1>
+          <p class="cal-sub">${emailValueLine(city)} <a href="#subscribe">${city.newsletter === "sunday" ? "Get the Sunday email" : "Join the list"}</a></p>
         </div>
         <div class="toggle-row">
           <div class="view-toggle city-toggle" role="tablist" aria-label="Calendar">
