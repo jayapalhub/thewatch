@@ -1,5 +1,5 @@
 import { html, page, notFound } from "../../_lib/html.js";
-import { shell, signupForm } from "../../_lib/layout.js";
+import { shell, signupForm, subscribeBand, emailValueLine } from "../../_lib/layout.js";
 import { eventBySlug, eventTags, upcomingEvents, eventRow, eventJsonLd, costLabel } from "../../_lib/events.js";
 import { fmtDateLong, fmtTimeRange } from "../../_lib/dates.js";
 import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
@@ -76,8 +76,10 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
       ${e.source_url ? html`<p class="source">Details from <a href="${e.source_url}" rel="noopener nofollow" target="_blank">the organizer's page</a>. Times and prices can change; the organizer's page is authoritative. <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Correction: " + e.title)}">Report a correction</a>.</p>` : ""}
     </div>
   </article>
+  ${e.city === "virtual"
+    ? html`<section class="band band-navy band-tight" id="subscribe"><div class="wrap split-center"><div><h2>Never miss the next one.</h2><p>The Sunday email picks the week's best online sessions with CPE, alongside every security event in your city.</p></div>${signupForm({ source: "event:" + e.slug, chooseCity: true })}</div></section>`
+    : subscribeBand({ city, source: "event:" + e.slug, heading: "Never miss the next one.", text: `${emailValueLine(city)}${e.org_display && city.newsletter === "sunday" ? ` That includes what ${e.org_display} has coming up.` : ""}` })}
   ${more.length ? html`<section class="band band-paper"><div class="wrap narrow"><h2>More from ${e.org_display}</h2><ul class="event-list">${more.map(eventRow)}</ul></div></section>` : ""}
-  <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Never miss one.</h2><p>The Sunday email has the whole week.</p></div>${e.city === "virtual" ? signupForm({ source: "event:" + e.slug, chooseCity: true }) : signupForm({ source: "event:" + e.slug, city: e.city })}</div></section>
   ${eventJsonLd(e, siteUrl)}`;
 
   return page(shell({ title: e.title, description: e.description_short || `${fmtDateLong(e.start_at)}${e.city === "virtual" ? " online" : ` in ${city.name}`}`, body, city: e.city, path: calendarPath(e.city), image: `/og/event/${e.slug}.png` }), 200, { "Cache-Control": "public, max-age=300" });

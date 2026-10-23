@@ -4,7 +4,7 @@ import { lazyReminders } from "../_lib/reminders.js";
 import { lazyJobs } from "../_lib/jobs.js";
 import { pageSponsor, clickUrl } from "../_lib/sponsors.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
-import { shell, signupForm } from "../_lib/layout.js";
+import { shell, subscribeBand, emailValueLine } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay, eventListJsonLd } from "../_lib/events.js";
 import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/constants.js";
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
@@ -63,12 +63,9 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       <a class="sponsor-link" href="${clickUrl("", sp, "page", { city: city.slug })}" rel="sponsored noopener" target="_blank">${sp.logo_url ? html`<img src="${sp.logo_url}" alt="${sp.name}" loading="lazy">` : html`<strong>${sp.name}</strong>`}</a>
       ${sp.tagline ? html`<span class="sponsor-tagline">${sp.tagline}</span>` : ""}
     </div></aside>` : ""}
-    <section class="band band-navy band-tight"><div class="wrap split-center">
-      ${city.newsletter === "sunday"
-        ? html`<div><h2>Get the week in your inbox on Sunday.</h2><p>Everything above, curated down to what's worth your time, with a note from Jerome.</p></div>`
-        : html`<div><h2>A ${city.name} email is on the way.</h2><p>Subscribe now and you're on the first send, the week it launches.</p></div>`}
-      ${signupForm({ source: `calendar:${city.slug}`, city: city.slug })}
-    </div></section>`;
+    ${city.newsletter === "sunday"
+      ? subscribeBand({ city, source: `calendar:${city.slug}`, text: "Everything on this calendar, curated down to what's worth your time, with a short note from Jerome. One email at 8 AM your time, and one click to unsubscribe." })
+      : subscribeBand({ city, source: `calendar:${city.slug}`, heading: `A ${city.name} email is on the way.`, text: "Subscribe now and you're on the first send, the week it launches." })}`;
 
   const res = page(shell({ title: `${city.name} security events calendar`, body: full, city: city.slug, path: `/${city.slug}`, wide: true }), 200, { "Cache-Control": "public, max-age=120" });
   res.headers.append("Set-Cookie", `watch_city=${city.slug}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`);
@@ -89,6 +86,7 @@ function header(city, view, f, orgs, anyFilter, monthKey) {
         <div>
           <p class="kicker">${city.region}</p>
           <h1>${view === "month" ? `${monthName(monthKey)} ${parts(monthKey).y}` : "The next ten weeks"}</h1>
+          <p class="cal-sub">${emailValueLine(city)} <a href="#subscribe">${city.newsletter === "sunday" ? "Get the Sunday email" : "Join the list"}</a></p>
         </div>
         <div class="toggle-row">
           <div class="view-toggle city-toggle" role="tablist" aria-label="Calendar">

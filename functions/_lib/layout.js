@@ -27,6 +27,22 @@ export function signupForm({ source, compact = false, cta = "Get the Sunday emai
   </form>`;
 }
 
+// What the email is, in one line, for a city. Used at the top of a city calendar and in the city signup bands.
+export function emailValueLine(city) {
+  return city.newsletter === "sunday"
+    ? `Every security event in ${city.name}, in your inbox Sunday morning.`
+    : `Every security event in ${city.name}, in one calendar. Its Sunday email starts soon, and subscribers get the first issue.`;
+}
+
+// The navy signup band for a city page. id="subscribe" so a link near the top of the page can jump to it.
+// Everything in it depends only on the city and the page, never on the visitor, so the page stays edge cacheable.
+export function subscribeBand({ city, source, heading, text }) {
+  return html`<section class="band band-navy band-tight" id="subscribe"><div class="wrap split-center">
+    <div><h2>${heading || emailValueLine(city)}</h2>${text ? html`<p>${text}</p>` : ""}</div>
+    ${signupForm({ source, city: city.slug })}
+  </div></section>`;
+}
+
 export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null }) {
   const c = cityOf(city) || CITIES[DEFAULT_CITY];
   const isVirtual = c.slug === "virtual";

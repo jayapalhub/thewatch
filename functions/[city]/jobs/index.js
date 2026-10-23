@@ -1,5 +1,5 @@
 import { html, page, raw, notFound } from "../../_lib/html.js";
-import { shell } from "../../_lib/layout.js";
+import { shell, subscribeBand } from "../../_lib/layout.js";
 import { CITIES, TOPICS, SENIORITY } from "../../_lib/constants.js";
 import { todayKey } from "../../_lib/dates.js";
 import { liveJobs, jobRow, lazyJobs, jobsJsonLd, REMOTE, POSTER_KINDS, JOB_DAYS } from "../../_lib/jobs.js";
@@ -47,7 +47,10 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
     <p class="jobs-fine">Listings come down after ${JOB_DAYS} days or as soon as the employer's posting closes. Direct employers and named staffing firms with a real opening only, no aggregator links.</p>
     ${anyFilter ? "" : jobsJsonLd(jobs, city, env.SITE_URL || "https://bettersecurity.ai", today)}
   </div>
-  <section class="band band-navy band-tight"><div class="wrap split-center">
+  ${city.newsletter === "sunday"
+    ? subscribeBand({ city, source: `jobs:${city.slug}`, heading: `New ${city.name} security roles, in your inbox Sunday morning.`, text: `The Sunday email carries a few of the best new roles from this board, alongside every security event in ${city.name} that week.` })
+    : subscribeBand({ city, source: `jobs:${city.slug}` })}
+  <section class="band band-paper band-tight"><div class="wrap split-center">
     <div><h2>Hiring in ${city.name}?</h2><p>Post a security role free. It reaches the people already planning their week on The Watch, and the best roles go in the Sunday email. Want yours at the top of the board and first in Sunday's email? <a href="/${city.slug}/jobs/feature">Feature a role</a>.</p></div>
     <p><a class="btn btn-electric" href="/${city.slug}/jobs/post">Post a role</a></p>
   </div></section>`;
