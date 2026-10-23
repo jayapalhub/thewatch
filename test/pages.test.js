@@ -47,6 +47,15 @@ test("event page: a signup band for the event's city", async () => {
   assert.match(body, /That includes what ISSA North Texas has coming up\./);
 });
 
+test("event page: times are labeled in the event's own zone, not always Pacific", async () => {
+  const db = fakeDb([{ match: /FROM events/, op: "first", reply: () => ({ ...EVENT }) }]);
+  const c = ctx("/dallas/events/" + EVENT.slug, db);
+  c.params = { city: "dallas", slug: EVENT.slug };
+  const when = ((await (await eventPage(c)).text()).match(/<dt>When<\/dt><dd>([\s\S]*?)<\/dd>/) || [])[1] || "";
+  assert.match(when, /PM Central/);
+  assert.doesNotMatch(when, /Pacific/);
+});
+
 test("jobs board: a Dallas signup band above the hiring band", async () => {
   const c = ctx("/dallas/jobs", fakeDb());
   c.params = { city: "dallas" };

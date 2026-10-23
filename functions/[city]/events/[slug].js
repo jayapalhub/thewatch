@@ -1,9 +1,9 @@
 import { html, page, notFound } from "../../_lib/html.js";
 import { shell, signupForm, subscribeBand, emailValueLine } from "../../_lib/layout.js";
 import { eventBySlug, eventTags, upcomingEvents, eventRow, eventJsonLd, costLabel } from "../../_lib/events.js";
-import { fmtDateLong, fmtTimeRange } from "../../_lib/dates.js";
+import { fmtDateLong, fmtTimeRange, zoneLabel } from "../../_lib/dates.js";
 import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
-import { FORMATS, AUDIENCE, cityOf, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
+import { FORMATS, AUDIENCE, cityOf, cityTz, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
 import { toUtc } from "../../_lib/dates.js";
 import { lazyReminders } from "../../_lib/reminders.js";
 import { eventStarted } from "../../_lib/cpe.js";
@@ -33,7 +33,7 @@ export async function onRequestGet({ params, env, request, waitUntil }) {
       <h1>${e.title}</h1>
       <div class="tags">${eventTags(e)}</div>
       <dl class="event-facts">
-        <div><dt>When</dt><dd>${fmtDateLong(e.start_at)}<br>${fmtTimeRange(e.start_at, e.end_at) || "Time to be announced"} Pacific${e.format !== "in_person" ? html`<br><small data-local-time data-start="${e.start_utc || (toUtc(e.start_at, e.timezone) || new Date()).toISOString()}" data-end="${e.end_utc || (e.end_at ? toUtc(e.end_at, e.timezone).toISOString() : "")}"></small>` : ""}</dd></div>
+        <div><dt>When</dt><dd>${fmtDateLong(e.start_at)}<br>${fmtTimeRange(e.start_at, e.end_at) ? `${fmtTimeRange(e.start_at, e.end_at)} ${zoneLabel(e.timezone || cityTz(e.city))}` : "Time to be announced"}${e.format !== "in_person" ? html`<br><small data-local-time data-start="${e.start_utc || (toUtc(e.start_at, e.timezone) || new Date()).toISOString()}" data-end="${e.end_utc || (e.end_at ? toUtc(e.end_at, e.timezone).toISOString() : "")}"></small>` : ""}</dd></div>
         <div><dt>Where</dt><dd>${where || "To be announced"}${mapsUrl ? html`<br><a href="${mapsUrl}" rel="noopener" target="_blank">Open in Maps</a>` : ""}${e.format === "hybrid" ? html`<br>Also available online` : ""}</dd></div>
         <div><dt>Cost</dt><dd>${costLabel(e) || "Not listed"}${e.cost_notes ? html`<br><small>${e.cost_notes}</small>` : ""}${e.member_price_notes ? html`<br><small>${e.member_price_notes}</small>` : ""}</dd></div>
         ${e.cpe_eligible ? html`<div><dt>CPE</dt><dd>Organizer reports ${e.cpe_hours ? `${e.cpe_hours} hours` : "credit"}${e.cpe_body ? ` (${e.cpe_body})` : ""}${e.cpe_notes ? html`<br><small>${e.cpe_notes}</small>` : ""}</dd></div>` : ""}
