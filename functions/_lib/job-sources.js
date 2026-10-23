@@ -7,10 +7,10 @@ import { cleanJobUrl, JOB_DAYS } from "./jobs.js";
 import { slugify } from "./html.js";
 
 // What counts as one of our roles. Title must match SECURITY_RE and must not match NOT_OURS_RE.
-const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT audit|technology audit|IS audit|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph\w*)\b/i;
+const SECURITY_RE = /\b(security|cyber|cybersecurity|cyber-security|infosec|information assurance|GRC|governance,? risk|privacy|IT (?:internal )?audit\w*|technology audit\w*|IS audit\w*|information systems audit\w*|third[- ]party risk|vendor risk|TPRM|compliance (?:analyst|manager|engineer|program)|ISSO|ISSM|ISSE|SOC analyst|threat|incident response|intrusion detection|detection engineering|identity and access|IAM|penetration|red team|application security|appsec|DevSecOps|vulnerability|CISO|risk (?:analyst|manager) \(?(?:IT|technology|cyber)|cryptograph\w*)\b/i;
 const NOT_OURS_RE = /\b(guard|officer, security|(?<!information )(?<!systems? )security officer|physical security|corporate security|regional security|global security|event security|workplace security|workplace (?:&|and) security|real estate|safety (?:&|and) security|personal security|K9|cargo security|security (?:supervisor|assistant manager|shift|operator|officers|technology technician)|supervisor,? security|shift supervisor|concierge|trade compliance|security valuation|lecturer|professor|faculty|employee relations|political law|hackathon|solution consultant|success architect|customer engineering|escalations? engineer|set watch|security guard|patrol|hris|payroll|security trailers?|perimeter (?:&|and) intrusion|access control products?|crisis|executive protection|protective|loss prevention|sales|account executive|account manager|account director|customer success|customer advocacy|business development|marketing|communications|public relations|public affairs|go[- ]to[- ]market|GTM|partnerships?|partner manager|evangelist|developer advocate|community manager|technical writer|content (?:writer|strategist|lead|marketer)|copywriter|demand generation|revenue|field CTO|recruiter|intern(?:ships?)?|industrial security|personnel security|PERSEC|security rep|ACSSO|AFSO|FSO|maritime security|treaty|join noblis|program security|special programs security|activity security|security representative|security cooperation|international security|security dispatch|dispatcher|security communication|sergeant|police|public safety|building security|security observation|TSCM|fire alarm|DC security|bancorp security|category manager|proposal|law enforcement|co-op|facilities|janitor|custod|driver|nurse|clinical|social security|food|cashier|securities|security clearance only)\b/i;
 
-export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", icims_classic: "iCIMS classic", successfactors: "SuccessFactors", oracle: "Oracle Recruiting" };
+export const SOURCE_KINDS = { workday: "Workday", greenhouse: "Greenhouse", lever: "Lever", ashby: "Ashby", eightfold: "Eightfold", smartrecruiters: "SmartRecruiters", radancy: "Radancy", phenom: "Phenom", icims: "iCIMS", icims_classic: "iCIMS classic", successfactors: "SuccessFactors", oracle: "Oracle Recruiting", jobvite: "Jobvite" };
 
 const PAY_RE = /\$\s?[\d,]{4,}(?:\.\d+)?(?:\s*(?:-|to|–|—)\s*\$\s?[\d,]{4,}(?:\.\d+)?)|[\d,]{5,}(?:\.\d+)?\s*USD\s*(?:-|to|–|—)\s*[\d,]{5,}(?:\.\d+)?\s*USD/;
 const strip = (h) => String(h || "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -419,7 +419,50 @@ export async function pullOracle(cfg, searchText, fetcher = getJson) {
   }
   return out;
 }
-export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, icims_classic: pullIcimsClassic, oracle: pullOracle };
+// Jobvite career sites (jobs.jobvite.com/<company>): the public search page, server rendered HTML. Each row is
+// <li><a href="/<company>/job/<id>"><div class="jv-job-list-name">Title</div><div class="jv-job-list-location">City,
+// State</div></a></li>, and the pager reads "1-26 of 26". A row that spans several places says "2 Locations", so the
+// postings we keep get one detail page read each, for the places and the excerpt. Config { company }.
+const JOBVITE_DETAILS = 12;
+export async function pullJobvite(cfg, searchText, fetcher = getJson) {
+  const company = String(cfg.company || "").trim().replace(/^\/|\/$/g, "");
+  if (!company) throw new Error("Jobvite board needs a company");
+  const base = `https://jobs.jobvite.com/${company}`;
+  const clean = (h) => decodeEntities(String(h || "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").replace(/\s+,/g, ",").trim();
+  const rows = []; const seen = new Set();
+  for (let p = 0; p < 10; p++) {
+    const html = String(await fetcher(`${base}/search?q=${encodeURIComponent(searchText || "security")}&p=${p}`, { text: true }));
+    if (p === 0 && !/jv-job-list|jv-page-search|jv-page-jobs/.test(html)) throw new Error("unexpected page from Jobvite (no job list)");
+    const before = seen.size; const re = /<a\b[^>]*href="(\/[^"]*\/job\/([A-Za-z0-9]+))"[^>]*>([\s\S]*?)<\/a>/gi; let m;
+    while ((m = re.exec(html))) {
+      const id = m[2]; if (seen.has(id)) continue;
+      const title = clean((/jv-job-list-name[^>]*>([\s\S]*?)<\/div>/i.exec(m[3]) || [])[1]); if (!title) continue;
+      seen.add(id);
+      rows.push({ id, href: m[1], title, location: clean((/jv-job-list-location[^>]*>([\s\S]*?)<\/div>/i.exec(m[3]) || [])[1]) });
+    }
+    const pager = /(\d+)\s*-\s*(\d+)\s+of\s+(\d+)/.exec(clean((/jv-pagination-text[^>]*>([\s\S]*?)<\/div>/i.exec(html) || [])[1]));
+    if (seen.size === before || !pager || Number(pager[2]) >= Number(pager[3])) break;
+  }
+  const out = []; let details = 0;
+  for (const r of rows) {
+    if (!isOurRole(r.title)) continue;
+    let location = r.location, excerpt = null;
+    if (details < JOBVITE_DETAILS) {
+      details++;
+      try {
+        const d = String(await fetcher(`https://jobs.jobvite.com${r.href}`, { text: true }));
+        const meta = (/<p[^>]*class="jv-job-detail-meta"[^>]*>([\s\S]*?)<\/p>/i.exec(d) || [])[1];
+        // The meta line is "Category <separator> Location", and several places come as further separators or line breaks.
+        if (meta) { const parts = meta.split(/<span[^>]*jv-inline-separator[^>]*><\/span>|<br\s*\/?>/i).map(clean).filter(Boolean); if (parts.length > 1) location = parts.slice(1).join("; "); }
+        const desc = (/class="jv-job-detail-description"[^>]*>([\s\S]*?)(?:<div class="jv-job-detail-bottom-actions"|<\/article>)/i.exec(d) || [])[1];
+        if (desc) excerpt = excerptOf(desc.replace(/<h3>\s*Description\s*<\/h3>/i, "").replace(/<div class="jv-meta">[\s\S]*?<\/div>/i, ""));
+      } catch { /* keep the list page's location; the row is still a real posting */ }
+    }
+    out.push({ key: r.id, title: r.title, url: `https://jobs.jobvite.com${r.href}`, location, posted_at: null, salary_text: null, remote: inferRemote(location), excerpt });
+  }
+  return out;
+}
+export const ADAPTERS = { successfactors: pullSuccessFactors, workday: pullWorkday, greenhouse: pullGreenhouse, lever: pullLever, ashby: pullAshby, eightfold: pullEightfold, smartrecruiters: pullSmartRecruiters, radancy: pullRadancy, phenom: pullPhenom, icims: pullIcims, icims_classic: pullIcimsClassic, oracle: pullOracle, jobvite: pullJobvite };
 
 // Run one source. Files new roles, refreshes pay and posted dates on known ones, closes the ones that left the board.
 export async function runJobSource(db, src, { fetcher = getJson, now = new Date() } = {}) {
@@ -492,7 +535,7 @@ async function finish(db, src, run) {
 // to a subrequest budget. On Workers Paid (10,000 subrequests per invocation) the tick gives boards a budget of 300,
 // so the 560 boards are each read about every two days.
 const WORKDAY_MAX_CHECKS = 12;
-const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, icims_classic: 5, oracle: 4 };
+const REQUEST_COST = { successfactors: 10, workday: 40, greenhouse: 2, lever: 2, ashby: 2, smartrecruiters: 2, eightfold: 8, radancy: 6, phenom: 7, icims: 3, icims_classic: 5, oracle: 4, jobvite: 4 };
 export async function runAllJobSources(db, { onlyId = null, fetcher = getJson, max = 1, dueOnly = true, budget = 40, deadline = null } = {}) {
   const sql = onlyId ? "SELECT * FROM job_sources WHERE id=?"
     : dueOnly ? "SELECT * FROM job_sources WHERE active=1 AND (last_run_at IS NULL OR last_run_at < datetime('now', '-2 days')) ORDER BY last_run_at IS NOT NULL, last_run_at, id LIMIT ?"

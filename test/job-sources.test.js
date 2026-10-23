@@ -25,10 +25,11 @@ describe("isOurRole title filter", () => {
   const ours = ["Senior Security Engineer", "Cyber Threat Analyst", "GRC Analyst", "Privacy Counsel", "IT Audit Manager", "Information Security Officer",
     "Third-Party Risk Analyst", "SOC Analyst II", "Identity and Access Engineer", "Application Security Engineer", "DevSecOps Engineer", "CISO",
     "Risk Analyst (IT)", "Cryptography Engineer", "Applied Cryptographer", "Penetration Tester", "Detection Engineering Manager", "Compliance Analyst",
-    "Information System Security Officer", "Information System Security Officer (ISSO)"];
+    "Information System Security Officer", "Information System Security Officer (ISSO)",
+    "IT Auditor", "Senior IT Auditor", "Senior IT Internal Auditor", "Technology Auditor", "Information Systems Auditor", "IS Auditor II"];
   const notOurs = ["Security Guard", "Security Officer", "Security Officer, Night Shift", "Physical Security Manager", "Account Executive, Security", "Sales Engineer, Security",
     "Customer Success Manager, Security", "Security Intern", "Social Security Specialist", "Securities Analyst", "Trade Compliance Manager",
-    "Marketing Manager, Cybersecurity", "Recruiter, Security", "Software Engineer", "Office Manager", "", null];
+    "Marketing Manager, Cybersecurity", "Recruiter, Security", "Software Engineer", "Office Manager", "Internal Auditor", "Financial Auditor", "", null];
   for (const t of ours) test(`keeps ${t}`, () => assert.equal(isOurRole(t), true));
   for (const t of notOurs) test(`drops ${JSON.stringify(t)}`, () => assert.equal(isOurRole(t), false));
 });
