@@ -25,7 +25,7 @@ cd "$(dirname "$0")/.."
 mkdir -p backups
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG="backups/dr-rehearsal-$STAMP.txt"
-W="npx --yes wrangler@3"
+W="npx --yes wrangler"
 
 say() { echo "$*" | tee -a "$LOG"; }
 
@@ -43,7 +43,9 @@ counts() {
 say "The Watch D1 restore rehearsal, mode: $MODE, started $(date -u +%FT%TZ)"
 
 say "Step 1: wrangler login check"
-if ! $W whoami 2>/dev/null | grep -qi "associated with the email"; then
+WHO="$($W whoami 2>&1 || true)"
+if echo "$WHO" | grep -qiE "not authenticated|not logged in" || ! echo "$WHO" | grep -qiE "logged in|associated with"; then
+  echo "$WHO" | tail -5
   echo "Not logged in. Run: npx wrangler login   (it opens your browser; sign in yourself), then run this again."
   exit 1
 fi
