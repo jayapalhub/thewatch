@@ -3,7 +3,7 @@
 import { slugify } from "./html.js";
 import { toUtc, TZ } from "./dates.js";
 import { autoPublishAt } from "./autopublish.js";
-import { cityTz } from "./constants.js";
+import { cityTz, loadCities } from "./constants.js";
 
 const WINDOW_DAYS = 90;
 
@@ -190,6 +190,9 @@ export function parseSans(j) {
 }
 
 export async function runSource(db, src, { now = new Date() } = {}) {
+  // A city added in the last minute may not be in this isolate's cached list yet, and cityTz would then fall back to
+  // Pacific and shift every wall clock time. Refresh when the source's city is unknown.
+  if (src.city !== "virtual" && cityTz(src.city) === "America/Los_Angeles") await loadCities(db, { force: true });
   const stats = { source_id: src.id, name: src.name, fetched: 0, added: 0, skipped: 0, error: null };
   let items = [];
   try {
