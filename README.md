@@ -22,6 +22,10 @@ scripts/seed.mjs      Turns data/seed/*.json into SQL for organizations and even
 data/seed/            Researched organizers and events
 ```
 
+## Environments
+
+Development, preview (every pull request, on the staging database) and production are described in [docs/environments.md](docs/environments.md), with the commands that keep staging migrated and seeded.
+
 ## Run it locally
 
 ```bash
