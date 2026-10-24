@@ -1,5 +1,6 @@
 // Jobs: curated local roles at /<city>/jobs and a Hiring this week block in the Sunday email. See project doc 125.
 // Rows move pending_review -> published (publish by default, same rules as events) -> expired (30 days) or closed (URL gone).
+import { initialsOf, hueOf } from "./logos.js";
 import { html, raw, slugify } from "./html.js";
 import { TOPICS, SENIORITY, cityOf } from "./constants.js";
 import { todayKey, addDays } from "./dates.js";
@@ -174,7 +175,7 @@ export function jobsEmailBlock(siteUrl, city, picks, total, issueId, styles) {
 // ago is an ordinary listing again. Rows without a role keep the older "Posted by" line.
 export function personLine(j, today = todayKey()) {
   if (postedHighlight(j, today)) {
-    return html`<p class="job-by job-by-person"><span class="job-by-label">${postedLabel(j)}</span> <span class="job-by-name">${j.posted_by_name}</span>${j.posted_by_title ? `, ${j.posted_by_title}` : ""} <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>${j.posted_by_url ? html` <a class="job-post-link" href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Read their post</a>` : ""} <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
+    return html`<p class="job-by job-by-person"><span class="job-by-label">${postedLabel(j)}</span> <span class="person-badge" style="--hue:${hueOf(j.posted_by_name)}" aria-hidden="true">${initialsOf(j.posted_by_name)}</span><span class="job-by-name">${j.posted_by_name}</span>${j.posted_by_title ? `, ${j.posted_by_title}` : ""} <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>${j.posted_by_url ? html` <a class="job-post-link" href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Read their post</a>` : ""} <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
   }
   if (j.posted_by_name && !POSTED_ROLES[j.posted_by_role]) {
     return html`<p class="job-by">${j.posted_by_url ? html`<a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Posted by ${j.posted_by_name}</a>` : html`Posted by ${j.posted_by_name}`}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind === "staffing" ? html` <span class="tag">Staffing firm</span>` : ""}${j.posted_by_date ? html` <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>` : ""} <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
@@ -188,6 +189,7 @@ export function jobRow(j, today = todayKey()) {
   const highlight = postedHighlight(j, today);
   return html`<li class="job-row ${isFeatured(j, today) ? "is-featured" : ""} ${highlight ? "is-posted" : ""} ${j.announced ? "is-announced" : ""}" id="job-${j.id}">
     <div class="job-main">
+      ${highlight && j.org_slug ? html`<img class="emp-logo" src="/logo/${j.org_slug}" alt="" width="44" height="44" loading="lazy" decoding="async">` : ""}
       ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
       <h2 class="job-title"><a href="${jobPath(j)}">${j.title}</a></h2>
       <p class="job-meta">${[j.employer, where, SENIORITY[j.seniority], j.salary_text].filter(Boolean).join(" · ")}</p>
