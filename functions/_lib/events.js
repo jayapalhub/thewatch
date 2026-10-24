@@ -121,7 +121,7 @@ export function eventRow(e) {
 
 export function dayHeading(key, today = todayKey()) {
   const label = key === today ? "Today" : weekday(key);
-  return html`<div class="day-head"><span class="day-num">${dayNum(key)}</span><span class="day-text"><span class="day-name">${label}</span><span class="day-month">${month3(key)}</span></span></div>`;
+  return html`<h2 class="day-head"><span class="day-num">${dayNum(key)}</span><span class="day-text"><span class="day-name">${label}</span><span class="day-month">${month3(key)}</span></span></h2>`;
 }
 
 export function dayList(events, { empty = "Nothing on the calendar yet for these days.", today = todayKey() } = {}) {

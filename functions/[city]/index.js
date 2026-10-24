@@ -154,7 +154,7 @@ function monthGrid(city, m, events, today, f) {
   return html`
   <div class="wrap">
     <div class="month-nav"><a href="${link(addMonths(m, -1))}">&larr; ${month3(addMonths(m, -1))}</a><a href="${link(addMonths(m, 1))}">${month3(addMonths(m, 1))} &rarr;</a></div>
-    <div class="month-grid" role="grid">
+    <div class="month-grid">
       ${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => html`<div class="mg-head">${d}</div>`)}
       ${cells.map((k) => k ? html`<div class="mg-cell ${k === today ? "is-today" : ""} ${k < today ? "is-past" : ""}"><span class="mg-num">${dayNum(k)}</span>
           ${(byDay[k] || []).slice(0, 4).map((e) => html`<a class="mg-ev ${e.is_better_security_event ? "is-bs" : ""}" href="/${city.slug}/events/${e.slug}" title="${e.title}"><span class="mg-time">${fmtTime(e.start_at)}</span> ${e.title}</a>`)}

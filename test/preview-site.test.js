@@ -63,7 +63,7 @@ describe("banner", () => {
     const res = await through("preview", "/sandiego", cityPage);
     const body = await res.text();
     assert.equal(res.status, 200);
-    assert.match(body, /<body class="preview">\s*<div class="preview-bar" role="note">Preview site with sample data\. The live site is <a href="https:\/\/bettersecurity\.ai">bettersecurity\.ai<\/a><\/div>/);
+    assert.match(body, /<body class="preview">\s*<aside class="preview-bar" aria-label="Preview notice">Preview site with sample data\. The live site is <a href="https:\/\/bettersecurity\.ai">bettersecurity\.ai<\/a><\/aside>/);
     assert.equal(body.indexOf("preview-bar") < body.indexOf("site-header"), true, "the bar comes before the header");
   });
 
@@ -73,7 +73,7 @@ describe("banner", () => {
     assert.equal(res.status, 200);
     assert.ok(!body.includes("preview-bar"));
     assert.ok(!body.includes(PREVIEW_BAR_TEXT));
-    assert.match(body, /<body>\s*<a class="skip"/);
+    assert.match(body, /<body>\s*<header class="site-header">\s*<a class="skip"/);
   });
 
   test("the embed widget never carries the bar, though its preview response is still noindex", async () => {

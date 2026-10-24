@@ -93,7 +93,7 @@ function virtualRow(e) {
   <li class="event-row virtual-row ${e.org_type === "vendor" ? "is-vendor" : ""} ${e.is_featured ? "is-featured" : ""}" data-start="${startUtc}" data-end="${endUtc}">
     <div class="event-time"><span class="v-date" data-tz-date>${startUtc.slice(0, 10)}</span><span class="v-time" data-tz-time>${startUtc.slice(11, 16)} UTC</span></div>
     <div class="event-main">
-      <h3 class="event-title"><a href="${eventPath(e)}">${e.title}</a></h3>
+      <h2 class="event-title"><a href="${eventPath(e)}">${e.title}</a></h2>
       <p class="event-meta">${e.org_display ? html`<a href="${orgPath(e.org_slug, e.city)}">${e.org_display}</a>` : ""}${e.platform && e.platform !== "other" ? html`<span class="sep"></span>${e.platform}` : ""}${e.speakers ? html`<span class="sep"></span>${e.speakers}` : ""}</p>
       ${e.description_short ? html`<p class="event-blurb">${e.description_short}</p>` : ""}
       <div class="tags">${e.org_type === "vendor" ? html`<span class="tag tag-vendor">Vendor</span>` : ""}${eventTags(e, { showFormat: false })}</div>
