@@ -2,7 +2,7 @@
 // the aggregator page follow through. Fixtures are handcrafted in the shape of each source; no network is used.
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { parseBrightTalk, parseIcal, parseSans, parseAggregatorPage, firstSentence, plainText, utcToLocalIso, tidyTitle } from "../functions/_lib/feeds.js";
+import { parseBrightTalk, parseIcal, parseSans, sansSpeakerName, parseAggregatorPage, firstSentence, plainText, utcToLocalIso, tidyTitle } from "../functions/_lib/feeds.js";
 import { fixtureText, fixtureJson } from "./helpers.js";
 
 // The common event shape every adapter hands to runSource.
@@ -148,6 +148,18 @@ describe("parseSans", () => {
     assert.equal(b.endUtc.toISOString(), "2026-11-07T18:30:00.000Z");
     assert.equal(b.cpeHint, null);
     assert.equal(b.cpeHours, null);
+  });
+
+  test("speaker names as SANS sends them now: a name object with first, middle and last", () => {
+    assert.equal(sansSpeakerName({ name: { prefix: "", first: "Robert", middle: "M.", last: "Lee", postfix: "" }, url: "/profiles/robert-m-lee" }), "Robert M. Lee");
+    assert.equal(sansSpeakerName({ name: "Jordan Example" }), "Jordan Example");
+    assert.equal(sansSpeakerName("Sam Sample"), "Sam Sample");
+    assert.equal(sansSpeakerName({ url: "/profiles/x" }), null);
+    assert.equal(sansSpeakerName({ name: { first: "" } }), null);
+    const [hit] = parseSans({ results: [{ hits: [{ title: "T", utcStartDate: "2026-11-01", utcStartTime: "17:00:00", url: "/webcasts/t/", webcastId: "w1",
+      speakers: [{ name: { prefix: "", first: "Tim", middle: "", last: "Conway", postfix: "" } }, { name: { first: "Brian", last: "Harrell" } }] }] }] });
+    assert.equal(hit.speakers, "Tim Conway; Brian Harrell");
+    assert.doesNotMatch(hit.speakers, /object/);
   });
 
   test("tolerates an empty or malformed response", () => {

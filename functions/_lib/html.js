@@ -32,6 +32,21 @@ export function page(body, status = 200, headers = {}) {
   });
 }
 
+// Plain text with any http(s) links made clickable. Everything is escaped; only the anchors are markup. A trailing
+// full stop, comma or bracket stays outside the link.
+export function linkify(text) {
+  const s = String(text == null ? "" : text);
+  let out = "", last = 0;
+  for (const m of s.matchAll(/https?:\/\/[^\s<>"']+/g)) {
+    let url = m[0];
+    const trail = url.match(/[.,;:!?)\]]+$/);
+    if (trail) url = url.slice(0, -trail[0].length);
+    out += esc(s.slice(last, m.index)) + `<a href="${esc(url)}" rel="noopener nofollow" target="_blank">${esc(url.replace(/^https?:\/\//, ""))}</a>`;
+    last = m.index + url.length;
+  }
+  return raw(out + esc(s.slice(last)));
+}
+
 export function json(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
     status,
