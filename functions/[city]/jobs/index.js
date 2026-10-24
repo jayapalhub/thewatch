@@ -2,7 +2,7 @@ import { html, page, raw, notFound } from "../../_lib/html.js";
 import { shell, subscribeBand, filterBox, signupForm } from "../../_lib/layout.js";
 import { TOPICS, SENIORITY, jobBoardOf } from "../../_lib/constants.js";
 import { todayKey } from "../../_lib/dates.js";
-import { liveJobs, postedJobs, jobRow, lazyJobs, postedHighlight, REMOTE, POSTER_KINDS, JOB_DAYS, POSTED_DAYS } from "../../_lib/jobs.js";
+import { liveJobs, postedJobs, jobRow, lazyJobs, postedHighlight, isNamed, REMOTE, POSTER_KINDS, JOB_DAYS, POSTED_DAYS } from "../../_lib/jobs.js";
 
 export async function onRequestGet({ params, request, env, waitUntil }) {
   const city = jobBoardOf(params.city);
@@ -24,6 +24,9 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
   const today = todayKey(city.timezone);
   const named = (all || jobs).filter((j) => j.posted_by_name).length;
   const postedCount = (all || jobs).filter((j) => postedHighlight(j, today)).length;
+  // Roles someone at the employer posted about come first, in their own section; the query already orders them first.
+  const namedRoles = jobs.filter(isNamed), otherRoles = jobs.filter((j) => !isNamed(j));
+  const list = (rows) => html`<ul class="job-list">${rows.map((j) => jobRow(j, today))}</ul>`;
   const opt = (map, cur) => Object.entries(map).map(([k, v]) => html`<option value="${k}" ${cur === k ? raw("selected") : ""}>${v}</option>`);
 
   const body = html`
@@ -47,9 +50,11 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
   <div class="wrap jobs-wrap">
     ${remoteRoles.length ? html`<p class="jobs-remote-note"><a href="#remote-roles">Plus ${remoteRoles.length} remote role${remoteRoles.length === 1 ? "" : "s"} open anywhere in the US</a>, posted by people at the employer.</p>` : ""}
     ${jobs.length
-      ? html`<p class="jobs-count">${anyFilter ? `${jobs.length} of ${total} open roles match.` : `${total} open role${total === 1 ? "" : "s"}.`}</p><ul class="job-list">${jobs.map((j) => jobRow(j, today))}</ul>`
+      ? html`<p class="jobs-count">${anyFilter ? `${jobs.length} of ${total} open roles match.` : `${total} open role${total === 1 ? "" : "s"}.`}</p>`
       : html`<p class="jobs-empty">${anyFilter ? html`No roles match these filters. <a href="/${city.slug}/jobs">See all roles</a>.` : `No roles are listed ${city.remote ? "on the remote board" : `for ${city.name}`} yet. The first ones are on the way.`}</p>`}
+    ${namedRoles.length ? html`<section class="jobs-named" id="named-roles"><h2>From the people hiring</h2><p class="jobs-fine">Roles someone at the employer posted about publicly, with a link to their post.</p>${list(namedRoles)}</section>` : jobs.length ? list(jobs) : ""}
     ${remoteRoles.length ? html`<section class="jobs-remote" id="remote-roles"><h2>Remote across the US</h2><p class="jobs-fine">Open anywhere in the United States, posted by someone at the employer. <a href="/remote/jobs">The remote board</a> has them all.</p><ul class="job-list">${remoteRoles.slice(0, 6).map((j) => jobRow(j, today))}</ul>${remoteRoles.length > 6 ? html`<p><a class="btn btn-outline" href="/remote/jobs">See all ${remoteRoles.length} remote roles</a></p>` : ""}</section>` : ""}
+    ${namedRoles.length && otherRoles.length ? html`<section class="jobs-more" id="more-roles"><h2>More roles ${city.remote ? "across the US" : `in ${city.name}`}</h2>${list(otherRoles)}</section>` : ""}
     <p class="jobs-fine">Listings come down after ${JOB_DAYS} days or as soon as the employer's posting closes. Direct employers and named staffing firms with a current opening only, no aggregator links. A role someone posted about carries their name for ${POSTED_DAYS} days from the post; anyone named can <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Please remove my name")}">ask to be removed</a>.</p>
   </div>
   ${city.remote ? html`<section class="band band-navy band-tight" id="subscribe"><div class="wrap split-center"><div><h2>Security roles and events, every Sunday.</h2><p>Pick your city: the Sunday email carries its events and the best new roles, remote ones included.</p></div>${signupForm({ source: "jobs:remote", chooseCity: true })}</div></section>` : city.newsletter === "sunday"

@@ -68,10 +68,15 @@ export function hydrateJob(j) {
   return j;
 }
 
-// Board order: featured first, then roles a hiring manager, leader or recruiter posted about in the last 21 days
-// (newest post first), then other roles with a named person, then the rest, newest first.
+// A named role is one someone at the employer posted about: posted_by_name is set and not empty.
+export const isNamed = (j) => !!(j && j.posted_by_name && String(j.posted_by_name).trim());
+const NAMED_SQL = "(j.posted_by_name IS NOT NULL AND j.posted_by_name != '')";
+
+// Board order: named roles first (the city board shows them in their own section), and within each group featured
+// first, then roles a hiring manager, leader or recruiter posted about in the last 21 days (newest post first), then
+// the rest, newest first.
 export function sortJobs(jobs, today = todayKey()) {
-  const rank = (j) => (isFeatured(j, today) ? 0 : postedHighlight(j, today) ? 1 : j.posted_by_name ? 2 : 3);
+  const rank = (j) => (isNamed(j) ? 0 : 10) + (isFeatured(j, today) ? 0 : postedHighlight(j, today) ? 1 : 2);
   const when = (j) => (postedHighlight(j, today) ? j.posted_by_date : j.posted_at || String(j.created_at || "").slice(0, 10)) || "";
   return jobs.map((j, i) => ({ j, i })).sort((a, b) => rank(a.j) - rank(b.j) || (when(b.j) > when(a.j) ? 1 : when(b.j) < when(a.j) ? -1 : 0) || a.i - b.i).map((x) => x.j);
 }
@@ -90,7 +95,7 @@ export async function liveJobs(db, city, { seniority, topic, remote, kind, named
   if (posted) { where.push(HIGHLIGHT_SQL); args.push(addDays(today, -POSTED_DAYS)); }
   try {
     const { results } = await db.prepare(`${SELECT} WHERE ${where.join(" AND ")}
-      ORDER BY (CASE WHEN j.featured_until >= ? THEN 0 ELSE 1 END), (CASE WHEN ${HIGHLIGHT_SQL} THEN 0 ELSE 1 END), (CASE WHEN j.posted_by_name IS NOT NULL AND j.posted_by_name != '' THEN 0 ELSE 1 END), COALESCE(j.posted_by_date, j.posted_at, substr(j.created_at, 1, 10)) DESC, j.id DESC LIMIT ?`).bind(...args, today, addDays(today, -POSTED_DAYS), limit).all();
+      ORDER BY (CASE WHEN ${NAMED_SQL} THEN 0 ELSE 1 END), (CASE WHEN j.featured_until >= ? THEN 0 ELSE 1 END), (CASE WHEN ${HIGHLIGHT_SQL} THEN 0 ELSE 1 END), COALESCE(j.posted_by_date, j.posted_at, substr(j.created_at, 1, 10)) DESC, j.id DESC LIMIT ?`).bind(...args, today, addDays(today, -POSTED_DAYS), limit).all();
     return sortJobs(results.map(hydrateJob), today);
   } catch { return []; } // table missing before the migration
 }
@@ -125,9 +130,11 @@ export function agoLabel(day, today = todayKey()) {
 }
 
 // The email's three: featured roles first, then roles with a named person, then the reader's own level, then the rest.
+// The chosen three are then shown with the named roles before the unnamed ones.
 export function pickJobsFor(jobs, seniority, n = 3, today = todayKey()) {
   const rank = (j) => (isFeatured(j, today) ? 0 : j.posted_by_name ? 1 : seniority && j.seniority === seniority ? 2 : 3);
-  return jobs.map((j, i) => ({ j, i })).sort((a, b) => rank(a.j) - rank(b.j) || a.i - b.i).slice(0, n).map((x) => x.j);
+  const picks = jobs.map((j, i) => ({ j, i })).sort((a, b) => rank(a.j) - rank(b.j) || a.i - b.i).slice(0, n);
+  return picks.sort((a, b) => (isNamed(a.j) ? 0 : 1) - (isNamed(b.j) ? 0 : 1) || a.i - b.i).map((x) => x.j);
 }
 
 // Email block for roles people posted about: up to three for the reader's city, before the ordinary picks. Nothing is
