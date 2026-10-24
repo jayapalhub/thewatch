@@ -3,7 +3,7 @@
 // as events. Jerome can hold or reject a role in that window; if he does nothing it goes live. Roles that drop off a
 // board are closed on the next run. Every row links to the employer's own posting. See project doc 135.
 import { autoPublishAt } from "./autopublish.js";
-import { cleanJobUrl, JOB_DAYS } from "./jobs.js";
+import { cleanJobUrl, titlesMatch, JOB_DAYS } from "./jobs.js";
 import { slugify } from "./html.js";
 
 // What counts as one of our roles. Title must match SECURITY_RE and must not match NOT_OURS_RE.
@@ -549,6 +549,18 @@ export async function runJobSource(db, src, { fetcher = getJson, now = new Date(
       // Some boards post the same requisition once per office. One live row per title and employer is enough.
       const twin = await db.prepare("SELECT id FROM jobs WHERE source_id=? AND lower(title)=lower(?) AND status IN ('published','pending_review') LIMIT 1").bind(src.id, String(it.title)).first();
       if (twin) { seen.add(String(it.key)); run.skipped++; continue; }
+      // A role someone announced in a post before it reached the employer's site: when the board now lists it, the
+      // announced row gains the employer's posting and the board's fields instead of a second row appearing.
+      const announced = await db.prepare("SELECT id, title FROM jobs WHERE announced=1 AND status='published' AND city=? AND (organization_id=? OR lower(employer_name)=lower(?))").bind(src.city, src.organization_id, src.employer_name).all();
+      const hit = ((announced && announced.results) || []).find((a) => titlesMatch(a.title, it.title));
+      if (hit) {
+        await db.prepare(`UPDATE jobs SET url=?, announced=0, source='sweep', source_id=?, source_key=?, location=COALESCE(location, ?), salary_text=COALESCE(?, salary_text), posted_at=COALESCE(posted_at, ?), excerpt=COALESCE(excerpt, ?),
+            expires_at=MAX(COALESCE(expires_at, ''), date('now', '+${JOB_DAYS} days')), last_checked_at=datetime('now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+            reviewer_notes=COALESCE(reviewer_notes,'') || ' Matched to the employer posting from the ${SOURCE_KINDS[src.kind]} board on ${now.toISOString().slice(0, 10)}.' WHERE id=?`)
+          .bind(url, src.id, String(it.key), String(it.location || "").slice(0, 120) || null, it.salary_text, it.posted_at, it.excerpt || null, hit.id).run();
+        seen.add(String(it.key)); run.matched = (run.matched || 0) + 1;
+        continue;
+      }
     }
     if (existing) {
       if (["published", "pending_review"].includes(existing.status)) await db.prepare("UPDATE jobs SET salary_text=COALESCE(?, salary_text), posted_at=COALESCE(posted_at, ?), excerpt=COALESCE(excerpt, ?), last_checked_at=datetime('now'), updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?").bind(it.salary_text, it.posted_at, it.excerpt || null, existing.id).run();
