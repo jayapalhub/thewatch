@@ -12,7 +12,7 @@ database_name = "thewatch"
 database_id = "1239087e-c235-43d1-b760-bb5723e358b9"
 migrations_dir = "migrations"
 
-# Non-secret settings. Secrets (RESEND_API_KEY, ADMIN_TOKEN) are set in the Cloudflare dashboard, never here.
+# Non-secret settings. Secrets (RESEND_API_KEY, ADMIN_TOKEN, CLICK_SALT for the click address hash) are set in the Cloudflare dashboard, never here.
 # Top level values are the production environment. ENVIRONMENT tells the code which one it is running in.
 [vars]
 ENVIRONMENT = "production"
