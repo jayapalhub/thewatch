@@ -1,4 +1,4 @@
-import { CITIES, eventPath, orgPath, cityOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
+import { CITIES, eventPath, orgPath, cityOf, jobBoardOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
 import { todayKey, addDays } from "./_lib/dates.js";
 import { jobPath, postedHighlight } from "./_lib/jobs.js";
 import { parseSpeakers, nameKey, resolveKey, loadOverrides } from "./_lib/speakers.js";
@@ -62,7 +62,7 @@ export async function onRequestGet({ env }) {
     if (parseSpeakers(e.speakers).some((p) => resolveKey(nameKey(p.name), overrides))) boards.forEach((b) => speakerCities.add(b));
   }
 
-  const liveJobs = jobs.filter((j) => CITIES[j.city] && (!j.expires_at || j.expires_at >= todayKey(CITIES[j.city].timezone)));
+  const liveJobs = jobs.filter((j) => jobBoardOf(j.city) && (!j.expires_at || j.expires_at >= todayKey(jobBoardOf(j.city).timezone)));
   const boardMod = new Map();
   for (const j of liveJobs) boardMod.set(j.city, later(boardMod.get(j.city), lastmod(j.updated_at)));
 
@@ -74,9 +74,10 @@ export async function onRequestGet({ env }) {
   for (const c of cities) if (speakerCities.has(c)) add(`/${c}/speakers`);
   if (speakerCities.has("virtual")) add("/virtual/speakers");
   for (const c of cities) if (boardMod.has(c)) add(`/${c}/jobs`, boardMod.get(c));
+  if (boardMod.has("remote")) add("/remote/jobs", boardMod.get("remote"));
   // From the people hiring: listed while someone is on it, nationwide and per city.
   const postedMod = new Map();
-  for (const j of liveJobs) if (postedHighlight(j, todayKey(CITIES[j.city].timezone))) postedMod.set(j.city, later(postedMod.get(j.city), lastmod(j.updated_at)));
+  for (const j of liveJobs) if (postedHighlight(j, todayKey(jobBoardOf(j.city).timezone))) postedMod.set(j.city, later(postedMod.get(j.city), lastmod(j.updated_at)));
   if (postedMod.size) add("/jobs/posted", [...postedMod.values()].reduce(later, null));
   for (const c of cities) if (postedMod.has(c)) add(`/${c}/jobs/posted`, postedMod.get(c));
   for (const c of cities) add(`/${c}/cpe`);

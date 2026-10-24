@@ -226,6 +226,11 @@ body.preview .day-head { top: 116px; }
   .event-actions { display: none; }
 }
 
+/* Remote roles: a note at the top of each city board and a section after its list (see [city]/jobs/index.js). */
+.jobs-remote-note { margin: 0 0 8px; font-size: .92rem; }
+.jobs-remote { margin-top: 36px; padding-top: 22px; border-top: 1px solid var(--mist); }
+.jobs-remote h2 { margin: 0 0 4px; }
+
 /* Filters fold behind one button on phones (see filterBox in layout.js). */
 .filters-toggle { display: none; }
 @media (max-width: 640px) {

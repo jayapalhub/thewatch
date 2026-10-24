@@ -2,7 +2,7 @@
 // Rows move pending_review -> published (publish by default, same rules as events) -> expired (30 days) or closed (URL gone).
 import { initialsOf, hueOf } from "./logos.js";
 import { html, raw, slugify } from "./html.js";
-import { TOPICS, SENIORITY, cityOf } from "./constants.js";
+import { TOPICS, SENIORITY, cityOf, jobBoardOf } from "./constants.js";
 import { todayKey, addDays } from "./dates.js";
 import { isPreview } from "./env.js";
 
@@ -27,7 +27,7 @@ export const REMOTE = { onsite: "Onsite", hybrid: "Hybrid", remote: "Remote" };
 export const POSTER_KINDS = { employer: "Employer's own recruiter or hiring manager", staffing: "Staffing firm recruiter" };
 
 // Roles people post about. Who the person is decides the label; a staffing agency recruiter is never one of them.
-export const POSTED_ROLES = { hiring_manager: "Hiring manager", leader: "Security leader", recruiter: "Recruiter" }; // recruiter means in house
+export const POSTED_ROLES = { hiring_manager: "Hiring manager", leader: "Security leader", recruiter: "Recruiter", team: "Works there" }; // recruiter means in house; team means someone who works at the employer (their own or a sister team), never an outside reposter
 export const POSTED_DAYS = 21; // the person highlight lasts this long from the post; an announced role expires then too
 const dayDiff = (from, to) => Math.round((Date.parse(String(to).slice(0, 10) + "T00:00:00Z") - Date.parse(String(from).slice(0, 10) + "T00:00:00Z")) / 86400000);
 // True while the role should carry the person highlight: a named person with a known role, posted in the last 21 days.
@@ -36,11 +36,11 @@ export function postedHighlight(j, today = todayKey()) {
   const n = dayDiff(j.posted_by_date, today);
   return n <= POSTED_DAYS;
 }
-export function postedLabel(j) { return POSTED_ROLES[j.posted_by_role] ? `${POSTED_ROLES[j.posted_by_role]} posted` : j.posted_by_kind === "staffing" ? "Staffing firm posted" : "Posted by the employer"; }
+export function postedLabel(j) { if (j.posted_by_role === "team") return `Shared by someone at ${j.employer || j.employer_name || "the employer"}`; return POSTED_ROLES[j.posted_by_role] ? `${POSTED_ROLES[j.posted_by_role]} posted` : j.posted_by_kind === "staffing" ? "Staffing firm posted" : "Posted by the employer"; }
 // An announced role (no employer posting yet) comes down 21 days after the post unless it gains the employer's URL.
 export function announcedExpiry(postedByDate, today = todayKey()) { return addDays(postedByDate || today, POSTED_DAYS); }
 export function removalLink(j) { return `mailto:watch@bettersecurity.ai?subject=${encodeURIComponent(`Please remove my name: ${j.title} at ${j.employer || j.employer_name || ""}`)}`; }
-const HIGHLIGHT_SQL = "j.posted_by_name IS NOT NULL AND j.posted_by_name != '' AND j.posted_by_role IN ('hiring_manager','leader','recruiter') AND COALESCE(j.posted_by_kind,'') != 'staffing' AND j.posted_by_date >= ?";
+const HIGHLIGHT_SQL = "j.posted_by_name IS NOT NULL AND j.posted_by_name != '' AND j.posted_by_role IN ('hiring_manager','leader','recruiter','team') AND COALESCE(j.posted_by_kind,'') != 'staffing' AND j.posted_by_date >= ?";
 
 // Two titles for the same role, one from a post and one from the employer's board: "Sr. Security Engineer (Remote)"
 // and "Senior Security Engineer". Tokens are compared after dropping punctuation, grades and work model words.
@@ -79,7 +79,7 @@ export function sortJobs(jobs, today = todayKey()) {
 // Live roles for a city: published and not past expiry, in board order (see sortJobs). posted: only roles with the
 // person highlight.
 export async function liveJobs(db, city, { seniority, topic, remote, kind, named, posted, limit = 200 } = {}) {
-  const today = todayKey(cityOf(city) && cityOf(city).timezone);
+  const today = todayKey(jobBoardOf(city) ? jobBoardOf(city).timezone : undefined);
   const where = ["j.city = ?", "j.status = 'published'", "(j.expires_at IS NULL OR j.expires_at >= ?)"];
   const args = [city, today];
   if (seniority && SENIORITY[seniority]) { where.push("j.seniority = ?"); args.push(seniority); }
@@ -97,7 +97,7 @@ export async function liveJobs(db, city, { seniority, topic, remote, kind, named
 
 // Roles with the person highlight, newest post first, for one city or (city null) every city.
 export async function postedJobs(db, city = null, { limit = 60 } = {}) {
-  const today = todayKey(city && cityOf(city) ? cityOf(city).timezone : undefined);
+  const today = todayKey(city && jobBoardOf(city) ? jobBoardOf(city).timezone : undefined);
   const where = ["j.status = 'published'", "(j.expires_at IS NULL OR j.expires_at >= ?)", HIGHLIGHT_SQL];
   const args = [today, addDays(today, -POSTED_DAYS)];
   if (city) { where.push("j.city = ?"); args.push(city); }
@@ -187,7 +187,7 @@ export function insightLine(j, today = todayKey()) {
   const highlight = postedHighlight(j, today);
   if (!highlight && !(j.posted_by_name && !POSTED_ROLES[j.posted_by_role])) return "";
   const who = [j.posted_by_name, shortTitle(j.posted_by_title, j.employer)].filter(Boolean).join(", ");
-  const verb = highlight && j.posted_by_role !== "recruiter" ? "is hiring" : "posted this role";
+  const verb = !highlight ? "posted this role" : j.posted_by_role === "team" ? "shared this role" : j.posted_by_role === "recruiter" ? "posted this role" : "is hiring";
   return html`<p class="job-insight"><span class="person-badge" style="--hue:${hueOf(j.posted_by_name)}" aria-hidden="true">${initialsOf(j.posted_by_name)}</span><span>${who}, ${verb}${j.posted_by_kind === "staffing" ? " (staffing firm)" : ""}</span></p>`;
 }
 // Kept for callers that still want the long form (the person's line with the post and removal links), such as admin.
@@ -200,7 +200,8 @@ export function announcedLine(j) { return j.announced ? html`<p class="job-annou
 
 export function jobRow(j, today = todayKey()) {
   const highlight = postedHighlight(j, today);
-  const where = [j.location, REMOTE[j.remote], SENIORITY[j.seniority]].filter(Boolean).join(" · ");
+  const model = REMOTE[j.remote] && !new RegExp(`\\b${REMOTE[j.remote]}\\b`, "i").test(j.location || "") ? REMOTE[j.remote] : ""; // "United States (Remote)" already says it
+  const where = [j.location, model, SENIORITY[j.seniority]].filter(Boolean).join(" · ");
   const when = highlight && j.posted_by_date ? j.posted_by_date : j.posted_at;
   const foot = [
     isFeatured(j, today) ? html`<span class="job-accent">Featured</span>` : "",

@@ -41,6 +41,9 @@ export function preferredCity(request) {
   return m && CITIES[m[1]] ? m[1] : DEFAULT_CITY;
 }
 
+// Remote roles open anywhere in the US have a board of their own at /remote/jobs; it is not a calendar city.
+export const REMOTE_BOARD = { slug: "remote", name: "Remote", title: "The Watch", region: "Anywhere in the United States", timezone: "America/New_York", newsletter: null, remote: true };
+export function jobBoardOf(slug) { return CITIES[slug] || (slug === "remote" ? REMOTE_BOARD : null); }
 export function cityOf(slug) { return CITIES[slug] || (slug === "virtual" ? VIRTUAL : null); }
 // The IANA zone an event on this calendar keeps its wall clock times in. Virtual sessions use Pacific, the site's base zone.
 export function cityTz(slug) { const c = cityOf(slug); return (c && c.timezone) || "America/Los_Angeles"; }
@@ -94,4 +97,4 @@ export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekl
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 
 // Bump on any CSS or JS change so browsers fetch the new file.
-export const ASSET_VERSION = "2026-10-24l";
+export const ASSET_VERSION = "2026-10-24m";
