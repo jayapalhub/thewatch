@@ -198,8 +198,12 @@ export async function pullAshby(cfg, _search, fetcher = getJson) {
 }
 // Eightfold career sites (careers.qualcomm.com and many others): config { host, company } where company is the
 // "domain" the site passes to its own API. Paged ten at a time; the site's location filter does the geography.
-export async function pullEightfold(cfg, searchText, fetcher = getJson, terms = []) {
-  const out = []; const loc = terms[0] || "";
+// Eightfold has two public search APIs. Newer tenants answer /api/pcsx/search; older ones refuse it ("PCSX is not
+// enabled for this user", Forvia on 2026-10-23) but still answer /api/apply/v2/jobs, the one their own careers page
+// uses. Both come back here in one shape. The older one is asked without a location (its location filter is not the
+// radius search the newer one has); the city filter afterwards keeps what is local.
+async function eightfoldPcsx(cfg, searchText, fetcher, loc) {
+  const out = [];
   for (let start = 0; start < 60; start += 10) {
     const q = new URLSearchParams({ domain: cfg.company, query: searchText || "security", location: loc, start: String(start), num: "10", sort_by: "relevance", filter_distance: "50" });
     const j = await fetcher(`https://${cfg.host}/api/pcsx/search?${q}`, { headers: { Referer: `https://${cfg.host}/careers` } });
@@ -208,9 +212,28 @@ export async function pullEightfold(cfg, searchText, fetcher = getJson, terms = 
     out.push(...ps);
     if (!ps.length || out.length >= ((j.data && j.data.count) || 0)) break;
   }
-  return out.filter((p) => isOurRole(p.name)).map((p) => {
+  return out;
+}
+async function eightfoldV2(cfg, searchText, fetcher) {
+  const out = [];
+  for (let start = 0; start < 60; start += 10) {
+    const q = new URLSearchParams({ domain: cfg.company, query: searchText || "security", start: String(start), num: "10" });
+    const j = await fetcher(`https://${cfg.host}/api/apply/v2/jobs?${q}`, { headers: { Referer: `https://${cfg.host}/careers` } });
+    if (!j || !Array.isArray(j.positions)) throw new Error("unexpected response from Eightfold");
+    for (const p of j.positions) out.push({ id: p.id, name: p.name, locations: Array.isArray(p.locations) ? p.locations : [p.location].filter(Boolean),
+      positionUrl: p.canonicalPositionUrl || `/careers/job/${p.id}`, postedTs: p.t_create, workLocationOption: p.work_location_option, description: p.job_description });
+    if (!j.positions.length || out.length >= (Number(j.count) || 0)) break;
+  }
+  return out;
+}
+export async function pullEightfold(cfg, searchText, fetcher = getJson, terms = []) {
+  let positions;
+  try { positions = await eightfoldPcsx(cfg, searchText, fetcher, terms[0] || ""); }
+  catch (e) { if (!/PCSX is not enabled/i.test(String(e && e.message))) throw e; positions = await eightfoldV2(cfg, searchText, fetcher); }
+  return positions.filter((p) => isOurRole(p.name)).map((p) => {
     const locs = Array.isArray(p.locations) ? p.locations.join("; ") : String(p.location || "");
-    return { key: String(p.id), title: p.name, url: `https://${cfg.host}${p.positionUrl || "/careers/job/" + p.id}`, location: locs, posted_at: p.postedTs ? new Date(p.postedTs * 1000).toISOString().slice(0, 10) : null, salary_text: null, remote: p.workLocationOption === "remote" ? "remote" : p.workLocationOption === "hybrid" ? "hybrid" : inferRemote(locs), excerpt: null };
+    const url = /^https?:\/\//.test(p.positionUrl || "") ? p.positionUrl : `https://${cfg.host}${p.positionUrl || "/careers/job/" + p.id}`;
+    return { key: String(p.id), title: p.name, url, location: locs, posted_at: p.postedTs ? new Date(p.postedTs * 1000).toISOString().slice(0, 10) : null, salary_text: null, remote: p.workLocationOption === "remote" ? "remote" : p.workLocationOption === "hybrid" ? "hybrid" : inferRemote(locs), excerpt: p.description ? excerptOf(p.description) : null };
   });
 }
 // SmartRecruiters public postings API: config { company } (the identifier in careers.smartrecruiters.com/<company>).
@@ -375,7 +398,7 @@ export async function pullSuccessFactors(cfg, searchText, fetcher = getJson) {
   // Classic Career Site Builder: HTML rows by startrow; the page size varies by site (10 or 25), so step by what came back.
   for (let start = 0; start < 250;) {
     const html = await fetcher(`${base}/search/?q=${encodeURIComponent(searchText || "security")}&sortColumn=referencedate&sortDirection=desc&startrow=${start}`, { text: true });
-    if (start === 0 && !/class="data-row"|jobTitle-link|searchResultsShell|No jobs found|no results/i.test(String(html))) throw new Error("unexpected page from SuccessFactors (no job table)");
+    if (start === 0 && !/class="data-row"|jobTitle-link|searchResultsShell|No jobs found|no results|currently no open positions/i.test(String(html))) throw new Error("unexpected page from SuccessFactors (no job table)");
     const rows = String(html).split(/<tr[^>]*class="data-row"/i).slice(1);
     const before = seen.size;
     for (const row of rows) {
