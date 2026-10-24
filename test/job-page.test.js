@@ -106,7 +106,7 @@ test("held, rejected and unknown roles answer 404", async () => {
   assert.equal((await render("/dallas/jobs/not-a-role", withJob(JOB))).res.status, 404);
 });
 
-test("jobs board: no JobPosting markup, titles open the role page, Apply still goes to the employer", async () => {
+test("jobs board: no JobPosting markup, the card title opens the role page, and Apply lives on the role page", async () => {
   const db = fakeDb([{ match: /FROM jobs j/, op: "all", reply: () => ({ results: [{ ...JOB }] }) }]);
   const res = await jobsBoard({ params: { city: "dallas" }, request: new Request("https://bettersecurity.ai/dallas/jobs"), env: { DB: db, SITE_URL: "https://bettersecurity.ai" }, waitUntil: () => {} });
   const body = await res.text();
@@ -114,7 +114,7 @@ test("jobs board: no JobPosting markup, titles open the role page, Apply still g
   assert.doesNotMatch(body, /JobPosting/);
   assert.doesNotMatch(body, /application\/ld\+json/);
   assert.match(body, /<h2 class="job-title"><a href="\/dallas\/jobs\/42-senior-security-engineer-at-example-co">Senior Security Engineer<\/a><\/h2>/);
-  assert.match(body, /<a class="btn btn-outline btn-small job-apply" href="\/go\/j\/42"/);
+  assert.doesNotMatch(body, /job-apply/);
 });
 
 test("apply ping counts a click for a published role only", async () => {

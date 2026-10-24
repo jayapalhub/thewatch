@@ -169,35 +169,57 @@ export function jobsEmailBlock(siteUrl, city, picks, total, issueId, styles) {
   ${total > picks.length ? `<div style="margin-top:8px;font-size:13px;"><a href="${siteUrl}/${city.slug}/jobs" style="color:${SHIELD};font-weight:700;">See all ${total} open roles</a></div>` : ""}`;
 }
 
-// Public page row. The title opens the role's own page; the Apply button still goes straight to the employer's posting
-// through the click counted redirect. The row keeps its job-<id> anchor so older links into the board still land.
-// The person line: with the highlight, who they are and a link to their post; a role posted about more than 21 days
-// ago is an ordinary listing again. Rows without a role keep the older "Posted by" line.
+// Public page row, laid out like a LinkedIn job card (decided 2026-10-23): the employer's logo, then short lines in a
+// fixed order (title, employer, place and level, pay when stated), one insight line naming the person behind the role,
+// and a small footer. The whole card opens the role's own page (the title link stretches over it), where the Apply
+// button, the link to the person's post and the removal link live. The row keeps its job-<id> anchor.
+
+// "Global CISO, KLDiscovery" reads as "Global CISO" next to the KLDiscovery role.
+function shortTitle(title, employer) {
+  const t = String(title || "").trim(), e = String(employer || "").trim();
+  if (e && t.toLowerCase().endsWith(`, ${e.toLowerCase()}`)) return t.slice(0, -(e.length + 2)).trim();
+  if (e && t.toLowerCase().endsWith(` at ${e.toLowerCase()}`)) return t.slice(0, -(e.length + 4)).trim();
+  return t;
+}
+// The insight line: the person, their title, and what they did. Hiring managers and leaders are hiring; recruiters and
+// older rows without a role posted the role.
+export function insightLine(j, today = todayKey()) {
+  const highlight = postedHighlight(j, today);
+  if (!highlight && !(j.posted_by_name && !POSTED_ROLES[j.posted_by_role])) return "";
+  const who = [j.posted_by_name, shortTitle(j.posted_by_title, j.employer)].filter(Boolean).join(", ");
+  const verb = highlight && j.posted_by_role !== "recruiter" ? "is hiring" : "posted this role";
+  return html`<p class="job-insight"><span class="person-badge" style="--hue:${hueOf(j.posted_by_name)}" aria-hidden="true">${initialsOf(j.posted_by_name)}</span><span>${who}, ${verb}${j.posted_by_kind === "staffing" ? " (staffing firm)" : ""}</span></p>`;
+}
+// Kept for callers that still want the long form (the person's line with the post and removal links), such as admin.
 export function personLine(j, today = todayKey()) {
-  if (postedHighlight(j, today)) {
-    return html`<p class="job-by job-by-person"><span class="job-by-label">${postedLabel(j)}</span> <span class="person-badge" style="--hue:${hueOf(j.posted_by_name)}" aria-hidden="true">${initialsOf(j.posted_by_name)}</span><span class="job-by-name">${j.posted_by_name}</span>${j.posted_by_title ? `, ${j.posted_by_title}` : ""} <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>${j.posted_by_url ? html` <a class="job-post-link" href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Read their post</a>` : ""} <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
-  }
-  if (j.posted_by_name && !POSTED_ROLES[j.posted_by_role]) {
-    return html`<p class="job-by">${j.posted_by_url ? html`<a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Posted by ${j.posted_by_name}</a>` : html`Posted by ${j.posted_by_name}`}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind === "staffing" ? html` <span class="tag">Staffing firm</span>` : ""}${j.posted_by_date ? html` <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>` : ""} <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
-  }
-  return "";
+  const line = insightLine(j, today);
+  if (!line) return "";
+  return html`${line}<p class="job-by-links">${j.posted_by_url ? html`<a class="job-post-link" href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Read their post</a> · ` : ""}<a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
 }
 export function announcedLine(j) { return j.announced ? html`<p class="job-announced">Announced, not yet on ${j.employer}'s site.</p>` : ""; }
 
 export function jobRow(j, today = todayKey()) {
-  const where = [j.location, REMOTE[j.remote]].filter(Boolean).join(", ");
   const highlight = postedHighlight(j, today);
-  return html`<li class="job-row ${isFeatured(j, today) ? "is-featured" : ""} ${highlight ? "is-posted" : ""} ${j.announced ? "is-announced" : ""}" id="job-${j.id}">
+  const where = [j.location, REMOTE[j.remote], SENIORITY[j.seniority]].filter(Boolean).join(" · ");
+  const when = highlight && j.posted_by_date ? j.posted_by_date : j.posted_at;
+  const foot = [
+    isFeatured(j, today) ? html`<span class="job-accent">Featured</span>` : "",
+    j.announced ? html`<span class="job-early">Announced early</span>` : "",
+    when ? `Posted ${agoLabel(when, today)}` : "",
+  ].filter(Boolean);
+  const logo = j.org_slug
+    ? html`<img class="emp-logo" src="/logo/${j.org_slug}" alt="" width="52" height="52" loading="lazy" decoding="async">`
+    : html`<span class="emp-logo emp-initials" style="--hue:${hueOf(j.employer)}" aria-hidden="true">${initialsOf(j.employer)}</span>`;
+  return html`<li class="job-row job-card ${isFeatured(j, today) ? "is-featured" : ""} ${highlight ? "is-posted" : ""} ${j.announced ? "is-announced" : ""}" id="job-${j.id}">
+    ${logo}
     <div class="job-main">
-      ${highlight && j.org_slug ? html`<img class="emp-logo" src="/logo/${j.org_slug}" alt="" width="44" height="44" loading="lazy" decoding="async">` : ""}
-      ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
       <h2 class="job-title"><a href="${jobPath(j)}">${j.title}</a></h2>
-      <p class="job-meta">${[j.employer, where, SENIORITY[j.seniority], j.salary_text].filter(Boolean).join(" · ")}</p>
-      ${personLine(j, today)}
-      ${announcedLine(j)}
-      <div class="tags">${j.topics.slice(0, 3).map((t) => (TOPICS[t] ? html`<span class="tag tag-topic">${TOPICS[t]}</span>` : ""))}${j.posted_at ? html`<span class="job-when">Posted ${agoLabel(j.posted_at, today)}</span>` : ""}</div>
+      <p class="job-company">${j.employer}</p>
+      ${where ? html`<p class="job-where">${where}</p>` : ""}
+      ${j.salary_text ? html`<p class="job-pay">${j.salary_text}</p>` : ""}
+      ${insightLine(j, today)}
+      ${foot.length ? html`<p class="job-foot">${foot.map((f, i) => html`${i ? " · " : ""}${f}`)}</p>` : ""}
     </div>
-    <a class="btn btn-outline btn-small job-apply" href="/go/j/${j.id}" rel="noopener" target="_blank">${j.announced ? "Read the post" : "Apply"}</a>
   </li>`;
 }
 
