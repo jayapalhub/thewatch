@@ -21,12 +21,12 @@ export async function onRequestGet({ request, env, data }) {
     <select name="status"><option value="">Waiting and live</option>${JOB_STATUSES.map((s) => html`<option value="${s}" ${s === status ? raw("selected") : ""}>${s.replace("_", " ")}</option>`)}</select>
     <select name="city"><option value="">All cities</option>${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${c.slug === city ? raw("selected") : ""}>${c.name}</option>`)}</select>
     <button class="a-btn">Filter</button>
-    <a class="a-btn a-btn-primary" href="/admin/jobs/new">Add role</a> <a class="a-btn" href="/admin/jobs/sources">Employer boards</a> <a class="a-btn" href="/admin/jobs/features">Featured requests</a>
+    <a class="a-btn a-btn-primary" href="/admin/jobs/posted">Add a posted role</a> <a class="a-btn" href="/admin/jobs/new">Add role</a> <a class="a-btn" href="/admin/jobs/sources">Employer boards</a> <a class="a-btn" href="/admin/jobs/features">Featured requests</a>
   </form>
   <table class="a-table"><thead><tr><th>Role</th><th>Who to talk to</th><th>Status</th><th>Clicks</th><th></th></tr></thead><tbody>
   ${jobs.map((j) => html`<tr>
     <td><a href="/admin/jobs/${j.id}"><strong>${j.title}</strong></a>${isFeatured(j, today) ? html` <span class="a-pill a-pill-good">featured</span>` : ""}<br><small class="a-muted">${j.employer} &middot; ${(CITIES[j.city] || {}).name || j.city}${j.location ? ` · ${j.location}` : ""} &middot; ${j.source}</small>${j.reviewer_notes ? html`<br><small class="a-warn">${j.reviewer_notes}</small>` : ""}</td>
-    <td><small>${j.posted_by_name ? html`${j.posted_by_name}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind ? html`<br><span class="a-muted">${j.posted_by_kind}</span>` : ""}` : html`<span class="a-muted">none</span>`}</small></td>
+    <td><small>${j.posted_by_name ? html`${j.posted_by_name}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}<br><span class="a-muted">${j.posted_by_role ? j.posted_by_role.replace("_", " ") : j.posted_by_kind || ""}${j.announced ? " · announced, no employer posting yet" : ""}</span>` : html`<span class="a-muted">none</span>`}</small></td>
     <td><span class="a-pill ${j.status === "published" ? "a-pill-good" : j.hold || (j.status === "pending_review" && !j.auto_publish_at) ? "a-pill-warn" : ""}">${j.status === "pending_review" ? (j.hold || !j.auto_publish_at ? "held, needs you" : `auto publishes ${fmtUtcLocal(j.auto_publish_at)}`) : j.status === "published" ? `live until ${j.expires_at || "?"}` : j.status}</span></td>
     <td>${j.apply_clicks}</td>
     <td><form method="post" class="a-inline"><input type="hidden" name="id" value="${j.id}">
