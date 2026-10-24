@@ -77,7 +77,8 @@ describe("board order and filter", () => {
     const out = sortJobs([PLAIN, OLD, RECRUITER, LEGACY, POSTED, LEADER, ANNOUNCED], TODAY).map((j) => j.id);
     assert.deepEqual(out, [2, 1, 4, 3, 5, 7, 6]); // 5 and 7 share a posting date and keep their order
     const featured = { ...PLAIN, id: 9, featured_until: "2099-01-01" };
-    assert.equal(sortJobs([POSTED, featured], TODAY)[0].id, 9);
+    assert.deepEqual(sortJobs([featured, POSTED], TODAY).map((j) => j.id), [1, 9], "a named role comes before a featured unnamed one");
+    assert.deepEqual(sortJobs([PLAIN, featured], TODAY).map((j) => j.id), [9, 6], "featured first among the unnamed");
   });
   test("liveJobs with posted asks only for highlighted roles, and the page offers the filter", async () => {
     const db = rowsDb([POSTED]);
