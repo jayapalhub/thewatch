@@ -1,7 +1,7 @@
 import { lazyAutoPublish } from "../_lib/autopublish.js";
 import { lazyNewsletterTick } from "../_lib/dispatch.js";
 import { html, page, raw } from "../_lib/html.js";
-import { shell, signupForm } from "../_lib/layout.js";
+import { shell, signupForm, filterBox } from "../_lib/layout.js";
 import { queryEvents, eventTags, costLabel } from "../_lib/events.js";
 import { TOPICS, eventPath, orgPath } from "../_lib/constants.js";
 import { addDays, todayKey, nowLocalIso, toUtc } from "../_lib/dates.js";
@@ -38,6 +38,10 @@ export async function onRequestGet({ request, env, waitUntil }) {
   if (f.body === "vendor") events = events.filter((e) => e.org_type === "vendor");
   else if (f.body) { const slugs = BODIES.find(([k]) => k === f.body)[2] || []; events = events.filter((e) => slugs.includes(e.org_slug)); }
   if (f.vendors === "0") events = events.filter((e) => e.org_type !== "vendor");
+  // Two weeks by default keeps the page short on a phone; the rest of the 60 days is one tap away.
+  const days = q.get("days") === "60" ? 60 : 14;
+  const cutoff = addDays(today, days) + "T00:00";
+  const shown = events.filter((e) => String(e.start_at || "") < cutoff);
   const counts = { total: events.length, cpe: events.filter((e) => e.cpe_eligible).length, free: events.filter((e) => ["free", "members_free"].includes(e.cost_type)).length };
 
   const keep = (over) => { const p = new URLSearchParams(); Object.entries({ ...f, ...over }).forEach(([k, v]) => { if (v && !(k === "cpe" && v === "1") && !(k === "vendors" && v === "1")) p.set(k, v); }); const s = p.toString(); return "/virtual" + (s ? "?" + s : ""); };
@@ -53,7 +57,8 @@ export async function onRequestGet({ request, env, waitUntil }) {
         </div>
         <a class="change-city" href="/?choose=1">Change city</a>
       </div>
-      <form class="filters" method="get" action="/virtual">
+      ${filterBox(html`<form class="filters" method="get" action="/virtual">
+        ${days === 60 ? html`<input type="hidden" name="days" value="60">` : ""}
         <label>Organizer<select name="body"><option value="">All organizers</option>${BODIES.map(([k, label]) => html`<option value="${k}" ${f.body === k ? raw("selected") : ""}>${label}</option>`)}</select></label>
         <label>Topic<select name="topic"><option value="">All topics</option>${Object.entries(TOPICS).filter(([k]) => k !== "social").map(([k, v]) => html`<option value="${k}" ${f.topic === k ? raw("selected") : ""}>${v}</option>`)}</select></label>
         <label>Cost<select name="cost"><option value="">Any cost</option><option value="free" ${f.cost === "free" ? raw("selected") : ""}>Free</option><option value="paid" ${f.cost === "paid" ? raw("selected") : ""}>Paid</option></select></label>
@@ -63,13 +68,14 @@ export async function onRequestGet({ request, env, waitUntil }) {
         <label>Show times in<select id="tz-select" aria-label="Time zone"><option value="auto">My time zone</option><option value="America/Los_Angeles">Pacific</option><option value="America/Denver">Mountain</option><option value="America/Chicago">Central</option><option value="America/New_York">Eastern</option><option value="UTC">UTC</option></select></label>
         <button class="btn btn-small btn-primary" type="submit">Apply</button>
         ${(f.topic || f.body || f.cost || f.q || !f.cpe || f.vendors === "0") ? html`<a class="clear" href="/virtual">Reset</a>` : ""}
-      </form>
+      </form>`, [f.topic, f.body, f.cost, f.q, !f.cpe, f.vendors === "0"].filter(Boolean).length)}
     </div>
   </section>
   <div class="wrap">
     <div id="virtual-list" data-virtual-list>
-      ${events.length ? html`<ul class="event-list virtual-list">${events.map((e) => virtualRow(e))}</ul>` : html`<p class="empty">${f.cpe ? "No CPE eligible sessions match. Untick the CPE box to see everything, or " : "Nothing matches these filters. "}<a href="/submit">submit a session</a>.</p>`}
+      ${shown.length ? html`<ul class="event-list virtual-list">${shown.map((e) => virtualRow(e))}</ul>` : events.length ? html`<p class="empty">Nothing matches in the next two weeks.</p>` : html`<p class="empty">${f.cpe ? "No CPE eligible sessions match. Untick the CPE box to see everything, or " : "Nothing matches these filters. "}<a href="/submit">submit a session</a>.</p>`}
     </div>
+    ${shown.length < events.length ? html`<p class="list-more"><a class="btn btn-outline" href="${keep({ days: "60" })}">Show all ${events.length} sessions in the next 60 days</a></p>` : ""}
     <p class="list-foot">Times are shown in your selected zone; the underlying schedule comes from each organizer's page, which stays authoritative. CPE hours are as the organizer reports them. <a href="/virtual/feed.ics">Subscribe to this calendar</a>.</p>
   </div>
   <section class="band band-navy band-tight"><div class="wrap split-center">

@@ -1,5 +1,5 @@
 import { html, page, raw, notFound } from "../../_lib/html.js";
-import { shell, subscribeBand } from "../../_lib/layout.js";
+import { shell, subscribeBand, filterBox } from "../../_lib/layout.js";
 import { CITIES, TOPICS, SENIORITY } from "../../_lib/constants.js";
 import { todayKey } from "../../_lib/dates.js";
 import { liveJobs, jobRow, lazyJobs, postedHighlight, REMOTE, POSTER_KINDS, JOB_DAYS, POSTED_DAYS } from "../../_lib/jobs.js";
@@ -31,7 +31,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
       <p class="kicker">${city.region}</p>
       <h1>Security jobs in ${city.name}</h1>
       <p class="jobs-lede">Open security, GRC, privacy and audit roles at local employers, each linked to the employer's own posting.${postedCount ? html` <a href="/${city.slug}/jobs/posted">${postedCount} of them ${postedCount === 1 ? "was" : "were"} posted about by the people hiring</a>, with their name and a link to their post, so you know who to reach out to.` : named ? ` Where a hiring manager or recruiter posted about the role, we show who, so you know who to reach out to.` : ""}</p>
-      ${total ? html`<form class="filters" method="get" action="/${city.slug}/jobs">
+      ${total ? filterBox(html`<form class="filters" method="get" action="/${city.slug}/jobs">
         <label>Seniority<select name="seniority"><option value="">All levels</option>${opt(SENIORITY, f.seniority)}</select></label>
         <label>Topic<select name="topic"><option value="">All topics</option>${opt(Object.fromEntries(Object.entries(TOPICS).filter(([k]) => k !== "social")), f.topic)}</select></label>
         <label>Work model<select name="remote"><option value="">Onsite, hybrid or remote</option>${opt(REMOTE, f.remote)}</select></label>
@@ -40,7 +40,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
         <label>Posted by<select name="kind"><option value="">Anyone</option>${opt({ employer: "The employer", staffing: "A staffing firm" }, f.kind)}</select></label>
         <button class="btn btn-small btn-primary" type="submit">Apply</button>
         ${anyFilter ? html`<a class="clear" href="/${city.slug}/jobs">Clear</a>` : ""}
-      </form>` : ""}
+      </form>`, [f.seniority, f.topic, f.remote, f.named, f.posted, f.kind].filter(Boolean).length) : ""}
     </div>
   </section>
   <div class="wrap jobs-wrap">

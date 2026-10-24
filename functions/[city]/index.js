@@ -4,7 +4,7 @@ import { lazyReminders } from "../_lib/reminders.js";
 import { lazyJobs } from "../_lib/jobs.js";
 import { pageSponsor, clickUrl } from "../_lib/sponsors.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
-import { shell, subscribeBand, emailValueLine } from "../_lib/layout.js";
+import { filterBox, shell, subscribeBand, emailValueLine } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay, eventListJsonLd } from "../_lib/events.js";
 import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/constants.js";
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
@@ -106,7 +106,7 @@ function header(city, view, f, orgs, anyFilter, monthKey) {
           </div>
         </div>
       </div>
-      <form class="filters" method="get" action="/${city.slug}">
+      ${filterBox(html`<form class="filters" method="get" action="/${city.slug}">
         ${view === "month" ? html`<input type="hidden" name="view" value="month"><input type="hidden" name="month" value="${monthKey.slice(0, 7)}">` : ""}
         <label>Topic<select name="topic"><option value="">All topics</option>${Object.entries(TOPICS).map(([k, v]) => html`<option value="${k}" ${f.topic === k ? raw("selected") : ""}>${v}</option>`)}</select></label>
         <label>Organizer<select name="org"><option value="">All organizers</option>${orgs.map((o) => html`<option value="${o.slug}" ${f.org === o.slug ? raw("selected") : ""}>${o.short_name || o.name}</option>`)}</select></label>
@@ -116,7 +116,7 @@ function header(city, view, f, orgs, anyFilter, monthKey) {
         <label class="search">Search<input type="search" name="q" value="${f.q}" placeholder="Title or organizer"></label>
         <button class="btn btn-small btn-primary" type="submit">Apply</button>
         ${anyFilter ? html`<a class="clear" href="${view === "month" ? keep({ topic: "", org: "", cost: "", cpe: "", format: "", q: "", view: "month", month: monthKey.slice(0, 7) }) : `/${city.slug}`}">Clear</a>` : ""}
-      </form>
+      </form>`, [f.topic, f.org, f.cost, f.format, f.cpe, f.q].filter(Boolean).length)}
     </div>
   </section>`;
 }
