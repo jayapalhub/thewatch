@@ -11,7 +11,7 @@ export const POSTED_TITLE = "From the people hiring";
 
 function intro(city) {
   const where = city ? `in ${city.region || city.name}` : "in every city The Watch covers";
-  return html`<p class="jobs-lede">When a hiring manager, a security leader or an in house recruiter posts publicly about a security role ${where}, it lands here first: the role, the person's name and title, and a link to their post, so you know who is behind the opening. Nothing is quoted from the post; read it where they wrote it. A role announced in a post before it reaches the employer's site is listed as announced and switches to the official posting once it appears.</p>`;
+  return html`<p class="jobs-lede">When a hiring manager, a security leader or an in house recruiter posts publicly about a security role ${where}, it appears here: the role, the person's name and title, and a link to their post, so you know who is behind the opening. Nothing is quoted from the post; read it where they wrote it. A role announced in a post before it reaches the employer's site is listed as announced and switches to the official posting once it appears.</p>`;
 }
 
 export function approachNote() {

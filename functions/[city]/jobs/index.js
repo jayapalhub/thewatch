@@ -47,7 +47,7 @@ export async function onRequestGet({ params, request, env, waitUntil }) {
     ${jobs.length
       ? html`<p class="jobs-count">${anyFilter ? `${jobs.length} of ${total} open roles match.` : `${total} open role${total === 1 ? "" : "s"}.`}</p><ul class="job-list">${jobs.map((j) => jobRow(j, today))}</ul>`
       : html`<p class="jobs-empty">${anyFilter ? html`No roles match these filters. <a href="/${city.slug}/jobs">See all roles</a>.` : `No roles are listed for ${city.name} yet. The first ones are on the way.`}</p>`}
-    <p class="jobs-fine">Listings come down after ${JOB_DAYS} days or as soon as the employer's posting closes. Direct employers and named staffing firms with a real opening only, no aggregator links. A role someone posted about carries their name for ${POSTED_DAYS} days from the post; anyone named can <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Please remove my name")}">ask to be removed</a>.</p>
+    <p class="jobs-fine">Listings come down after ${JOB_DAYS} days or as soon as the employer's posting closes. Direct employers and named staffing firms with a current opening only, no aggregator links. A role someone posted about carries their name for ${POSTED_DAYS} days from the post; anyone named can <a href="mailto:watch@bettersecurity.ai?subject=${encodeURIComponent("Please remove my name")}">ask to be removed</a>.</p>
   </div>
   ${city.newsletter === "sunday"
     ? subscribeBand({ city, source: `jobs:${city.slug}`, heading: `New ${city.name} security roles, in your inbox Sunday morning.`, text: `The Sunday email carries a few of the best new roles from this board, alongside every security event in ${city.name} that week.` })
