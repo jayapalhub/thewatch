@@ -149,6 +149,7 @@
   if (!el) return;
   try {
     var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz === el.getAttribute('data-tz')) return; // same zone as the event: the line would repeat the time above it
     var s = new Date(el.getAttribute('data-start')); var eAttr = el.getAttribute('data-end'); var en = eAttr ? new Date(eAttr) : null;
     var f = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
     var t = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
@@ -156,10 +157,3 @@
   } catch (e) {}
 })();
 
-// On a phone the city strip scrolls sideways; start it with the current city in view.
-(function () {
-  var cur = document.querySelector('.city-toggle a[aria-selected="true"]');
-  if (!cur || !cur.parentNode) return;
-  var strip = cur.parentNode;
-  if (strip.scrollWidth > strip.clientWidth) strip.scrollLeft = Math.max(0, cur.offsetLeft - (strip.clientWidth - cur.offsetWidth) / 2);
-})();

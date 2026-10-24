@@ -320,6 +320,8 @@ body.preview .day-head { top: 116px; }
 
 /* Virtual calendar */
 .cal-sub { color: var(--muted); max-width: 64ch; margin: 6px 0 0; }
+.local-time { display: block; }
+.local-time:empty { display: none; }
 /* Long values such as a pasted registration link wrap instead of pushing the page sideways. */
 .event-facts dd, .event-facts small, .event-body { overflow-wrap: anywhere; }
 /* With forty cities a strip of city tabs no longer fits; a small link next to the region opens the city chooser. */

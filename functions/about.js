@@ -23,5 +23,5 @@ export async function onRequestGet({ request }) {
     <p>Corrections, event tips, sponsorship and everything else: <a href="mailto:watch@bettersecurity.ai">watch@bettersecurity.ai</a>. Organizers can <a href="/submit">submit an event</a> directly.</p>
   </div></section>
   <section class="band band-navy band-tight"><div class="wrap split-center"><div><h2>Read it this Sunday.</h2></div>${signupForm({ source: "about", chooseCity: true, city: preferredCity(request) })}</div></section>`;
-  return page(shell({ title: "About", body, path: "/about" }), 200, { "Cache-Control": "private, max-age=600" });
+  return page(shell({ title: "About", description: `The Watch is a free calendar and Sunday email of cybersecurity, AI security, privacy and audit events in ${cities}, published by Better Security.`, body, path: "/about" }), 200, { "Cache-Control": "private, max-age=600" });
 }

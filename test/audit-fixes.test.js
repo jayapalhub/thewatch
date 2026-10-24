@@ -59,3 +59,23 @@ describe("not found page", () => {
     assert.equal(await api.text(), "Not found");
   });
 });
+
+describe("polish", () => {
+  test("short city lists are named; long ones become a count", async () => {
+    const { cityListText } = await import("../functions/_lib/constants.js");
+    const c = (n) => Array.from({ length: n }, (_, i) => ({ name: `City ${i + 1}` }));
+    assert.equal(cityListText(c(1)), "City 1");
+    assert.equal(cityListText(c(3)), "City 1, City 2 and City 3");
+    assert.equal(cityListText(c(5)), "City 1, City 2, City 3, City 4 and City 5");
+    assert.equal(cityListText(c(40)), "40 cities");
+  });
+  test("site pages carry their own search description, each within what search engines show", async () => {
+    for (const [mod, path] of [["../functions/subscribe.js", "/subscribe"], ["../functions/submit.js", "/submit"], ["../functions/about.js", "/about"], ["../functions/privacy.js", "/privacy"], ["../functions/terms.js", "/terms"], ["../functions/sponsor.js", "/sponsor"]]) {
+      const { onRequestGet } = await import(mod);
+      const body = await (await onRequestGet({ request: req(path), env: { DB: fakeDb([{ match: /COUNT/i, op: "first", reply: () => ({ n: 0 }) }]), SITE_URL: "https://bettersecurity.ai" }, params: {}, waitUntil: () => {} })).text();
+      const d = body.match(/<meta name="description" content="([^"]*)"/)[1];
+      assert.ok(d.length <= 170, `${path}: ${d.length} characters`);
+      assert.doesNotMatch(d, /in one calendar and one Sunday email\. By Better Security\.$/, `${path} still uses the generic description`);
+    }
+  });
+});

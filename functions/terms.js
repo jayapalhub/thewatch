@@ -16,5 +16,5 @@ export async function onRequestGet() {
     <h2>Contact</h2>
     <p><a href="mailto:watch@bettersecurity.ai">watch@bettersecurity.ai</a></p>
   </div></section>`;
-  return page(shell({ title: "Terms", body, path: "/terms" }), 200, { "Cache-Control": "public, max-age=3600" });
+  return page(shell({ title: "Terms", description: "Terms for using The Watch calendar, Sunday email and event listings, published by Better Security.", body, path: "/terms" }), 200, { "Cache-Control": "public, max-age=3600" });
 }
