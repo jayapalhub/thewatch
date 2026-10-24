@@ -95,7 +95,7 @@ describe("job rows", () => {
   const today = "2026-10-23";
   test("a role someone posted about shows the employer logo and the person's initials", () => {
     const row = String(jobRow(hydrateJob({ ...base, posted_by_name: "Michael Brewer", posted_by_title: "CISO", posted_by_role: "leader", posted_by_url: "https://lnkd.in/p/x", posted_by_date: "2026-10-21", announced: 1 }), today));
-    assert.match(row, /<img class="emp-logo" src="\/logo\/encore-capital-group" alt="" width="52" height="52" loading="lazy"/);
+    assert.match(row, /<img class="emp-logo" src="\/logo\/encore-capital-group" alt="" width="64" height="64" loading="lazy"/);
     assert.match(row, /<span class="person-badge" style="--hue:\d+" aria-hidden="true">MB<\/span><span>Michael Brewer, CISO, is hiring<\/span>/);
   });
   test("an ordinary role shows its employer logo but no person; a role without an organization shows the employer's initials", () => {

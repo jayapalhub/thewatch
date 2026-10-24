@@ -208,7 +208,7 @@ export function jobRow(j, today = todayKey()) {
     when ? `Posted ${agoLabel(when, today)}` : "",
   ].filter(Boolean);
   const logo = j.org_slug
-    ? html`<img class="emp-logo" src="/logo/${j.org_slug}" alt="" width="52" height="52" loading="lazy" decoding="async">`
+    ? html`<img class="emp-logo" src="/logo/${j.org_slug}" alt="" width="64" height="64" loading="lazy" decoding="async">`
     : html`<span class="emp-logo emp-initials" style="--hue:${hueOf(j.employer)}" aria-hidden="true">${initialsOf(j.employer)}</span>`;
   return html`<li class="job-row job-card ${isFeatured(j, today) ? "is-featured" : ""} ${highlight ? "is-posted" : ""} ${j.announced ? "is-announced" : ""}" id="job-${j.id}">
     ${logo}
