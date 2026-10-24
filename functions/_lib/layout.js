@@ -180,3 +180,10 @@ export function notFoundPage(path = "/") {
   </div></section>`;
   return page(shell({ title: "Page not found", body, city: c ? c.slug : null, path }), 404, { "Cache-Control": "no-store" });
 }
+
+// Filters fold behind one "Filters" button on phones so the first screen shows events or roles, not dropdowns. The
+// box renders open (so it works without script and on desktop, where the button is hidden); a one line script closes
+// it on narrow screens when no filter is active. site.js reopens it if the window widens.
+export function filterBox(form, active = 0) {
+  return html`<details class="filters-box" open data-filters><summary class="filters-toggle">Filters${active ? html` <span class="filters-count">${active}</span>` : ""}</summary>${form}</details>${active ? "" : raw('<script>(function(d){if(window.matchMedia&&matchMedia("(max-width: 640px)").matches)d.open=false})(document.currentScript.previousElementSibling)</script>')}`;
+}

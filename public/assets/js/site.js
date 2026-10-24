@@ -11,6 +11,15 @@
     });
   }
 
+  // Filters box (layout.js filterBox): it starts closed on phones; if the window widens past phone width it opens,
+  // since the toggle button is hidden there.
+  var boxes = document.querySelectorAll('[data-filters]');
+  if (boxes.length && window.matchMedia) {
+    var wide = window.matchMedia('(min-width: 641px)');
+    var openWide = function () { if (wide.matches) boxes.forEach(function (b) { b.open = true; }); };
+    if (wide.addEventListener) wide.addEventListener('change', openWide); else if (wide.addListener) wide.addListener(openWide);
+  }
+
   function wire(form) {
     var msg = form.querySelector('.signup-msg, .form-msg');
     form.addEventListener('submit', function (ev) {

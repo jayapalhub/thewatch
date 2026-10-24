@@ -215,9 +215,28 @@ body.preview .day-head { top: 116px; }
 @media (max-width: 720px) {
   .day-group { grid-template-columns: 1fr; gap: 8px; }
   .day-head { position: static; }
-  .event-row { grid-template-columns: 1fr; gap: 4px; }
-  .event-actions { padding-top: 6px; }
+  /* Phone event cards, like the job cards: the whole card opens the event, two lines of description, the cost, CPE
+     and format tags only, and the Register button lives on the event page. */
+  .event-row { position: relative; grid-template-columns: 1fr; gap: 2px; padding: 14px 0; }
+  .event-title a { display: inline; padding: 0; margin: 0; }
+  .event-title a::after { content: ""; position: absolute; inset: 0; }
+  .event-meta a, .tags a { position: relative; z-index: 1; }
+  .event-blurb { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: .92rem; color: var(--muted); }
+  .event-row .tag-topic { display: none; }
+  .event-actions { display: none; }
 }
+
+/* Filters fold behind one button on phones (see filterBox in layout.js). */
+.filters-toggle { display: none; }
+@media (max-width: 640px) {
+  .filters-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 18px; border: 1px solid var(--mist); border-radius: 8px; background: var(--white); color: var(--ink); font-weight: 700; cursor: pointer; list-style: none; }
+  .filters-toggle::-webkit-details-marker { display: none; }
+  .filters-toggle::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); margin-left: 2px; }
+  .filters-box[open] > .filters-toggle { margin-bottom: 14px; }
+  .filters-box[open] > .filters-toggle::after { transform: rotate(-135deg) translateY(-1px); }
+  .filters-count { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--shield); color: var(--white); font-size: .78rem; }
+}
+.list-more { margin: 18px 0 0; }
 
 /* Month grid */
 .month-nav { display: flex; justify-content: space-between; padding: 18px 0 10px; font-weight: 700; }
