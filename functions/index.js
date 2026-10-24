@@ -15,8 +15,11 @@ export async function onRequestGet({ request, env }) {
   const db = env.DB;
   const today = todayKey();
   const cities = Object.values(CITIES);
-  const counts = await Promise.all(cities.map((c) => db.prepare("SELECT COUNT(*) AS n FROM events WHERE status='published' AND city=? AND start_at >= ?").bind(c.slug, today).first()));
-  const nextByCity = await Promise.all(cities.map((c) => upcomingEvents(db, { city: c.slug, limit: 2 })));
+  // One grouped count for every city, instead of a count and a next event query per city (80 queries at 40 cities).
+  const { results: countRows = [] } = await db.prepare("SELECT city, COUNT(*) AS n FROM events WHERE status='published' AND start_at >= ? GROUP BY city").bind(today).all();
+  const countOf = Object.fromEntries(countRows.map((r) => [r.city, r.n]));
+  // Alphabetical, so a reader can find their city in a list of forty at a glance.
+  cities.sort((a, b) => a.name.localeCompare(b.name));
   const virtualCount = await db.prepare("SELECT COUNT(*) AS n FROM events WHERE status='published' AND (city='virtual' OR also_virtual=1) AND start_at >= ?").bind(today).first();
   const [picks, orgCount] = await Promise.all([upcomingEvents(db, { featured: true, limit: 3 }), db.prepare("SELECT COUNT(*) AS n FROM organizations").first()]);
 
@@ -25,24 +28,22 @@ export async function onRequestGet({ request, env }) {
     <div class="wrap">
       <p class="kicker">A calendar and a Sunday email for security people</p>
       <h1>Pick your city.</h1>
-      <p class="lede">Every cybersecurity, AI security, privacy and audit event near you, from chapter meetings and meetups to the big summits, in one calendar. Plus the best live online sessions with CPE, from anywhere.</p>
+      <p class="lede">Every cybersecurity, AI security, privacy and audit event near you, from chapter meetings and meetups to the big summits, in one calendar with a Sunday email. Plus the best live online sessions with CPE, from anywhere.</p>
     </div>
   </section>
   <section class="band">
     <div class="wrap city-grid">
-      ${cities.map((c, i) => html`
-      <a class="city-card" href="/${c.slug}">
-        <span class="city-card-name">${c.name}</span>
-        <span class="city-card-region">${c.region}</span>
-        <span class="city-card-count">${counts[i]?.n ?? 0} upcoming event${(counts[i]?.n ?? 0) === 1 ? "" : "s"}${c.newsletter ? " and a Sunday email" : ""}</span>
-        ${nextByCity[i].length ? html`<span class="city-card-next">Next: ${nextByCity[i][0].title}</span>` : html`<span class="city-card-next">Calendar filling up</span>`}
-      </a>`)}
-      <a class="city-card city-card-virtual" href="/virtual">
-        <span class="city-card-name">Virtual</span>
-        <span class="city-card-region">Live online, from anywhere</span>
-        <span class="city-card-count">${virtualCount?.n ?? 0} sessions, most with CPE</span>
-        <span class="city-card-next">Webinars, virtual summits and online chapter meetings</span>
+      <a class="city-tile city-tile-virtual" href="/virtual">
+        <span class="city-tile-name">Virtual</span>
+        <span class="city-tile-region">Live online sessions from anywhere, most with CPE</span>
+        <span class="city-tile-count">${virtualCount?.n ?? 0} sessions</span>
       </a>
+      ${cities.map((c) => { const n = countOf[c.slug] || 0; return html`
+      <a class="city-tile" href="/${c.slug}">
+        <span class="city-tile-name">${c.name}</span>
+        <span class="city-tile-region">${c.region}</span>
+        ${n ? html`<span class="city-tile-count">${n} event${n === 1 ? "" : "s"}</span>` : html`<span class="city-tile-count city-tile-new">New calendar</span>`}
+      </a>`; })}
     </div>
     <div class="wrap"><p class="a-muted city-foot">Your pick is remembered on this device. Not here yet? <a href="mailto:watch@bettersecurity.ai?subject=Bring%20The%20Watch%20to%20my%20city">Tell us your city</a> or <a href="/submit">submit an event</a>.</p></div>
   </section>
