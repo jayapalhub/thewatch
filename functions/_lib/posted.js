@@ -3,7 +3,7 @@
 // each row names the person, says who they are and links to the post itself. See the standing rule in CLAUDE.md.
 import { html, page } from "./html.js";
 import { shell, subscribeBand } from "./layout.js";
-import { CITIES } from "./constants.js";
+import { CITIES, REMOTE_BOARD } from "./constants.js";
 import { todayKey } from "./dates.js";
 import { jobRow, POSTED_DAYS } from "./jobs.js";
 
@@ -11,7 +11,7 @@ export const POSTED_TITLE = "From the people hiring";
 
 function intro(city) {
   const where = city ? `in ${city.region || city.name}` : "in every city The Watch covers";
-  return html`<p class="jobs-lede">When a hiring manager, a security leader or an in house recruiter posts publicly about a security role ${where}, it appears here: the role, the person's name and title, and a link to their post, so you know who is behind the opening. Nothing is quoted from the post; read it where they wrote it. A role announced in a post before it reaches the employer's site is listed as announced and switches to the official posting once it appears.</p>`;
+  return html`<p class="jobs-lede">When someone who works at the employer (a hiring manager, a security leader, an in house recruiter, or someone on that team or a sister team) posts publicly about a security role ${where}, it appears here: the role, the person's name and title, and a link to their post, so you know who is behind the opening. Nothing is quoted from the post; read it where they wrote it. A role announced in a post before it reaches the employer's site is listed as announced and switches to the official posting once it appears.</p>`;
 }
 
 export function approachNote() {
@@ -30,14 +30,14 @@ export function approachNote() {
 export function postedPage(city, jobs, { siteUrl } = {}) {
   const today = todayKey(city ? city.timezone : undefined);
   const path = city ? `/${city.slug}/jobs/posted` : "/jobs/posted";
-  const groups = city ? [[city, jobs]] : Object.values(CITIES).map((c) => [c, jobs.filter((j) => j.city === c.slug)]).filter(([, js]) => js.length);
+  const groups = city ? [[city, jobs]] : [...Object.values(CITIES), REMOTE_BOARD].map((c) => [c, jobs.filter((j) => j.city === c.slug)]).filter(([, js]) => js.length);
   const body = html`
   <section class="cal-head">
     <div class="wrap">
       <p class="kicker">${city ? city.region : "Every city"}</p>
       <h1>${POSTED_TITLE}${city ? ` in ${city.name}` : ""}</h1>
       ${intro(city)}
-      <p class="crumbs">${city ? html`<a href="/${city.slug}/jobs">All security jobs in ${city.name}</a> · <a href="/jobs/posted">Every city</a>` : html`${Object.values(CITIES).map((c, i) => html`${i ? " · " : ""}<a href="/${c.slug}/jobs/posted">${c.name}</a>`)}`}</p>
+      <p class="crumbs">${city ? html`<a href="/${city.slug}/jobs">All security jobs in ${city.name}</a> · <a href="/jobs/posted">Every city</a>` : html`${Object.values(CITIES).map((c, i) => html`${i ? " · " : ""}<a href="/${c.slug}/jobs/posted">${c.name}</a>`)} · <a href="/remote/jobs/posted">Remote</a>`}</p>
     </div>
   </section>
   <div class="wrap jobs-wrap">
@@ -47,9 +47,9 @@ export function postedPage(city, jobs, { siteUrl } = {}) {
       : html`<p class="jobs-empty">Nobody has posted about an open role ${city ? `in ${city.name}` : ""} in the last ${POSTED_DAYS} days. ${city ? html`The <a href="/${city.slug}/jobs">${city.name} board</a> has every open role.` : html`The city boards have every open role.`}</p>`}
     ${approachNote()}
   </div>
-  ${city ? subscribeBand({ city, source: `posted:${city.slug}`, heading: `Hear about these roles first, Sunday morning.`, text: `The Sunday email carries the roles people posted about that week for ${city.name}, before the rest of the board.` }) : ""}`;
+  ${city && !city.remote ? subscribeBand({ city, source: `posted:${city.slug}`, heading: `Hear about these roles first, Sunday morning.`, text: `The Sunday email carries the roles people posted about that week for ${city.name}, before the rest of the board.` }) : ""}`;
   const description = city
-    ? `Security roles in ${city.region || city.name} that a hiring manager, a security leader or an in house recruiter posted about, with who posted and a link to their post.`
+    ? `Security roles in ${city.region || city.name} that someone at the employer posted about (a hiring manager, a security leader, an in house recruiter or a member of the team), with who posted and a link to their post.`
     : "Security roles across The Watch cities that a hiring manager, a security leader or an in house recruiter posted about, with who posted and a link to their post.";
-  return page(shell({ title: city ? `${POSTED_TITLE} in ${city.name}` : POSTED_TITLE, description, body, city: city ? city.slug : null, path, canonical: path, wide: true, head: jobs.length ? "" : '<meta name="robots" content="noindex">' }), 200, { "Cache-Control": "public, max-age=300" });
+  return page(shell({ title: city ? `${POSTED_TITLE} in ${city.name}` : POSTED_TITLE, description, body, city: city && !city.remote ? city.slug : null, path, canonical: path, wide: true, head: jobs.length ? "" : '<meta name="robots" content="noindex">' }), 200, { "Cache-Control": "public, max-age=300" });
 }

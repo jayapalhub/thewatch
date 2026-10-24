@@ -37,8 +37,8 @@ export async function onRequestPost({ request, env, data }) {
   const emp = await resolveEmployer(db, row.employer, { note: "Created from Admin > Jobs > Add a posted role" });
   const r = await db.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, topics, expires_at, status, hold, auto_publish_at, published_at, source,
       posted_by_name, posted_by_title, posted_by_role, posted_by_kind, posted_by_url, posted_by_date, announced, reviewer_notes)
-      VALUES (?,?,?,?,?,?,'onsite','[]',?,'published',0,NULL,?,'manual',?,?,?,'employer',?,?,?,?)`)
-    .bind(row.city, emp.id, row.employer, row.title, row.url, row.location, row.expires_at || defaultExpiry(), new Date().toISOString(),
+      VALUES (?,?,?,?,?,?,?,'[]',?,'published',0,NULL,?,'manual',?,?,?,'employer',?,?,?,?)`)
+    .bind(row.city, emp.id, row.employer, row.title, row.url, row.location, row.remote || 'onsite', row.expires_at || defaultExpiry(), new Date().toISOString(),
       row.posted_by_name, row.posted_by_title, row.posted_by_role, row.posted_by_url, row.posted_by_date, row.announced,
       row.announced ? `Announced in a public post on ${row.posted_by_date}; no employer posting yet. Comes down ${row.expires_at} unless the posting appears.` : `From a public post on ${row.posted_by_date}.`).run();
   return redirect(`/admin/jobs/${r.meta.last_row_id}?msg=${encodeURIComponent(row.announced ? "Added and live as announced; add the employer's posting URL when it appears" : "Added and live")}`);

@@ -4,7 +4,7 @@
 // drop it and nobody lands on a stale listing.
 import { html, raw, page, notFound } from "../../_lib/html.js";
 import { shell, subscribeBand } from "../../_lib/layout.js";
-import { CITIES, TOPICS, SENIORITY } from "../../_lib/constants.js";
+import { TOPICS, SENIORITY, jobBoardOf } from "../../_lib/constants.js";
 import { todayKey, fmtDateLong } from "../../_lib/dates.js";
 import { initialsOf, hueOf } from "../../_lib/logos.js";
 import { jobById, jobPath, jobJsonLd, cleanJobUrl, isFeatured, agoLabel, postedHighlight, postedLabel, removalLink, POSTED_ROLES, REMOTE, JOB_DAYS } from "../../_lib/jobs.js";
@@ -14,18 +14,18 @@ function gone(city) {
   const body = html`
   <section class="hero hero-short"><div class="wrap narrow">
     <h1>This role is no longer open</h1>
-    <p class="lede">The employer has closed this posting, or it reached the end of its ${JOB_DAYS} days on the board. The ${city.name} board has the roles that are open now.</p>
-    <p><a class="btn btn-electric" href="/${city.slug}/jobs">See open roles in ${city.name}</a></p>
+    <p class="lede">The employer has closed this posting, or it reached the end of its ${JOB_DAYS} days on the board. The ${city.remote ? "remote" : city.name} board has the roles that are open now.</p>
+    <p><a class="btn btn-electric" href="/${city.slug}/jobs">See open roles${city.remote ? "" : ` in ${city.name}`}</a></p>
   </div></section>`;
-  return page(shell({ title: "Role closed", body, city: city.slug, path: `/${city.slug}/jobs`, head: '<meta name="robots" content="noindex">' }), 410, { "Cache-Control": "public, max-age=300" });
+  return page(shell({ title: "Role closed", body, city: city.remote ? null : city.slug, path: `/${city.slug}/jobs`, head: '<meta name="robots" content="noindex">' }), 410, { "Cache-Control": "public, max-age=300" });
 }
 
 export async function onRequestGet({ params, request, env }) {
-  if (!CITIES[params.city]) return notFound("Calendar not found");
+  if (!jobBoardOf(params.city)) return notFound("Calendar not found");
   const m = /^(\d{1,12})(?:-[a-z0-9-]*)?$/.exec(String(params.job || ""));
   if (!m) return notFound("Role not found");
   const j = await jobById(env.DB, parseInt(m[1], 10)).catch(() => null);
-  const city = j && CITIES[j.city];
+  const city = j && jobBoardOf(j.city);
   if (!j || !city) return notFound("Role not found");
   const today = todayKey(city.timezone);
   if (j.status === "closed" || j.status === "expired" || (j.status === "published" && j.expires_at && j.expires_at < today)) return gone(city);
@@ -52,7 +52,7 @@ export async function onRequestGet({ params, request, env }) {
   const body = html`
   <article class="event-page job-page">
     <div class="wrap narrow">
-      <p class="crumbs"><a href="/${city.slug}/jobs">Security jobs in ${city.name}</a></p>
+      <p class="crumbs"><a href="/${city.slug}/jobs">${city.remote ? "Remote security jobs" : `Security jobs in ${city.name}`}</a></p>
       ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
       <h1>${j.title}</h1>
       <p class="job-employer">${highlight && j.org_slug ? html`<img class="emp-logo emp-logo-inline" src="/logo/${j.org_slug}" alt="" width="32" height="32" decoding="async">` : ""}${j.employer}</p>
@@ -81,5 +81,5 @@ export async function onRequestGet({ params, request, env }) {
     : subscribeBand({ city, source: `job:${city.slug}` })}`;
 
   const description = `${j.title} at ${j.employer}, ${loc || city.name}${REMOTE[j.remote] ? ` (${REMOTE[j.remote].toLowerCase()})` : ""}.${salary ? ` ${salary}.` : ""}${posted ? ` Posted ${fmtDateLong(posted)}.` : ""} Apply on ${j.employer}'s own careers page.`;
-  return page(shell({ title: `${j.title} at ${j.employer}, ${loc || city.name}`, description, body, city: city.slug, path: `/${city.slug}/jobs`, canonical: path }), 200, { "Cache-Control": "public, max-age=300" });
+  return page(shell({ title: `${j.title} at ${j.employer}, ${loc || city.name}`, description, body, city: city.remote ? null : city.slug, path: `/${city.slug}/jobs`, canonical: path }), 200, { "Cache-Control": "public, max-age=300" });
 }

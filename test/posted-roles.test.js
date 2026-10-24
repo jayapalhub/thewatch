@@ -83,7 +83,7 @@ describe("board order and filter", () => {
     const db = rowsDb([POSTED]);
     await liveJobs(db, "dallas", { posted: "1" });
     const sql = db.calls[0].sql;
-    assert.match(sql, /posted_by_role IN \('hiring_manager','leader','recruiter'\)/);
+    assert.match(sql, /posted_by_role IN \('hiring_manager','leader','recruiter','team'\)/);
     assert.match(sql, /COALESCE\(j\.posted_by_kind,''\) != 'staffing'/);
     assert.match(sql, /j\.posted_by_date >= \?/);
     const res = await jobsBoard({ params: { city: "dallas" }, request: new Request("https://bettersecurity.ai/dallas/jobs?posted=1"), env: env(rowsDb([POSTED, PLAIN])), waitUntil: () => {} });
@@ -329,5 +329,29 @@ describe("matching a board run to an announced role", () => {
     assert.equal(run.added, 1);
     assert.equal(run.matched, undefined);
     assert.equal(db.find(/UPDATE jobs SET url=\?, announced=0/).length, 0);
+  });
+});
+
+describe("people who work there, and the remote board", () => {
+  const TEAM = { ...POSTED, id: 41, posted_by_name: "Sam Lee", posted_by_title: "Threat Intelligence Analyst", posted_by_role: "team" };
+  test("someone on the team shared the role, and the role page says they work at the employer", () => {
+    assert.match(String(jobRow(TEAM, TODAY)), /Sam Lee, Threat Intelligence Analyst, shared this role/);
+    assert.equal(postedLabel({ ...TEAM, employer: "WEC Energy" }), "Shared by someone at WEC Energy");
+  });
+  test("the posted role form takes Remote and someone who works there, and still refuses agencies", () => {
+    const base = { posted_by_url: "https://www.linkedin.com/posts/x", posted_by_name: "Sam Lee", posted_by_title: "Analyst", employer: "Acme", title: "Security Engineer", posted_by_date: "2026-10-20" };
+    const r = parsePostedForm({ ...base, posted_by_role: "team", city: "remote" }, "2026-10-23").row;
+    assert.equal(r.city, "remote"); assert.equal(r.remote, "remote"); assert.equal(r.location, "United States (Remote)"); assert.equal(r.posted_by_role, "team");
+    assert.match(parsePostedForm({ ...base, posted_by_role: "staffing", city: "remote" }, "2026-10-23").error, /Staffing agency posts stay out/);
+    assert.match(parsePostedForm({ ...base, posted_by_role: "team", city: "atlantis" }, "2026-10-23").error, /Pick the city, or Remote/);
+  });
+  test("the remote board renders, and city boards point to the remote roles", async () => {
+    const REM = { ...POSTED, id: 42, city: "remote", remote: "remote", location: "United States (Remote)" };
+    const remote = await (await jobsBoard({ params: { city: "remote" }, request: new Request("https://bettersecurity.ai/remote/jobs"), env: env(rowsDb([REM])), waitUntil: () => {} })).text();
+    assert.match(remote, /<h1>Remote security jobs across the US<\/h1>/);
+    assert.doesNotMatch(remote, /Hiring in Remote/);
+    const city = await (await jobsBoard({ params: { city: "dallas" }, request: new Request("https://bettersecurity.ai/dallas/jobs"), env: env(rowsDb([REM])), waitUntil: () => {} })).text();
+    assert.match(city, /Plus 1 remote role open anywhere in the US/);
+    assert.match(city, /<section class="jobs-remote" id="remote-roles"><h2>Remote across the US<\/h2>/);
   });
 });

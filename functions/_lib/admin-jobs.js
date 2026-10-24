@@ -1,5 +1,5 @@
 import { html, raw, str, list, slugify } from "./html.js";
-import { CITIES, TOPICS, SENIORITY } from "./constants.js";
+import { CITIES, TOPICS, SENIORITY, jobBoardOf } from "./constants.js";
 import { REMOTE, POSTER_KINDS, POSTED_ROLES, JOB_STATUSES, cleanJobUrl, isJobBoard, announcedExpiry } from "./jobs.js";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -85,13 +85,13 @@ export const POSTED_FORM_ROLES = { ...POSTED_ROLES, staffing: "Staffing agency r
 export function parsePostedForm(p, today) {
   const postUrl = str(p.posted_by_url, 500), name = str(p.posted_by_name, 100), ptitle = str(p.posted_by_title, 120), role = str(p.posted_by_role, 20);
   const employer = str(p.employer, 120), title = str(p.title, 140), employerUrl = str(p.url, 500);
-  if (role === "staffing") return { error: "Staffing agency posts stay out: only a hiring manager, a security leader or an in house recruiter at the employer is listed." };
-  if (!POSTED_ROLES[role]) return { error: "Say who the person is: a hiring manager, a security leader or an in house recruiter." };
+  if (role === "staffing") return { error: "Staffing agency posts stay out: only someone who works at the employer (a hiring manager, a security leader, an in house recruiter or a member of the team) is listed." };
+  if (!POSTED_ROLES[role]) return { error: "Say who the person is: a hiring manager, a security leader, an in house recruiter or someone who works there." };
   if (!cleanJobUrl(postUrl)) return { error: "The post URL must be a full web address starting with https://" };
   if (!name || !ptitle) return { error: "The person's name and title are required; both come from their public post." };
   if (!employer || !title) return { error: "Employer and job title are required." };
-  const city = CITIES[str(p.city, 30)] ? str(p.city, 30) : null;
-  if (!city) return { error: "Pick the city." };
+  const city = jobBoardOf(str(p.city, 30)) ? str(p.city, 30) : null;
+  if (!city) return { error: "Pick the city, or Remote for a role open anywhere in the US." };
   const postedByDate = DATE_RE.test(str(p.posted_by_date, 10)) ? str(p.posted_by_date, 10) : today;
   if (postedByDate > today) return { error: "The post date cannot be in the future." };
   const announced = employerUrl ? 0 : 1;
@@ -102,7 +102,7 @@ export function parsePostedForm(p, today) {
     url: announced ? cleanJobUrl(postUrl) : cleanJobUrl(employerUrl),
     expires_at: announced ? announcedExpiry(postedByDate, today) : null, // null: the usual 30 days from today
     posted_by_name: name, posted_by_title: ptitle, posted_by_role: role, posted_by_kind: "employer", posted_by_url: cleanJobUrl(postUrl), posted_by_date: postedByDate,
-    location: str(p.location, 120) || null,
+    location: str(p.location, 120) || (city === "remote" ? "United States (Remote)" : null), remote: city === "remote" ? "remote" : "onsite",
   } };
 }
 
@@ -128,7 +128,7 @@ export const JOB_COLUMNS = ["city", "organization_id", "employer_name", "title",
 // The quick form itself.
 export function postedForm(p = {}, orgs = [], { action = "/admin/jobs/posted" } = {}) {
   return html`<form class="a-form" method="post" action="${action}">
-    <p class="a-muted">For a role a hiring manager, a security leader or an in house recruiter posted about publicly. It goes live at once, with their name, title and a link to the post, and nothing copied from the post. If the employer's posting is already listed, the person is attached to it instead of a second row.</p>
+    <p class="a-muted">For a role someone who works at the employer posted about publicly: a hiring manager, a security leader, an in house recruiter, or someone on that team or a sister team. Never someone who only reposts other companies' roles. It goes live at once, with their name, title and a link to the post, and nothing copied from the post. If the employer's posting is already listed, the person is attached to it instead of a second row.</p>
     <div class="a-grid-2">
       <label>Post URL<input type="url" name="posted_by_url" required maxlength="500" value="${p.posted_by_url || ""}" placeholder="https://www.linkedin.com/posts/..."></label>
       <label>Post date<input type="date" name="posted_by_date" value="${p.posted_by_date || ""}"></label>
@@ -136,12 +136,12 @@ export function postedForm(p = {}, orgs = [], { action = "/admin/jobs/posted" } 
     <div class="a-grid-3">
       <label>Person's name<input name="posted_by_name" required maxlength="100" value="${p.posted_by_name || ""}"></label>
       <label>Their title<input name="posted_by_title" required maxlength="120" value="${p.posted_by_title || ""}" placeholder="Director of Security Engineering"></label>
-      <label>Who they are<select name="posted_by_role" required><option value="">Choose</option>${Object.entries(POSTED_FORM_ROLES).map(([k, v]) => html`<option value="${k}" ${sel(p.posted_by_role === k)}>${k === "recruiter" ? "In house recruiter" : v}</option>`)}</select></label>
+      <label>Who they are<select name="posted_by_role" required><option value="">Choose</option>${Object.entries(POSTED_FORM_ROLES).map(([k, v]) => html`<option value="${k}" ${sel(p.posted_by_role === k)}>${k === "recruiter" ? "In house recruiter" : k === "team" ? "Works at the employer (their team or a sister team)" : v}</option>`)}</select></label>
     </div>
     <div class="a-grid-3">
       <label>Employer<input name="employer" list="orgs" required maxlength="120" value="${p.employer || ""}"></label>
       <label>Job title<input name="title" required maxlength="140" value="${p.title || ""}"></label>
-      <label>City<select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${sel(p.city === c.slug)}>${c.name}</option>`)}</select></label>
+      <label>City<select name="city">${Object.values(CITIES).map((c) => html`<option value="${c.slug}" ${sel(p.city === c.slug)}>${c.name}</option>`)}<option value="remote" ${sel(p.city === "remote")}>Remote (anywhere in the US)</option></select></label>
     </div>
     <datalist id="orgs">${orgs.map((o) => html`<option value="${o.name}">`)}</datalist>
     <div class="a-grid-2">
