@@ -29,12 +29,14 @@ describe("isOurRole title filter", () => {
     "IT Auditor", "Senior IT Auditor", "Senior IT Internal Auditor", "Technology Auditor", "Information Systems Auditor", "IS Auditor II",
     "AI Governance Lead", "Responsible AI Program Manager", "AI Risk Manager", "IT Risk Manager", "Technology Risk Analyst", "Operational Risk Manager, Technology",
     "Sr. Manager - IT Compliance (Remote)", "Manager, IT Compliance", "IT General Controls Analyst", "Data Protection Officer", "Digital Forensics Examiner",
-    "Identity Governance Engineer", "Business Continuity Manager", "Disaster Recovery Analyst", "Operational Resilience Lead", "Cyber Resilience Manager"];
+    "Identity Governance Engineer", "Business Continuity Manager", "Disaster Recovery Analyst", "Operational Resilience Lead", "Cyber Resilience Manager",
+    "Internal Auditor", "Senior Internal Auditor", "Internal Audit Manager", "Risk Manager", "Senior Risk Analyst", "Operational Risk Manager", "Enterprise Risk Management Analyst"];
   const notOurs = ["Security Guard", "Security Officer", "Security Officer, Night Shift", "Physical Security Manager", "Account Executive, Security", "Sales Engineer, Security",
     "Customer Success Manager, Security", "Security Intern", "Social Security Specialist", "Securities Analyst", "Trade Compliance Manager",
-    "Marketing Manager, Cybersecurity", "Recruiter, Security", "Software Engineer", "Office Manager", "Internal Auditor", "Financial Auditor", "Fraud Analyst", "Trust and Safety Specialist", "Data Governance Manager",
+    "Marketing Manager, Cybersecurity", "Recruiter, Security", "Software Engineer", "Office Manager", "Financial Auditor", "Fraud Analyst", "Trust and Safety Specialist", "Data Governance Manager",
     "Records Management Specialist", "eDiscovery Analyst", "Model Risk Manager", "Export Control Compliance Manager", "Credit Risk Manager", "Market Risk Analyst",
-    "Risk Manager", "Crisis Management Lead", "", null];
+    "Liquidity Risk Manager", "Counterparty Risk Analyst", "Underwriting Risk Analyst", "Risk Adjustment Analyst", "Clinical Risk Manager",
+    "Patient Safety and Risk Manager", "Crisis Management Lead", "", null];
   for (const t of ours) test(`keeps ${t}`, () => assert.equal(isOurRole(t), true));
   for (const t of notOurs) test(`drops ${JSON.stringify(t)}`, () => assert.equal(isOurRole(t), false));
 });
