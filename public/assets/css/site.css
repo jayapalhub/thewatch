@@ -452,28 +452,38 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .jobs-wrap { padding: 20px 20px 36px; }
 .jobs-count { color: var(--muted); font-weight: 600; margin: 0 0 6px; }
 .job-list { list-style: none; margin: 0; padding: 0; }
-.job-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 16px 0; border-top: 1px solid var(--mist-soft); }
-.job-row.is-featured { background: linear-gradient(90deg, rgba(31,182,240,.08), transparent 70%); border-radius: 10px; padding-left: 12px; margin-left: -12px; }
-.job-flag { display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); margin-bottom: 2px; }
-.job-title { margin: 0 0 4px; font-size: 1.12rem; }
-.job-title a { color: var(--ink); text-decoration: none; display: inline-block; padding: 10px 0; margin: -10px 0; }
-.job-title a:hover { color: var(--electric-deep); text-decoration: underline; }
-.job-meta { margin: 0 0 4px; color: var(--muted); font-size: .95rem; }
-.job-by { margin: 0 0 6px; font-size: .92rem; font-weight: 600; }
-.job-when { color: var(--muted); font-size: .8rem; font-weight: 500; margin-left: 4px; }
-/* Roles people posted about: who they are, their name and a link to the post, with a line for announced roles. */
-.job-row.is-posted { background: linear-gradient(90deg, rgba(27,74,138,.07), transparent 70%); border-radius: 10px; padding-left: 12px; margin-left: -12px; }
-.job-by-person { font-weight: 500; }
-/* Roles people post about: the employer's logo beside the title and the person's initials beside their name. */
-.job-row.is-posted .job-main { position: relative; padding-left: 58px; min-height: 48px; }
-.emp-logo { position: absolute; left: 0; top: 2px; width: 44px; height: 44px; object-fit: contain; background: var(--white); border: 1px solid var(--mist); border-radius: 10px; padding: 4px; box-sizing: border-box; }
-.emp-logo-inline { position: static; width: 32px; height: 32px; padding: 3px; border-radius: 8px; vertical-align: middle; margin-right: 10px; }
+/* Job cards, laid out like LinkedIn's (2026-10-23): logo, then short lines in a fixed order, one insight line and a
+   small footer. The title link stretches over the whole card, so the card is the tap target. */
+.job-card { position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; align-items: start; padding: 16px 12px; margin: 0 -12px; border-top: 1px solid var(--mist-soft); border-radius: 10px; transition: background .12s; }
+.job-list > .job-card:first-child { border-top: 0; }
+.job-card:hover { background: var(--paper); }
+.emp-logo { display: block; object-fit: contain; background: var(--white); border: 1px solid var(--mist-soft); border-radius: 10px; box-sizing: border-box; }
+.job-card .emp-logo { width: 64px; height: 64px; padding: 6px; }
+.job-card .emp-initials { padding: 0; font-size: 1.3rem; }
+.emp-initials { display: flex; align-items: center; justify-content: center; padding: 0; border: 0; color: var(--white); font-weight: 800; font-size: 1.05rem; background: hsl(var(--hue, 210) 45% 36%); }
+.emp-logo-inline { display: inline-block; width: 32px; height: 32px; padding: 3px; border-radius: 8px; vertical-align: middle; margin-right: 10px; }
+.job-card .job-title { margin: 0 0 2px; font-family: var(--body); font-size: 1.05rem; font-weight: 700; line-height: 1.3; letter-spacing: normal; }
+.job-card .job-title a { color: var(--ink); text-decoration: none; }
+.job-card .job-title a::after { content: ""; position: absolute; inset: 0; border-radius: 10px; }
+.job-card:hover .job-title a { text-decoration: underline; }
+.job-card .job-title a:focus-visible { outline: none; }
+.job-card .job-title a:focus-visible::after { outline: 2px solid var(--electric-deep); outline-offset: -2px; }
+.job-company { margin: 0; font-size: .95rem; color: var(--ink); }
+.job-where { margin: 0; font-size: .92rem; color: var(--muted); }
+.job-pay { margin: 0; font-size: .92rem; color: var(--ink); }
+.job-insight { display: flex; align-items: center; margin: 8px 0 0; font-size: .9rem; color: var(--ink); line-height: 1.35; }
+.job-insight .person-badge { width: 22px; height: 22px; font-size: .62rem; flex: none; margin-right: 8px; }
+.job-foot { margin: 6px 0 0; font-size: .82rem; color: var(--muted); }
+.job-early { color: #0B7A3E; font-weight: 700; }
+.job-accent { color: var(--shield); font-weight: 700; }
+@media (max-width: 560px) { .job-card { grid-template-columns: 56px minmax(0, 1fr); gap: 14px; } .job-card .emp-logo { width: 56px; height: 56px; padding: 5px; } .job-card .emp-initials { padding: 0; font-size: 1.15rem; } }
+/* The person's line on the role page: who they are, their initials, and links to the post and to removal. */
 .person-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; margin-right: 6px; vertical-align: middle; font-size: .72rem; font-weight: 800; letter-spacing: .02em; color: var(--white); background: hsl(var(--hue, 210) 45% 36%); }
-@media (max-width: 640px) { .job-row.is-posted .job-main { padding-left: 50px; } .emp-logo { width: 38px; height: 38px; } }
 .job-by-label { display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); background: var(--paper); padding: 3px 8px; border-radius: 999px; margin-right: 4px; }
-.job-by-name { font-weight: 700; }
-.job-post-link { font-weight: 700; margin-left: 4px; }
-.job-remove { color: var(--muted); font-size: .78rem; font-weight: 500; margin-left: 6px; }
+.job-by-links { margin: 4px 0 0; font-size: .85rem; }
+.job-post-link { font-weight: 700; }
+.job-remove { color: var(--muted); font-size: .78rem; font-weight: 500; }
+.job-flag { display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); margin-bottom: 2px; }
 .job-announced { margin: 0 0 6px; font-size: .88rem; color: var(--warn-ink); background: var(--warn-bg); display: inline-block; padding: 3px 8px; border-radius: 6px; }
 .posted-city { font-size: 1.3rem; margin: 28px 0 6px; }
 .posted-approach { margin: 32px 0 8px; padding: 18px 22px; background: var(--paper); border-radius: var(--radius); }
@@ -487,7 +497,6 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .job-excerpt { margin: 4px 0 22px; }
 .job-excerpt h2 { font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0 0 6px; }
 .job-excerpt p { margin: 0; line-height: 1.6; }
-@media (max-width: 560px) { .job-row { grid-template-columns: 1fr; } .job-apply { justify-self: start; } }
 
 /* CPE log */
 .attend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -6px 0 24px; }

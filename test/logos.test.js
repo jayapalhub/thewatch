@@ -95,11 +95,18 @@ describe("job rows", () => {
   const today = "2026-10-23";
   test("a role someone posted about shows the employer logo and the person's initials", () => {
     const row = String(jobRow(hydrateJob({ ...base, posted_by_name: "Michael Brewer", posted_by_title: "CISO", posted_by_role: "leader", posted_by_url: "https://lnkd.in/p/x", posted_by_date: "2026-10-21", announced: 1 }), today));
-    assert.match(row, /<img class="emp-logo" src="\/logo\/encore-capital-group" alt="" width="44" height="44" loading="lazy"/);
-    assert.match(row, /<span class="person-badge" style="--hue:\d+" aria-hidden="true">MB<\/span><span class="job-by-name">Michael Brewer<\/span>/);
+    assert.match(row, /<img class="emp-logo" src="\/logo\/encore-capital-group" alt="" width="64" height="64" loading="lazy"/);
+    assert.match(row, /<span class="person-badge" style="--hue:\d+" aria-hidden="true">MB<\/span><span>Michael Brewer, CISO, is hiring<\/span>/);
   });
-  test("an ordinary role shows neither", () => {
+  test("an ordinary role shows its employer logo but no person; a role without an organization shows the employer's initials", () => {
     const row = String(jobRow(hydrateJob(base), today));
-    assert.doesNotMatch(row, /emp-logo|person-badge/);
+    assert.match(row, /class="emp-logo" src="\/logo\/encore-capital-group"/);
+    assert.doesNotMatch(row, /person-badge/);
+    const bare = String(jobRow(hydrateJob({ ...base, org_slug: null, org_name: null }), today));
+    assert.match(bare, /<span class="emp-logo emp-initials" style="--hue:\d+" aria-hidden="true">EC<\/span>/);
+  });
+  test("a title that ends with the employer is shortened in the insight line", () => {
+    const row = String(jobRow(hydrateJob({ ...base, posted_by_name: "Karine Thibault", posted_by_title: "Global CISO, Encore Capital Group", posted_by_role: "leader", posted_by_date: "2026-10-23" }), today));
+    assert.match(row, /<span>Karine Thibault, Global CISO, is hiring<\/span>/);
   });
 });

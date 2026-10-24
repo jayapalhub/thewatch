@@ -94,25 +94,24 @@ describe("board order and filter", () => {
 });
 
 describe("rows and pages", () => {
-  test("a highlighted row carries the label, the person, how long ago, the post link and a removal link", () => {
+  test("a highlighted row is a card: logo, title, employer, place, the person's insight line and a footer", () => {
     const row = String(jobRow(POSTED, TODAY));
-    assert.match(row, /class="job-row  is-posted "/);
-    assert.match(row, /<span class="job-by-label">Hiring manager posted<\/span> <span class="person-badge" style="--hue:\d+" aria-hidden="true">JD<\/span><span class="job-by-name">Jane Doe<\/span>, Director of Security <span class="job-when">2 days ago<\/span> <a class="job-post-link" href="https:\/\/www\.linkedin\.com\/posts\/janedoe-1" rel="noopener nofollow" target="_blank">Read their post<\/a> <a class="job-remove" href="mailto:watch@bettersecurity\.ai\?subject=Please%20remove%20my%20name/);
-    assert.match(row, />Apply<\/a>/);
-    assert.doesNotMatch(row, /Announced/);
+    assert.match(row, /class="job-row job-card  is-posted "/);
+    assert.match(row, /<p class="job-insight"><span class="person-badge" style="--hue:\d+" aria-hidden="true">JD<\/span><span>Jane Doe, Director of Security, is hiring<\/span><\/p>/);
+    assert.match(row, /<p class="job-foot">Posted 2 days ago<\/p>/, "the footer counts from the post for a highlighted role");
+    assert.doesNotMatch(row, /Announced|job-apply|Ask to be removed/, "the Apply button and the links live on the role page");
   });
-  test("an announced row says so and its button reads the post", () => {
+  test("an announced row says Announced early in the footer", () => {
     const row = String(jobRow(ANNOUNCED, TODAY));
-    assert.match(row, /<p class="job-announced">Announced, not yet on Example Co's site\.<\/p>/);
-    assert.match(row, /href="\/go\/j\/4" rel="noopener" target="_blank">Read the post<\/a>/);
+    assert.match(row, /<span class="job-early">Announced early<\/span>/);
+    assert.doesNotMatch(row, /job-apply/);
   });
-  test("after 21 days the role is an ordinary listing; rows without a role keep the plain byline", () => {
+  test("recruiters posted the role; after 21 days the role is an ordinary listing; rows without a role keep a plain insight line", () => {
     const old = String(jobRow(OLD, TODAY));
-    assert.doesNotMatch(old, /job-by/);
+    assert.doesNotMatch(old, /job-insight/);
     assert.doesNotMatch(old, /Jane Doe/);
     const legacy = String(jobRow(LEGACY, TODAY));
-    assert.match(legacy, /Posted by Pat Old<\/a>, Recruiter/);
-    assert.match(legacy, /Ask to be removed/);
+    assert.match(legacy, /<span>Pat Old, Recruiter, posted this role<\/span>/);
     assert.doesNotMatch(legacy, /job-by-label/);
   });
   test("the role page: label and post link for a highlighted role, no JobPosting and a read the post button when announced", async () => {
@@ -147,7 +146,7 @@ describe("rows and pages", () => {
     assert.match(body, /send a brief note that mentions their post/);
     assert.match(body, /<link rel="canonical" href="https:\/\/bettersecurity\.ai\/dallas\/jobs\/posted">/);
     assert.doesNotMatch(body, /name="robots" content="noindex"/);
-    assert.ok((body.match(/Ask to be removed/g) || []).length >= 3, "every person shown has a removal link");
+    assert.match(body, /Anyone named can <a href="mailto:watch@bettersecurity\.ai\?subject=Please%20remove%20my%20name">ask to be removed<\/a>/, "the page says how to ask for removal; each role page carries its own link");
     const empty = await cityPosted({ params: { city: "dallas" }, env: env(rowsDb([])), waitUntil: () => {} });
     const eb = await empty.text();
     assert.match(eb, /Nobody has posted about an open role in Dallas in the last 21 days\./);
