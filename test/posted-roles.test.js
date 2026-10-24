@@ -286,6 +286,18 @@ describe("admin entry", () => {
     assert.match(await res.text(), /Staffing agency posts stay out/);
     assert.equal(db.find(/INSERT INTO jobs|UPDATE jobs/).length, 0);
   });
+  test("one post can name several roles: a second title from the same post is added, the same title again is not", async () => {
+    // The fake database answers the post check only when the title matches the role already entered from this post.
+    const db = fakeDb([{ match: /WHERE posted_by_url=\? AND lower\(title\)=lower\(\?\)/, reply: (args) => (String(args[1]).toLowerCase() === "security engineer" ? { id: 90 } : null) },
+      { match: /FROM organizations WHERE slug/, reply: () => ({ id: 3, trusted: 1 }) }]);
+    const again = await addPosted({ request: form(fields), env: { DB: db }, data: { user: "t" } });
+    assert.match(again.headers.get("location"), /\/admin\/jobs\/90\?msg=/);
+    assert.equal(db.find(/INSERT INTO jobs/).length, 0);
+    const second = await addPosted({ request: form({ ...fields, title: "GRC Analyst" }), env: { DB: db }, data: { user: "t" } });
+    assert.equal(second.status, 302);
+    assert.equal(db.find(/INSERT INTO jobs/).length, 1);
+    assert.equal(insertRow(db.find(/INSERT INTO jobs/)[0]).title, "GRC Analyst");
+  });
 });
 
 describe("matching a board run to an announced role", () => {

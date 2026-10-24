@@ -21,8 +21,9 @@ export async function onRequestPost({ request, env, data }) {
   if (error) return view(html`${flash(error, "err")}${postedForm(p, await orgs(db))}`, data.user, 400);
   const now = "strftime('%Y-%m-%dT%H:%M:%fZ','now')";
   const live = "status IN ('pending_review','published','draft')";
-  // The post is already on a role: nothing to add.
-  const byPost = await db.prepare(`SELECT id FROM jobs WHERE posted_by_url=? AND ${live} LIMIT 1`).bind(row.posted_by_url).first();
+  // This post is already on this same role: nothing to add. One post often names several roles (a hiring manager
+  // listing three openings), so the check is the post and the title together, not the post alone.
+  const byPost = await db.prepare(`SELECT id FROM jobs WHERE posted_by_url=? AND lower(title)=lower(?) AND ${live} LIMIT 1`).bind(row.posted_by_url, row.title).first();
   if (byPost) return redirect(`/admin/jobs/${byPost.id}?msg=${encodeURIComponent("That post is already on this role")}`);
   // The employer's posting is already listed: attach the person to it, and publish it now if it was waiting.
   const existing = row.announced ? null : await db.prepare(`SELECT id, status FROM jobs WHERE url=? AND ${live} LIMIT 1`).bind(row.url).first();
