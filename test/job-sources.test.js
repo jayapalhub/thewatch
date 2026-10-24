@@ -256,6 +256,35 @@ describe("pullEightfold", () => {
     assert.equal(f.calls.length, 1);
     await assert.rejects(pullEightfold({ host: "h.test", company: "c" }, "", recordingFetcher(() => ({ data: {} }))), /unexpected response from Eightfold/);
   });
+
+  test("a tenant without PCSX falls back to the older /api/apply/v2/jobs search, without a location, with absolute links and excerpts", async () => {
+    const v2 = { count: 3, positions: [
+      { id: 563087416861092, name: "Cybersecurity Engineer", locations: ["AUBURN HILLS HQ R&D,US-MI,United States"], t_create: 1782313457, canonicalPositionUrl: "https://jobs.example.test/careers/job/563087416861092", work_location_option: "onsite",
+        job_description: "<p>Example Corp is a global leader in parts.</p><p>You will design and run security controls for connected vehicle platforms, and work with product teams on threat models.</p>" },
+      { id: 2, name: "Purchasing Intern", locations: ["Nelas,Portugal"], t_create: 1782313457, work_location_option: "onsite" },
+      { id: 3, name: "Information Security Analyst", location: "Remote, United States", t_create: null, work_location_option: "remote" },
+    ] };
+    const f = recordingFetcher((url) => {
+      if (url.includes("/api/pcsx/")) throw new Error('HTTP 403 ({"message": "PCSX is not enabled for this user."} )');
+      return v2;
+    });
+    const out = await pullEightfold({ host: "example.eightfold.ai", company: "example.com" }, "security", f, ["Detroit"]);
+    assert.equal(f.calls.length, 2);
+    const q = new URL(f.calls[1].url);
+    assert.equal(q.pathname, "/api/apply/v2/jobs");
+    assert.equal(q.searchParams.get("domain"), "example.com");
+    assert.equal(q.searchParams.get("location"), null);
+    assert.deepEqual(out.map((r) => [r.key, r.url, r.location, r.remote, r.posted_at]), [
+      ["563087416861092", "https://jobs.example.test/careers/job/563087416861092", "AUBURN HILLS HQ R&D,US-MI,United States", "onsite", "2026-06-24"],
+      ["3", "https://example.eightfold.ai/careers/job/3", "Remote, United States", "remote", null],
+    ]);
+    assert.match(out[0].excerpt, /^You will design and run security controls/);
+    out.forEach(assertRoleShape);
+  });
+
+  test("any other PCSX error is still an error", async () => {
+    await assert.rejects(pullEightfold({ host: "h.test", company: "c" }, "", recordingFetcher(() => { throw new Error("HTTP 500"); })), /HTTP 500/);
+  });
 });
 
 describe("pullSmartRecruiters", () => {
@@ -427,6 +456,11 @@ describe("pullSuccessFactors", () => {
   test("a classic page with no job table is an error", async () => {
     const f = recordingFetcher((url, init) => { if (init.method === "POST") throw new Error("HTTP 403"); return "<html><body>Access denied</body></html>"; });
     await assert.rejects(pullSuccessFactors({ host: "h.test" }, "", f), /no job table/);
+  });
+
+  test("a classic page that says there are no open positions is an empty result, not an error", async () => {
+    const f = recordingFetcher((url, init) => { if (init.method === "POST") throw new Error("HTTP 403"); return '<html><body><p>Search results for "security". There are currently no open positions matching "security".</p></body></html>'; });
+    assert.deepEqual(await pullSuccessFactors({ host: "h.test" }, "security", f), []);
   });
 });
 
