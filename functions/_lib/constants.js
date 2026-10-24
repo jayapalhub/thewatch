@@ -53,6 +53,7 @@ export const TOPICS = {
   appsec: "AppSec",
   privacy: "Privacy",
   audit: "Audit",
+  resilience: "Resilience",
   identity: "Identity",
   network: "Network",
   threat_intel: "Threat intel",
