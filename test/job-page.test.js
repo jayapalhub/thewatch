@@ -113,7 +113,7 @@ test("jobs board: no JobPosting markup, titles open the role page, Apply still g
   assert.equal(res.status, 200);
   assert.doesNotMatch(body, /JobPosting/);
   assert.doesNotMatch(body, /application\/ld\+json/);
-  assert.match(body, /<h3 class="job-title"><a href="\/dallas\/jobs\/42-senior-security-engineer-at-example-co">Senior Security Engineer<\/a><\/h3>/);
+  assert.match(body, /<h2 class="job-title"><a href="\/dallas\/jobs\/42-senior-security-engineer-at-example-co">Senior Security Engineer<\/a><\/h2>/);
   assert.match(body, /<a class="btn btn-outline btn-small job-apply" href="\/go\/j\/42"/);
 });
 

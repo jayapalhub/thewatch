@@ -81,3 +81,4 @@ staging. D1 refuses a compound SELECT with many terms, which Node's SQLite allow
 
 Never load `tools/staging/seed.sql` into production. The slugs all start with `staging-` so a mistake would be visible,
 but the guard is to read the database name before pressing enter.
+

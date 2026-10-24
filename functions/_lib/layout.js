@@ -51,7 +51,7 @@ export function subscribeBand({ city, source, heading, text }) {
 // live calendar. The middleware records the environment; production renders nothing here.
 export const PREVIEW_BAR_TEXT = "Preview site with sample data. The live site is";
 export function previewBar() {
-  return previewRuntime() ? html`<div class="preview-bar" role="note">${PREVIEW_BAR_TEXT} <a href="https://bettersecurity.ai">bettersecurity.ai</a></div>` : "";
+  return previewRuntime() ? html`<aside class="preview-bar" aria-label="Preview notice">${PREVIEW_BAR_TEXT} <a href="https://bettersecurity.ai">bettersecurity.ai</a></aside>` : "";
 }
 
 export function shell({ title, description, body, city = null, path = "/", wide = false, head = "", image = null, canonical }) {
@@ -104,8 +104,8 @@ ${raw(head)}
 </head>
 <body${preview ? raw(' class="preview"') : ""}>
 ${previewBar()}
-<a class="skip" href="#main">Skip to content</a>
 <header class="site-header">
+  <a class="skip" href="#main">Skip to content</a>
   <div class="wrap header-row">
     <a class="brand" href="/" aria-label="Better Security home">${mark(34)}<span class="brand-text"><span class="brand-name">The Watch</span><span class="brand-city">${generic ? "by Better Security" : c.name}</span></span></a>
     <nav class="site-nav" aria-label="Main">
@@ -130,7 +130,7 @@ ${body}
       ${CITIES[c.slug] ? signupForm({ source: "footer", compact: true, cta: "Subscribe", city: c.slug }) : signupForm({ source: "footer", compact: true, cta: "Subscribe", chooseCity: true })}
     </div>
     <div class="footer-col">
-      <h3>Calendar</h3>
+      <h2>Calendar</h2>
       ${Object.values(CITIES).map((x) => html`<a href="/${x.slug}">${x.name}</a>`)}
       <a href="/virtual">Virtual sessions and CPE</a>
       <a href="/?choose=1">Change city</a>
@@ -143,14 +143,14 @@ ${body}
       <a href="/submit">Submit an event</a>
     </div>
     <div class="footer-col">
-      <h3>Better Security</h3>
+      <h2>Better Security</h2>
       ${SHOW_BS_EVENTS ? html`<a href="/events">Our events</a><a href="/events/padel-social-2027">Padel Social 2027</a>` : ""}
       <a href="/sponsor">Sponsor</a>
       <a href="/about">About</a>
       <a href="mailto:watch@bettersecurity.ai">watch@bettersecurity.ai</a>
     </div>
     <div class="footer-col">
-      <h3>Fine print</h3>
+      <h2>Fine print</h2>
       <a href="/privacy">Privacy policy</a>
       <a href="/terms">Terms</a>
       <p class="footer-address">${MAIL_ADDRESS}</p>
