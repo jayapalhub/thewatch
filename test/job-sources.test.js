@@ -26,10 +26,15 @@ describe("isOurRole title filter", () => {
     "Third-Party Risk Analyst", "SOC Analyst II", "Identity and Access Engineer", "Application Security Engineer", "DevSecOps Engineer", "CISO",
     "Risk Analyst (IT)", "Cryptography Engineer", "Applied Cryptographer", "Penetration Tester", "Detection Engineering Manager", "Compliance Analyst",
     "Information System Security Officer", "Information System Security Officer (ISSO)",
-    "IT Auditor", "Senior IT Auditor", "Senior IT Internal Auditor", "Technology Auditor", "Information Systems Auditor", "IS Auditor II"];
+    "IT Auditor", "Senior IT Auditor", "Senior IT Internal Auditor", "Technology Auditor", "Information Systems Auditor", "IS Auditor II",
+    "AI Governance Lead", "Responsible AI Program Manager", "AI Risk Manager", "IT Risk Manager", "Technology Risk Analyst", "Operational Risk Manager, Technology",
+    "Sr. Manager - IT Compliance (Remote)", "Manager, IT Compliance", "IT General Controls Analyst", "Data Protection Officer", "Digital Forensics Examiner",
+    "Identity Governance Engineer", "Business Continuity Manager", "Disaster Recovery Analyst", "Operational Resilience Lead", "Cyber Resilience Manager"];
   const notOurs = ["Security Guard", "Security Officer", "Security Officer, Night Shift", "Physical Security Manager", "Account Executive, Security", "Sales Engineer, Security",
     "Customer Success Manager, Security", "Security Intern", "Social Security Specialist", "Securities Analyst", "Trade Compliance Manager",
-    "Marketing Manager, Cybersecurity", "Recruiter, Security", "Software Engineer", "Office Manager", "Internal Auditor", "Financial Auditor", "", null];
+    "Marketing Manager, Cybersecurity", "Recruiter, Security", "Software Engineer", "Office Manager", "Internal Auditor", "Financial Auditor", "Fraud Analyst", "Trust and Safety Specialist", "Data Governance Manager",
+    "Records Management Specialist", "eDiscovery Analyst", "Model Risk Manager", "Export Control Compliance Manager", "Credit Risk Manager", "Market Risk Analyst",
+    "Risk Manager", "Crisis Management Lead", "", null];
   for (const t of ours) test(`keeps ${t}`, () => assert.equal(isOurRole(t), true));
   for (const t of notOurs) test(`drops ${JSON.stringify(t)}`, () => assert.equal(isOurRole(t), false));
 });
@@ -103,6 +108,9 @@ describe("location and inference helpers", () => {
     assert.deepEqual(inferTopics("Cloud Security Engineer"), ["cloud"]);
     assert.deepEqual(inferTopics("Privacy Program Manager"), ["privacy"]);
     assert.deepEqual(inferTopics("Security Engineer"), ["grc"]);
+    assert.deepEqual(inferTopics("Business Continuity Manager"), ["resilience"]);
+    assert.deepEqual(inferTopics("Digital Forensics Examiner"), ["threat_intel"]); // "ics" inside forensics is not the ICS keyword
+    assert.deepEqual(inferTopics("AI Governance Lead"), ["grc", "ai"]);
     assert.equal(inferTopics("Director, Cloud Identity and Threat Detection, AppSec").length, 3);
   });
 });
