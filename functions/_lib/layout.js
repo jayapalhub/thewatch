@@ -1,4 +1,4 @@
-import { html, raw } from "./html.js";
+import { html, raw, page } from "./html.js";
 import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS } from "./constants.js";
 import { previewRuntime } from "./env.js";
 
@@ -164,4 +164,19 @@ ${body}
 <script src="/assets/js/site.js?v=${ASSET_VERSION}" defer></script>
 </body>
 </html>`;
+}
+
+// The page a visitor sees for a missing page or event (the middleware swaps it in for plain text 404s on HTML
+// requests). Old Sunday email links to removed events land here, so it points back to that city's calendar.
+export function notFoundPage(path = "/") {
+  const seg = String(path).split("/")[1] || "";
+  const c = seg === "virtual" ? cityOf("virtual") : CITIES[seg];
+  const home = c ? `/${c.slug}` : "/?choose=1";
+  const body = html`<section class="band"><div class="wrap narrow">
+    <p class="kicker">Page not found</p>
+    <h1>We couldn't find that page.</h1>
+    <p>If you followed a link to an event, it may have been removed or moved since the link was shared. ${c ? html`The <a href="${home}">${c.slug === "virtual" ? "Virtual calendar" : `${c.name} calendar`}</a> has everything coming up.` : html`Every city's calendar is on the <a href="${home}">city chooser</a>.`}</p>
+    <p><a class="btn btn-primary" href="${home}">${c ? (c.slug === "virtual" ? "Go to the Virtual calendar" : `Go to the ${c.name} calendar`) : "Choose your city"}</a> ${c && c.slug === "virtual" ? "" : html`<a class="btn btn-outline" href="/virtual">Virtual sessions</a>`}</p>
+  </div></section>`;
+  return page(shell({ title: "Page not found", body, city: c ? c.slug : null, path }), 404, { "Cache-Control": "no-store" });
 }

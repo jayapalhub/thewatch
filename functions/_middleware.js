@@ -1,6 +1,7 @@
 import { loadCities } from "./_lib/constants.js";
 import { meterDB, noteRequest, flushUsage, alertOnce } from "./_lib/ops.js";
 import { isPreview, rememberEnvironment } from "./_lib/env.js";
+import { notFoundPage } from "./_lib/layout.js";
 
 // Runs before every function.
 // 1. Public pages are cached at the edge for a few minutes, so crawlers and repeat visitors do not each cost a set of
@@ -35,6 +36,14 @@ function withHeaders(res, path, extra = {}) {
   if (!path.startsWith("/embed/") && !h.has("X-Frame-Options")) h.set("X-Frame-Options", "DENY");
   for (const [k, v] of Object.entries(extra)) h.set(k, v);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
+// Only for people asking for a page: not APIs, admin, images, feeds, embeds or files.
+export function wantsNotFoundPage(request, path, res) {
+  if (!(request.headers.get("accept") || "").includes("text/html")) return false;
+  if (/^\/(api|admin|logo|og|embed|go|r|assets|cpe)(\/|$)/.test(path)) return false;
+  if (/\.(ics|png|svg|jpe?g|gif|webp|xml|txt|js|css|json|pdf)$/i.test(path)) return false;
+  return /^text\/plain/.test(res.headers.get("content-type") || "text/plain");
 }
 
 const PREVIEW_HEADERS = { "X-Robots-Tag": "noindex, nofollow" };
@@ -92,6 +101,9 @@ export async function onRequest(context) {
     }
     return withHeaders(res, path, extra);
   }
+
+  // A plain text "Not found" from a page route becomes a proper page with the header and a way back, for people.
+  if (res.status === 404 && request.method === "GET" && wantsNotFoundPage(request, path, res)) return withHeaders(notFoundPage(path), path, extra);
 
   const out = withHeaders(res, path, extra);
   // The only cookie a public page sets is the remembered city (watch_city); that one is dropped from the cached copy.

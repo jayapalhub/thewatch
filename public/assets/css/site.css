@@ -301,13 +301,11 @@ body.preview .day-head { top: 116px; }
 
 /* Virtual calendar */
 .cal-sub { color: var(--muted); max-width: 64ch; margin: 6px 0 0; }
-.city-toggle a { min-width: 96px; text-align: center; white-space: nowrap; }
-/* Five calendars do not fit a phone in one row: the strip scrolls sideways and the current city stays visible */
-@media (max-width: 640px) {
-  .city-toggle { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .city-toggle::-webkit-scrollbar { display: none; }
-  .city-toggle a { flex: 0 0 auto; min-width: 0; padding: 8px 12px; }
-}
+/* Long values such as a pasted registration link wrap instead of pushing the page sideways. */
+.event-facts dd, .event-facts small, .event-body { overflow-wrap: anywhere; }
+/* With forty cities a strip of city tabs no longer fits; a small link next to the region opens the city chooser. */
+.change-city { margin-left: 10px; font-size: .85rem; font-weight: 600; color: var(--shield); text-transform: none; letter-spacing: normal; white-space: nowrap; }
+.cal-title-row .change-city { margin-left: 0; align-self: flex-start; }
 .virtual-list { margin-top: 10px; }
 .virtual-list .day-sep { list-style: none; font-family: var(--display); font-weight: 800; font-size: 1.15rem; color: var(--shield); padding: 22px 0 6px; border-top: 1px solid var(--mist); }
 .virtual-list .day-sep:first-child { border-top: 0; padding-top: 10px; }

@@ -201,6 +201,16 @@ export async function fetchSans(url, now = new Date()) {
   const j = await r.json();
   return parseSans(j);
 }
+// A SANS speaker is a string, { name: "Jane Doe" }, or (since late 2026) { name: { prefix, first, middle, last, postfix } }.
+// Anything else is dropped rather than written as "[object Object]".
+export function sansSpeakerName(sp) {
+  if (typeof sp === "string") return sp.trim() || null;
+  if (!sp || typeof sp !== "object") return null;
+  const n = sp.name ?? sp.title;
+  if (typeof n === "string") return n.trim() || null;
+  if (n && typeof n === "object") return [n.prefix, n.first, n.middle, n.last, n.postfix].filter((x) => typeof x === "string" && x.trim()).map((x) => x.trim()).join(" ") || null;
+  return null;
+}
 export function parseSans(j) {
   const hits = (j && j.results && j.results[0] && j.results[0].hits) || [];
   const out = [];
@@ -209,7 +219,7 @@ export function parseSans(j) {
     const startUtc = new Date(`${h.utcStartDate}T${h.utcStartTime}Z`);
     const endUtc = h.utcEndDate && h.utcEndTime ? new Date(`${h.utcEndDate}T${h.utcEndTime}Z`) : new Date(startUtc.getTime() + 3600000);
     if (isNaN(startUtc)) continue;
-    const speakers = Array.isArray(h.speakers) ? h.speakers.map((sp) => (typeof sp === "string" ? sp : sp && (sp.name || sp.title))).filter(Boolean).join("; ") : null;
+    const speakers = Array.isArray(h.speakers) ? h.speakers.map(sansSpeakerName).filter(Boolean).join("; ") : null;
     out.push({ uid: `sans:${h.webcastId || h.uid || h.objectID}`, title: String(h.title).trim(), startUtc, endUtc, url: /^https?:/.test(h.url || "") ? h.url : `https://www.sans.org${h.url || ""}`,
       summary: String(h.description || "").trim(), speakers: speakers ? speakers.slice(0, 300) : null, platform: "SANS", cpeHint: parseFloat(h.cpesGiven) > 0 ? 1 : null, cpeHours: parseFloat(h.cpesGiven) || null, online: true });
   }

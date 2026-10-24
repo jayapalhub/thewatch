@@ -95,15 +95,11 @@ function header(city, view, f, orgs, anyFilter, monthKey) {
     <div class="wrap">
       <div class="cal-title-row">
         <div>
-          <p class="kicker">${city.region}</p>
+          <p class="kicker">${city.region} <a class="change-city" href="/?choose=1">Change city</a></p>
           <h1>${view === "month" ? `${monthName(monthKey)} ${parts(monthKey).y}` : "The next ten weeks"}</h1>
           <p class="cal-sub">${emailValueLine(city)} <a href="#subscribe">${city.newsletter === "sunday" ? "Get the Sunday email" : "Join the list"}</a></p>
         </div>
         <div class="toggle-row">
-          <div class="view-toggle city-toggle" role="tablist" aria-label="Calendar">
-            ${Object.values(CITIES).map((c) => html`<a role="tab" aria-selected="${c.slug === city.slug ? "true" : "false"}" href="/${c.slug}">${c.name}</a>`)}
-            <a role="tab" aria-selected="false" href="/virtual">Virtual</a>
-          </div>
           <div class="view-toggle" role="tablist" aria-label="View">
             <a role="tab" aria-selected="${view === "list" ? "true" : "false"}" href="${keep({ view: "" })}">List</a>
             <a role="tab" aria-selected="${view === "month" ? "true" : "false"}" href="${keep({ view: "month" })}">Month</a>
