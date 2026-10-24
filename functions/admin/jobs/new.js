@@ -22,9 +22,9 @@ export async function onRequestPost({ request, env, data }) {
   // Publish by default: a role added here as pending review goes live in 24 hours unless it is held. Draft stays a draft.
   const pending = row.status === "pending_review";
   const r = await env.DB.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, seniority, topics, salary_text, posted_at, expires_at, featured_until, status, hold, auto_publish_at,
-      posted_by_name, posted_by_title, posted_by_url, posted_by_kind, posted_by_date, reviewer_notes, source, published_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,'manual',?)`)
+      posted_by_name, posted_by_title, posted_by_url, posted_by_kind, posted_by_date, reviewer_notes, posted_by_role, announced, source, published_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?,'manual',?)`)
     .bind(row.city, emp.id, row.employer, row.title, row.url, row.location, row.remote, row.seniority, row.topics, row.salary_text, row.posted_at,
       row.expires_at || (published ? defaultExpiry() : null), row.featured_until, row.status, pending ? autoPublishAt() : null,
-      row.posted_by_name, row.posted_by_title, row.posted_by_url, row.posted_by_kind, row.posted_by_date, row.reviewer_notes, published ? new Date().toISOString() : null).run();
+      row.posted_by_name, row.posted_by_title, row.posted_by_url, row.posted_by_kind, row.posted_by_date, row.reviewer_notes, row.posted_by_role, row.announced, published ? new Date().toISOString() : null).run();
   return redirect(`/admin/jobs/${r.meta.last_row_id}?msg=${encodeURIComponent(published ? "Added and live" : pending ? "Added; goes live in 24 hours unless you hold it" : "Added")}`);
 }

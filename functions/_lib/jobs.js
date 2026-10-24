@@ -24,6 +24,38 @@ export function isJobBoard(url) {
 }
 export const REMOTE = { onsite: "Onsite", hybrid: "Hybrid", remote: "Remote" };
 export const POSTER_KINDS = { employer: "Employer's own recruiter or hiring manager", staffing: "Staffing firm recruiter" };
+
+// Roles people post about. Who the person is decides the label; a staffing agency recruiter is never one of them.
+export const POSTED_ROLES = { hiring_manager: "Hiring manager", leader: "Security leader", recruiter: "Recruiter" }; // recruiter means in house
+export const POSTED_DAYS = 21; // the person highlight lasts this long from the post; an announced role expires then too
+const dayDiff = (from, to) => Math.round((Date.parse(String(to).slice(0, 10) + "T00:00:00Z") - Date.parse(String(from).slice(0, 10) + "T00:00:00Z")) / 86400000);
+// True while the role should carry the person highlight: a named person with a known role, posted in the last 21 days.
+export function postedHighlight(j, today = todayKey()) {
+  if (!j || !j.posted_by_name || !POSTED_ROLES[j.posted_by_role] || j.posted_by_kind === "staffing" || !j.posted_by_date) return false;
+  const n = dayDiff(j.posted_by_date, today);
+  return n <= POSTED_DAYS;
+}
+export function postedLabel(j) { return POSTED_ROLES[j.posted_by_role] ? `${POSTED_ROLES[j.posted_by_role]} posted` : j.posted_by_kind === "staffing" ? "Staffing firm posted" : "Posted by the employer"; }
+// An announced role (no employer posting yet) comes down 21 days after the post unless it gains the employer's URL.
+export function announcedExpiry(postedByDate, today = todayKey()) { return addDays(postedByDate || today, POSTED_DAYS); }
+export function removalLink(j) { return `mailto:watch@bettersecurity.ai?subject=${encodeURIComponent(`Please remove my name: ${j.title} at ${j.employer || j.employer_name || ""}`)}`; }
+const HIGHLIGHT_SQL = "j.posted_by_name IS NOT NULL AND j.posted_by_name != '' AND j.posted_by_role IN ('hiring_manager','leader','recruiter') AND COALESCE(j.posted_by_kind,'') != 'staffing' AND j.posted_by_date >= ?";
+
+// Two titles for the same role, one from a post and one from the employer's board: "Sr. Security Engineer (Remote)"
+// and "Senior Security Engineer". Tokens are compared after dropping punctuation, grades and work model words.
+const TITLE_NOISE = new Set(["the", "a", "an", "of", "and", "or", "for", "to", "in", "at", "remote", "hybrid", "onsite", "us", "usa", "fulltime", "full", "time", "ft", "i", "ii", "iii", "iv", "1", "2", "3", "4", "new"]);
+const TITLE_SYNONYMS = { sr: "senior", jr: "junior", mgr: "manager", eng: "engineer", engr: "engineer", infosec: "security", cybersecurity: "security", cyber: "security", appsec: "application" };
+export function titleTokens(t) {
+  return new Set(String(t || "").toLowerCase().replace(/\(.*?\)/g, " ").replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean).map((w) => TITLE_SYNONYMS[w] || w).filter((w) => !TITLE_NOISE.has(w)));
+}
+export function titlesMatch(a, b) {
+  const x = titleTokens(a), y = titleTokens(b);
+  if (!x.size || !y.size) return false;
+  let both = 0; for (const w of x) if (y.has(w)) both++;
+  const jaccard = both / (x.size + y.size - both);
+  const contains = [...x].every((w) => y.has(w)) || [...y].every((w) => x.has(w));
+  return jaccard >= 0.6 || (contains && both >= 2);
+}
 export const JOB_STATUSES = ["draft", "pending_review", "published", "rejected", "expired", "closed"];
 
 const SELECT = `SELECT j.*, o.name AS org_name, o.slug AS org_slug, o.trusted AS org_trusted FROM jobs j LEFT JOIN organizations o ON o.id = j.organization_id`;
@@ -35,9 +67,17 @@ export function hydrateJob(j) {
   return j;
 }
 
-// Live roles for a city: published and not past expiry. Featured roles first, then newest.
-// Tiered board: featured first, then roles with a named person (the thing nobody else lists), then the rest, newest first.
-export async function liveJobs(db, city, { seniority, topic, remote, kind, named, limit = 200 } = {}) {
+// Board order: featured first, then roles a hiring manager, leader or recruiter posted about in the last 21 days
+// (newest post first), then other roles with a named person, then the rest, newest first.
+export function sortJobs(jobs, today = todayKey()) {
+  const rank = (j) => (isFeatured(j, today) ? 0 : postedHighlight(j, today) ? 1 : j.posted_by_name ? 2 : 3);
+  const when = (j) => (postedHighlight(j, today) ? j.posted_by_date : j.posted_at || String(j.created_at || "").slice(0, 10)) || "";
+  return jobs.map((j, i) => ({ j, i })).sort((a, b) => rank(a.j) - rank(b.j) || (when(b.j) > when(a.j) ? 1 : when(b.j) < when(a.j) ? -1 : 0) || a.i - b.i).map((x) => x.j);
+}
+
+// Live roles for a city: published and not past expiry, in board order (see sortJobs). posted: only roles with the
+// person highlight.
+export async function liveJobs(db, city, { seniority, topic, remote, kind, named, posted, limit = 200 } = {}) {
   const today = todayKey(cityOf(city) && cityOf(city).timezone);
   const where = ["j.city = ?", "j.status = 'published'", "(j.expires_at IS NULL OR j.expires_at >= ?)"];
   const args = [city, today];
@@ -46,11 +86,24 @@ export async function liveJobs(db, city, { seniority, topic, remote, kind, named
   if (remote && REMOTE[remote]) { where.push("j.remote = ?"); args.push(remote); }
   if (kind && POSTER_KINDS[kind]) { where.push("j.posted_by_kind = ?"); args.push(kind); }
   if (named) where.push("j.posted_by_name IS NOT NULL AND j.posted_by_name != ''");
+  if (posted) { where.push(HIGHLIGHT_SQL); args.push(addDays(today, -POSTED_DAYS)); }
   try {
     const { results } = await db.prepare(`${SELECT} WHERE ${where.join(" AND ")}
-      ORDER BY (CASE WHEN j.featured_until >= ? THEN 0 ELSE 1 END), (CASE WHEN j.posted_by_name IS NOT NULL AND j.posted_by_name != '' THEN 0 ELSE 1 END), COALESCE(j.posted_at, substr(j.created_at, 1, 10)) DESC, j.id DESC LIMIT ?`).bind(...args, today, limit).all();
-    return results.map(hydrateJob);
+      ORDER BY (CASE WHEN j.featured_until >= ? THEN 0 ELSE 1 END), (CASE WHEN ${HIGHLIGHT_SQL} THEN 0 ELSE 1 END), (CASE WHEN j.posted_by_name IS NOT NULL AND j.posted_by_name != '' THEN 0 ELSE 1 END), COALESCE(j.posted_by_date, j.posted_at, substr(j.created_at, 1, 10)) DESC, j.id DESC LIMIT ?`).bind(...args, today, addDays(today, -POSTED_DAYS), limit).all();
+    return sortJobs(results.map(hydrateJob), today);
   } catch { return []; } // table missing before the migration
+}
+
+// Roles with the person highlight, newest post first, for one city or (city null) every city.
+export async function postedJobs(db, city = null, { limit = 60 } = {}) {
+  const today = todayKey(city && cityOf(city) ? cityOf(city).timezone : undefined);
+  const where = ["j.status = 'published'", "(j.expires_at IS NULL OR j.expires_at >= ?)", HIGHLIGHT_SQL];
+  const args = [today, addDays(today, -POSTED_DAYS)];
+  if (city) { where.push("j.city = ?"); args.push(city); }
+  try {
+    const { results } = await db.prepare(`${SELECT} WHERE ${where.join(" AND ")} ORDER BY j.posted_by_date DESC, j.id DESC LIMIT ?`).bind(...args, limit).all();
+    return results.map(hydrateJob).filter((j) => postedHighlight(j, today)).sort((a, b) => (b.posted_by_date > a.posted_by_date ? 1 : b.posted_by_date < a.posted_by_date ? -1 : b.id - a.id));
+  } catch { return []; }
 }
 
 export async function jobById(db, id) {
@@ -76,6 +129,27 @@ export function pickJobsFor(jobs, seniority, n = 3, today = todayKey()) {
   return jobs.map((j, i) => ({ j, i })).sort((a, b) => rank(a.j) - rank(b.j) || a.i - b.i).slice(0, n).map((x) => x.j);
 }
 
+// Email block for roles people posted about: up to three for the reader's city, before the ordinary picks. Nothing is
+// quoted from the post; the reader is sent to read it where it was written.
+export function postedEmailBlock(siteUrl, city, posted, issueId, styles, today = todayKey()) {
+  const picks = (posted || []).filter((j) => postedHighlight(j, today)).slice(0, 3);
+  if (!picks.length) return "";
+  const { INK, MUTED, SHIELD, MIST, esc } = styles;
+  const rows = picks.map((j) => {
+    const where = [j.employer, j.location].filter(Boolean).join(" · ");
+    return `<tr><td style="padding:8px 0 10px;border-bottom:1px solid ${MIST};">
+      <div style="font-size:11px;font-weight:700;color:${SHIELD};text-transform:uppercase;letter-spacing:.04em;">${esc(postedLabel(j))}${j.announced ? ` · announced, not yet on ${esc(j.employer)}'s site` : ""}</div>
+      <a href="${siteUrl}/go/j/${j.id}?i=${issueId || ""}" style="color:${INK};font-weight:700;text-decoration:none;font-size:15px;">${esc(j.title)}</a>
+      <div style="color:${MUTED};font-size:13px;margin-top:2px;">${esc(where)}</div>
+      <div style="font-size:13px;margin-top:2px;">${esc(j.posted_by_name)}${j.posted_by_title ? `, ${esc(j.posted_by_title)}` : ""} · ${esc(agoLabel(j.posted_by_date, today))}${j.posted_by_url ? ` · <a href="${esc(j.posted_by_url)}" style="color:${SHIELD};font-weight:700;">Read their post</a>` : ""}</div>
+    </td></tr>`;
+  }).join("");
+  return `<div style="font-size:16px;font-weight:800;margin:24px 0 4px;">From the people hiring</div>
+  <div style="font-size:13px;color:${MUTED};margin:0 0 6px;">Roles a hiring manager, a security leader or an in house recruiter posted about this week, so you know who is behind the opening.</div>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">${rows}</table>
+  <div style="margin-top:8px;font-size:13px;"><a href="${siteUrl}/${city.slug}/jobs/posted" style="color:${SHIELD};font-weight:700;">All roles from the people hiring in ${esc(city.name)}</a></div>`;
+}
+
 // Email block, filled per subscriber at send time (see personalize in dispatch.js).
 export function jobsEmailBlock(siteUrl, city, picks, total, issueId, styles) {
   if (!picks.length) return "";
@@ -96,17 +170,32 @@ export function jobsEmailBlock(siteUrl, city, picks, total, issueId, styles) {
 
 // Public page row. The title opens the role's own page; the Apply button still goes straight to the employer's posting
 // through the click counted redirect. The row keeps its job-<id> anchor so older links into the board still land.
+// The person line: with the highlight, who they are and a link to their post; a role posted about more than 21 days
+// ago is an ordinary listing again. Rows without a role keep the older "Posted by" line.
+export function personLine(j, today = todayKey()) {
+  if (postedHighlight(j, today)) {
+    return html`<p class="job-by job-by-person"><span class="job-by-label">${postedLabel(j)}</span> <span class="job-by-name">${j.posted_by_name}</span>${j.posted_by_title ? `, ${j.posted_by_title}` : ""} <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>${j.posted_by_url ? html` <a class="job-post-link" href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Read their post</a>` : ""} <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
+  }
+  if (j.posted_by_name && !POSTED_ROLES[j.posted_by_role]) {
+    return html`<p class="job-by">${j.posted_by_url ? html`<a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Posted by ${j.posted_by_name}</a>` : html`Posted by ${j.posted_by_name}`}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind === "staffing" ? html` <span class="tag">Staffing firm</span>` : ""}${j.posted_by_date ? html` <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>` : ""} <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></p>`;
+  }
+  return "";
+}
+export function announcedLine(j) { return j.announced ? html`<p class="job-announced">Announced, not yet on ${j.employer}'s site.</p>` : ""; }
+
 export function jobRow(j, today = todayKey()) {
   const where = [j.location, REMOTE[j.remote]].filter(Boolean).join(", ");
-  return html`<li class="job-row ${isFeatured(j, today) ? "is-featured" : ""}" id="job-${j.id}">
+  const highlight = postedHighlight(j, today);
+  return html`<li class="job-row ${isFeatured(j, today) ? "is-featured" : ""} ${highlight ? "is-posted" : ""} ${j.announced ? "is-announced" : ""}" id="job-${j.id}">
     <div class="job-main">
       ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
       <h2 class="job-title"><a href="${jobPath(j)}">${j.title}</a></h2>
       <p class="job-meta">${[j.employer, where, SENIORITY[j.seniority], j.salary_text].filter(Boolean).join(" · ")}</p>
-      ${j.posted_by_name ? html`<p class="job-by">${j.posted_by_url ? html`<a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Posted by ${j.posted_by_name}</a>` : html`Posted by ${j.posted_by_name}`}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind === "staffing" ? html` <span class="tag">Staffing firm</span>` : ""}${j.posted_by_date ? html` <span class="job-when">${agoLabel(j.posted_by_date, today)}</span>` : ""}</p>` : ""}
+      ${personLine(j, today)}
+      ${announcedLine(j)}
       <div class="tags">${j.topics.slice(0, 3).map((t) => (TOPICS[t] ? html`<span class="tag tag-topic">${TOPICS[t]}</span>` : ""))}${j.posted_at ? html`<span class="job-when">Posted ${agoLabel(j.posted_at, today)}</span>` : ""}</div>
     </div>
-    <a class="btn btn-outline btn-small job-apply" href="/go/j/${j.id}" rel="noopener" target="_blank">Apply</a>
+    <a class="btn btn-outline btn-small job-apply" href="/go/j/${j.id}" rel="noopener" target="_blank">${j.announced ? "Read the post" : "Apply"}</a>
   </li>`;
 }
 
@@ -200,4 +289,5 @@ export function jobPosting(j, city, siteUrl, today = todayKey()) {
   };
 }
 const ldScript = (data) => raw(`<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`);
-export function jobJsonLd(j, city, siteUrl, today = todayKey()) { return ldScript(jobPosting(j, city, siteUrl, today)); }
+// An announced role has no official posting yet, so it carries no JobPosting markup.
+export function jobJsonLd(j, city, siteUrl, today = todayKey()) { return j.announced ? "" : ldScript(jobPosting(j, city, siteUrl, today)); }

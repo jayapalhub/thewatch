@@ -461,6 +461,19 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .job-meta { margin: 0 0 4px; color: var(--muted); font-size: .95rem; }
 .job-by { margin: 0 0 6px; font-size: .92rem; font-weight: 600; }
 .job-when { color: var(--muted); font-size: .8rem; font-weight: 500; margin-left: 4px; }
+/* Roles people posted about: who they are, their name and a link to the post, with a line for announced roles. */
+.job-row.is-posted { background: linear-gradient(90deg, rgba(27,74,138,.07), transparent 70%); border-radius: 10px; padding-left: 12px; margin-left: -12px; }
+.job-by-person { font-weight: 500; }
+.job-by-label { display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--shield); background: var(--paper); padding: 3px 8px; border-radius: 999px; margin-right: 4px; }
+.job-by-name { font-weight: 700; }
+.job-post-link { font-weight: 700; margin-left: 4px; }
+.job-remove { color: var(--muted); font-size: .78rem; font-weight: 500; margin-left: 6px; }
+.job-announced { margin: 0 0 6px; font-size: .88rem; color: var(--warn-ink); background: var(--warn-bg); display: inline-block; padding: 3px 8px; border-radius: 6px; }
+.posted-city { font-size: 1.3rem; margin: 28px 0 6px; }
+.posted-approach { margin: 32px 0 8px; padding: 18px 22px; background: var(--paper); border-radius: var(--radius); }
+.posted-approach h2 { font-size: 1.15rem; margin-bottom: 8px; }
+.posted-approach ol { margin: 0 0 10px; padding-left: 22px; line-height: 1.6; }
+.posted-approach li { margin-bottom: 6px; }
 .jobs-empty { padding: 28px 0; font-size: 1.05rem; }
 .jobs-fine { margin-top: 22px; color: var(--muted); font-size: .85rem; }
 .job-page h1 { margin-bottom: 4px; }

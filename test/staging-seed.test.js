@@ -62,17 +62,25 @@ describe("staging seed", () => {
     }
   });
 
-  test("ten published roles, each linked to an employer organization and a .test posting", () => {
+  test("fourteen published roles, each linked to an employer organization and a .test posting", () => {
     const jobs = all("SELECT j.*, o.type org_type FROM jobs j LEFT JOIN organizations o ON o.id=j.organization_id");
-    assert.equal(jobs.length, 10);
+    assert.equal(jobs.length, 14);
     for (const j of jobs) {
       assert.equal(j.status, "published");
       assert.equal(j.org_type, "employer", `${j.title} employer org`);
-      assert.match(j.url, /^https:\/\/careers\.[a-z-]+\.test\//, `${j.title} link`);
+      assert.match(j.url, j.announced ? /^https:\/\/social\.example\.test\/posts\// : /^https:\/\/careers\.[a-z-]+\.test\//, `${j.title} link`);
       assert.ok(["onsite", "hybrid", "remote"].includes(j.remote));
       assert.ok(j.expires_at > j.posted_at);
-      assert.ok(j.excerpt && j.excerpt.length > 40);
+      if (j.source === "sweep" || !j.posted_by_name) assert.ok(j.excerpt && j.excerpt.length > 40);
     }
+    // Four roles people posted about: three with the employer's posting and one announced, each with a fictional person.
+    const posted = jobs.filter((j) => j.posted_by_role);
+    assert.equal(posted.length, 4);
+    assert.deepEqual(posted.map((j) => j.posted_by_role).sort(), ["hiring_manager", "hiring_manager", "leader", "recruiter"]);
+    for (const j of posted) { assert.match(j.posted_by_url, /^https:\/\/social\.example\.test\/posts\//); assert.equal(j.posted_by_kind, "employer"); assert.ok(j.posted_by_date <= j.posted_at || j.posted_by_date); }
+    const announced = posted.filter((j) => j.announced);
+    assert.equal(announced.length, 1);
+    assert.equal(announced[0].url, announced[0].posted_by_url, "an announced role links to the post");
     assert.deepEqual(new Set(jobs.map((j) => j.city)), new Set(["sandiego", "dallas"]));
     assert.equal(all("SELECT id FROM jobs WHERE source='sweep' AND source_id IS NULL").length, 0, "swept roles point at their board");
     // Migration 0016 seeds ten real San Diego boards; the seed adds three fictional ones on top.

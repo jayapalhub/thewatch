@@ -120,3 +120,18 @@ WITH c (city, org_slug, employer, title, url, location, remote, seniority, topic
 SELECT c.city, (SELECT id FROM organizations WHERE slug=c.org_slug), c.employer, c.title, c.url, c.location, c.remote, c.seniority, c.topics, c.salary, strftime('%Y-%m-%d', 'now', c.posted_offset), strftime('%Y-%m-%d', 'now', c.expires_offset), 'published', c.source, (SELECT id FROM job_sources WHERE employer_name=c.employer AND city=c.city), c.source_key, c.excerpt, datetime('now')
 FROM c
 WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE url = c.url);
+
+-- Roles people posted about (fictional people on a .test social network). Three carry the employer's posting; the fourth
+-- is announced, so its link is the post itself and it comes down 21 days after the post unless the posting appears.
+INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, seniority, topics, posted_at, expires_at, status, source, published_at, posted_by_name, posted_by_title, posted_by_role, posted_by_kind, posted_by_url, posted_by_date, announced, reviewer_notes)
+WITH p (city, org_slug, employer, title, url, location, remote, seniority, topics, posted_offset, expires_offset, person, person_title, role, post_url, post_offset, announced) AS (VALUES
+  ('sandiego', 'staging-example-aerospace', 'Example Aerospace', 'Detection Engineering Lead', 'https://careers.example-aerospace.test/jobs/1010', 'San Diego, CA', 'hybrid', 'manager', '["threat_intel","cloud"]', '-2 days', '+28 days', 'Morgan Sample', 'Director of Security Operations', 'hiring_manager', 'https://social.example.test/posts/morgan-sample-detection-lead', '-2 days', 0),
+  ('sandiego', 'staging-placeholder-bank', 'Placeholder Bank', 'Security Awareness Program Manager', 'https://careers.placeholder-bank.test/roles/2010', 'San Diego, CA', 'hybrid', 'manager', '["grc","leadership"]', '-5 days', '+25 days', 'Riley Placeholder', 'Senior Talent Partner, Technology', 'recruiter', 'https://social.example.test/posts/riley-placeholder-awareness-pm', '-5 days', 0),
+  ('dallas', 'staging-sample-health', 'Sample Health Systems', 'Deputy CISO', 'https://careers.sample-health.test/jobs/3010', 'Dallas, TX', 'onsite', 'director', '["leadership","grc"]', '-1 days', '+29 days', 'Jordan Example', 'Chief Information Security Officer', 'leader', 'https://social.example.test/posts/jordan-example-deputy-ciso', '-1 days', 0),
+  ('dallas', 'staging-placeholder-bank', 'Placeholder Bank', 'Cloud Security Engineer, Payments', 'https://social.example.test/posts/casey-sample-cloud-payments', 'Plano, TX', 'hybrid', 'practitioner', '["cloud","appsec"]', '-3 days', '+18 days', 'Casey Sample', 'Head of Payments Security', 'hiring_manager', 'https://social.example.test/posts/casey-sample-cloud-payments', '-3 days', 1)
+)
+SELECT p.city, (SELECT id FROM organizations WHERE slug=p.org_slug), p.employer, p.title, p.url, p.location, p.remote, p.seniority, p.topics, strftime('%Y-%m-%d', 'now', p.posted_offset), strftime('%Y-%m-%d', 'now', p.expires_offset), 'published', 'manual', datetime('now'),
+  p.person, p.person_title, p.role, 'employer', p.post_url, strftime('%Y-%m-%d', 'now', p.post_offset), p.announced,
+  CASE WHEN p.announced = 1 THEN 'Sample announced role for staging: no employer posting yet.' ELSE 'Sample posted role for staging.' END
+FROM p
+WHERE NOT EXISTS (SELECT 1 FROM jobs WHERE url = p.url);

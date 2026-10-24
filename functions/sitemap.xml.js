@@ -1,6 +1,6 @@
 import { CITIES, eventPath, orgPath, cityOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
 import { todayKey, addDays } from "./_lib/dates.js";
-import { jobPath } from "./_lib/jobs.js";
+import { jobPath, postedHighlight } from "./_lib/jobs.js";
 import { parseSpeakers, nameKey, resolveKey, loadOverrides } from "./_lib/speakers.js";
 
 // Only pages that answer 200 and are meant to be indexed. A page that would render noindex (an organizer or speaker
@@ -37,7 +37,8 @@ export async function onRequestGet({ env }) {
       WHERE e.status = 'published' AND e.speakers IS NOT NULL AND trim(e.speakers) != ''${NOT_BS_EVENT}`)),
     loadOverrides(db),
     // Live roles. A day of slack in the query, then each city's own date decides, as on the board.
-    rows(db.prepare(`SELECT j.id, j.city, j.title, j.employer_name, o.name AS org_name, j.expires_at, COALESCE(j.updated_at, j.published_at) AS updated_at
+    rows(db.prepare(`SELECT j.id, j.city, j.title, j.employer_name, o.name AS org_name, j.expires_at, COALESCE(j.updated_at, j.published_at) AS updated_at,
+      j.posted_by_name, j.posted_by_role, j.posted_by_kind, j.posted_by_date
       FROM jobs j LEFT JOIN organizations o ON o.id = j.organization_id WHERE j.status = 'published' AND (j.expires_at IS NULL OR j.expires_at >= ?)`).bind(addDays(todayKey(), -1))),
     rows(db.prepare("SELECT city, week_start, updated_at FROM issues WHERE status='sent'")),
   ]);
@@ -73,6 +74,11 @@ export async function onRequestGet({ env }) {
   for (const c of cities) if (speakerCities.has(c)) add(`/${c}/speakers`);
   if (speakerCities.has("virtual")) add("/virtual/speakers");
   for (const c of cities) if (boardMod.has(c)) add(`/${c}/jobs`, boardMod.get(c));
+  // From the people hiring: listed while someone is on it, nationwide and per city.
+  const postedMod = new Map();
+  for (const j of liveJobs) if (postedHighlight(j, todayKey(CITIES[j.city].timezone))) postedMod.set(j.city, later(postedMod.get(j.city), lastmod(j.updated_at)));
+  if (postedMod.size) add("/jobs/posted", [...postedMod.values()].reduce(later, null));
+  for (const c of cities) if (postedMod.has(c)) add(`/${c}/jobs/posted`, postedMod.get(c));
   for (const c of cities) add(`/${c}/cpe`);
   for (const c of cities) add(`/${c}/subscribe`);
   for (const i of sentIssues) if (CITIES[i.city]) add(`/${i.city}/issues/${i.week_start}`, i.updated_at);

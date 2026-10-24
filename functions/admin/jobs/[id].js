@@ -26,13 +26,14 @@ export async function onRequestPost({ params, request, env, data }) {
   if (error) return page(adminShell({ title: before.title, body: html`${flash(error, "err")}${jobForm({ ...before, ...p }, await orgs(env.DB), { action: `/admin/jobs/${id}` })}`, path: "/admin/jobs", user: data.user }), 400);
   const emp = await resolveEmployer(env.DB, row.employer, { note: "Created from Admin > Jobs" });
   const goingLive = row.status === "published" && before.status !== "published";
+  const unannounced = before.announced && !row.announced; // the employer's posting arrived: the role gets its usual run
   await env.DB.prepare(`UPDATE jobs SET city=?, organization_id=?, employer_name=?, title=?, url=?, location=?, remote=?, seniority=?, topics=?, salary_text=?, posted_at=?, expires_at=?, featured_until=?, status=?,
-      posted_by_name=?, posted_by_title=?, posted_by_url=?, posted_by_kind=?, posted_by_date=?, reviewer_notes=?,
+      posted_by_name=?, posted_by_title=?, posted_by_url=?, posted_by_kind=?, posted_by_date=?, reviewer_notes=?, posted_by_role=?, announced=?,
       hold=CASE WHEN ?='published' THEN 0 ELSE hold END, published_at=CASE WHEN ? THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE published_at END,
       closed_reason=CASE WHEN ?='published' THEN NULL ELSE closed_reason END, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?`)
     .bind(row.city, emp.id, row.employer, row.title, row.url, row.location, row.remote, row.seniority, row.topics, row.salary_text, row.posted_at,
-      goingLive && (!row.expires_at || row.expires_at < todayKey()) ? defaultExpiry() : row.expires_at || before.expires_at, row.featured_until, row.status,
-      row.posted_by_name, row.posted_by_title, row.posted_by_url, row.posted_by_kind, row.posted_by_date, row.reviewer_notes,
+      (goingLive || unannounced) && (!row.expires_at || row.expires_at < todayKey()) ? defaultExpiry() : row.expires_at || before.expires_at, row.featured_until, row.status,
+      row.posted_by_name, row.posted_by_title, row.posted_by_url, row.posted_by_kind, row.posted_by_date, row.reviewer_notes, row.posted_by_role, row.announced,
       row.status, goingLive ? 1 : 0, row.status, id).run();
-  return redirect(`/admin/jobs/${id}?msg=${encodeURIComponent(goingLive ? "Saved and live" : "Saved")}`);
+  return redirect(`/admin/jobs/${id}?msg=${encodeURIComponent(goingLive ? "Saved and live" : unannounced ? "Saved; the role now links to the employer's posting" : "Saved")}`);
 }
