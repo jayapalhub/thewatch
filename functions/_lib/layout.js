@@ -1,5 +1,5 @@
 import { html, raw } from "./html.js";
-import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS, cityListText } from "./constants.js";
+import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS } from "./constants.js";
 import { previewRuntime } from "./env.js";
 
 export const SHIELD_PATH = "M12699.99 19504.82l-4476.78 -2847.86c-440.67,-280.35 -871.71,-817.92 -871.71,-1701.16l0 -6890.42 5348.49 -2170.18 5348.48 2170.18 0 6890.42c0,883.24 -431.04,1420.81 -871.71,1701.16l-4476.77 2847.86zm0 -2838.35l2953.65 -1878.91 0 -1261.73 -1771.64 -1083.78 1771.64 -1083.74 0 -1680.18 -2953.65 -1198.49 -2953.66 1198.49 0 5109.43 2953.66 1878.91z";
@@ -62,7 +62,7 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const generic = !city; // site wide pages (about, sponsor, subscribe, submit, legal) carry the brand, not a city
   const brandTitle = generic ? "The Watch" : c.title;
   const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? "The Watch: cybersecurity events calendars by Better Security" : `${brandTitle}: cybersecurity events in ${c.name}`;
-  const desc = description || (generic ? `Every cybersecurity, AI security, privacy and audit event in ${cityListText()}, in one calendar and one Sunday email. By Better Security.` : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
+  const desc = description || (generic ? `Every cybersecurity, AI security, privacy and audit event in ${Object.keys(CITIES).length} US cities, in one calendar and one Sunday email. By Better Security.` : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
   const calHome = isVirtual ? "/virtual" : `/${c.slug}`;
   const canonicalPath = canonical !== undefined ? canonical : generic ? path : null;
   const canonicalUrl = canonicalPath ? `https://bettersecurity.ai${canonicalPath}` : null;
@@ -126,12 +126,11 @@ ${body}
   <div class="wrap footer-grid">
     <div class="footer-brand">
       ${mark(40)}
-      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${cityListText()}, plus the best online sessions.</p>
+      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${Object.keys(CITIES).length} cities, plus the best online sessions.</p>
       ${CITIES[c.slug] ? signupForm({ source: "footer", compact: true, cta: "Subscribe", city: c.slug }) : signupForm({ source: "footer", compact: true, cta: "Subscribe", chooseCity: true })}
     </div>
     <div class="footer-col">
       <h2>Calendar</h2>
-      ${Object.values(CITIES).map((x) => html`<a href="/${x.slug}">${x.name}</a>`)}
       <a href="/virtual">Virtual sessions and CPE</a>
       <a href="/?choose=1">Change city</a>
       <a href="${calHome}/feed.ics">Subscribe to the calendar feed</a>
@@ -156,6 +155,10 @@ ${body}
       <p class="footer-address">${MAIL_ADDRESS}</p>
       <p class="footer-address">&copy; ${new Date().getFullYear()} Better Security</p>
     </div>
+  </div>
+  <div class="wrap footer-cities">
+    <h2>All cities</h2>
+    <div class="footer-city-grid">${Object.values(CITIES).slice().sort((a, b) => a.name.localeCompare(b.name)).map((x) => html`<a href="/${x.slug}">${x.name}</a>`)}</div>
   </div>
 </footer>
 <script src="/assets/js/site.js?v=${ASSET_VERSION}" defer></script>
