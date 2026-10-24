@@ -6,6 +6,7 @@ import { html, raw, page, notFound } from "../../_lib/html.js";
 import { shell, subscribeBand } from "../../_lib/layout.js";
 import { CITIES, TOPICS, SENIORITY } from "../../_lib/constants.js";
 import { todayKey, fmtDateLong } from "../../_lib/dates.js";
+import { initialsOf, hueOf } from "../../_lib/logos.js";
 import { jobById, jobPath, jobJsonLd, cleanJobUrl, isFeatured, agoLabel, postedHighlight, postedLabel, removalLink, POSTED_ROLES, REMOTE, JOB_DAYS } from "../../_lib/jobs.js";
 
 // 410 for a role that was listed and has ended. Nothing about the role itself is shown.
@@ -43,7 +44,7 @@ export async function onRequestGet({ params, request, env }) {
   // the role field existed keep the plain byline.
   const highlight = postedHighlight(j, today);
   const byline = highlight
-    ? html`<span class="job-by-label">${postedLabel(j)}</span><br>${j.posted_by_name}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}<br><small>${agoLabel(j.posted_by_date, today)}${j.posted_by_url ? html` · <a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Read their post</a>` : ""} · <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></small>`
+    ? html`<span class="job-by-label">${postedLabel(j)}</span><br><span class="person-badge" style="--hue:${hueOf(j.posted_by_name)}" aria-hidden="true">${initialsOf(j.posted_by_name)}</span>${j.posted_by_name}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}<br><small>${agoLabel(j.posted_by_date, today)}${j.posted_by_url ? html` · <a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">Read their post</a>` : ""} · <a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></small>`
     : j.posted_by_name && !POSTED_ROLES[j.posted_by_role]
       ? html`${j.posted_by_url ? html`<a href="${j.posted_by_url}" rel="noopener nofollow" target="_blank">${j.posted_by_name}</a>` : j.posted_by_name}${j.posted_by_title ? `, ${j.posted_by_title}` : ""}${j.posted_by_kind === "staffing" ? html` <span class="tag">Staffing firm</span>` : ""}${j.posted_by_date ? html`<br><small>Posted about it ${agoLabel(j.posted_by_date, today)}</small>` : ""}<br><small><a class="job-remove" href="${removalLink(j)}">Ask to be removed</a></small>`
       : null;
@@ -54,7 +55,7 @@ export async function onRequestGet({ params, request, env }) {
       <p class="crumbs"><a href="/${city.slug}/jobs">Security jobs in ${city.name}</a></p>
       ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
       <h1>${j.title}</h1>
-      <p class="job-employer">${j.employer}</p>
+      <p class="job-employer">${highlight && j.org_slug ? html`<img class="emp-logo emp-logo-inline" src="/logo/${j.org_slug}" alt="" width="32" height="32" decoding="async">` : ""}${j.employer}</p>
       ${topics.length ? html`<div class="tags">${topics.map((t) => html`<span class="tag tag-topic">${TOPICS[t]}</span>`)}</div>` : ""}
       <dl class="event-facts">
         <div><dt>Employer</dt><dd>${j.employer}</dd></div>
