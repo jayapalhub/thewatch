@@ -1,6 +1,6 @@
 import { esc } from "./html.js";
 import { emailSponsor, clickUrl, absUrl } from "./sponsors.js";
-import { liveJobs, pickJobsFor, jobsEmailBlock } from "./jobs.js";
+import { liveJobs, pickJobsFor, jobsEmailBlock, postedEmailBlock, postedHighlight } from "./jobs.js";
 import { queryEvents, groupByDay, costLabel, cpeLabel } from "./events.js";
 import { fmtTimeRange, weekday, monthName, dayNum, addDays, parts, inZone, zoneLabel } from "./dates.js";
 import { TOPICS, MAIL_ADDRESS, CITIES, DEFAULT_CITY, SHOW_BS_EVENTS, cityTz } from "./constants.js";
@@ -88,7 +88,11 @@ export function picksBlock(siteUrl, events, interests, issueId) {
 // Hiring this week: three roles per subscriber, matched to their seniority, filled at send time like the nudge.
 export const JOBS_SLOT = "{{JOBS}}";
 export function jobsBlock(siteUrl, city, jobs, seniority, issueId) {
-  return jobsEmailBlock(siteUrl, city, pickJobsFor(jobs || [], seniority, 3), (jobs || []).length, issueId, { INK, MUTED, SHIELD, MIST, esc });
+  const styles = { INK, MUTED, SHIELD, MIST, esc };
+  const posted = (jobs || []).filter((j) => postedHighlight(j)).slice(0, 3);
+  const shown = new Set(posted.map((j) => j.id));
+  const rest = (jobs || []).filter((j) => !shown.has(j.id));
+  return postedEmailBlock(siteUrl, city, posted, issueId, styles) + jobsEmailBlock(siteUrl, city, pickJobsFor(rest, seniority, 3), (jobs || []).length, issueId, styles);
 }
 export function profileNudgeHtml(siteUrl, token) {
   return `<div style="margin:26px 0 0;padding:14px 16px;background:${PAPER};border-radius:10px;font-size:14px;line-height:1.55;">
