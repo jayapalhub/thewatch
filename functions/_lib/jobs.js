@@ -200,7 +200,8 @@ export function announcedLine(j) { return j.announced ? html`<p class="job-annou
 
 export function jobRow(j, today = todayKey()) {
   const highlight = postedHighlight(j, today);
-  const where = [j.location, REMOTE[j.remote], SENIORITY[j.seniority]].filter(Boolean).join(" · ");
+  const model = REMOTE[j.remote] && !new RegExp(`\\b${REMOTE[j.remote]}\\b`, "i").test(j.location || "") ? REMOTE[j.remote] : ""; // "United States (Remote)" already says it
+  const where = [j.location, model, SENIORITY[j.seniority]].filter(Boolean).join(" · ");
   const when = highlight && j.posted_by_date ? j.posted_by_date : j.posted_at;
   const foot = [
     isFeatured(j, today) ? html`<span class="job-accent">Featured</span>` : "",
