@@ -22,5 +22,5 @@ export async function onRequestGet({ request }) {
     <div><h2>Nothing sold</h2><p>One clearly marked sponsor per issue. Your email is never shared with organizers or sponsors.</p></div>
     <div><h2>Invitations</h2><p>Tell us your role and interests after you sign up and you'll be first to hear about Better Security's dinners and roundtables on your topic.</p></div>
   </div></section>`;
-  return page(shell({ title: "Subscribe", body, path: "/subscribe" }));
+  return page(shell({ title: "Subscribe", description: "The Watch Sunday email: every security, GRC, privacy and audit event in your city for the week ahead, with CPE noted. Free, at 8 AM local time.", body, path: "/subscribe" }));
 }

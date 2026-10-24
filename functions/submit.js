@@ -72,5 +72,5 @@ export async function onRequestGet({ request, env }) {
       <p class="form-msg" role="status" aria-live="polite"></p>
     </form>
   </div></section>`;
-  return page(shell({ title: "Submit an event", body, path: "/submit" }));
+  return page(shell({ title: "Submit an event", description: "Submit a cybersecurity, privacy, audit or AI governance event to The Watch. Reviewed by a person, usually within a day, then listed free.", body, path: "/submit" }));
 }

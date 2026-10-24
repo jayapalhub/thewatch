@@ -23,5 +23,5 @@ export async function onRequestGet() {
     <h2>Changes</h2>
     <p>If this policy changes in a way that matters, we'll say so in the Sunday email. The date at the top is the version you're reading.</p>
   </div></section>`;
-  return page(shell({ title: "Privacy policy", body, path: "/privacy" }), 200, { "Cache-Control": "public, max-age=3600" });
+  return page(shell({ title: "Privacy policy", description: "How The Watch and Better Security handle subscriber data: what we collect, why, who processes it, and how to unsubscribe or delete it.", body, path: "/privacy" }), 200, { "Cache-Control": "public, max-age=3600" });
 }

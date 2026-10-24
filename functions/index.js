@@ -55,7 +55,7 @@ export async function onRequestGet({ request, env }) {
 
   <section class="band band-paper">
     <div class="wrap three-up">
-      <div><h2>One place, every organizer</h2><p>ISACA, ISSA, OWASP, IIA, IAPP, ISC2, InfraGard, the meetups, the universities and the summits, ${orgCount?.n ?? 0} organizers so far. If it is about security and it is near you, it belongs on the calendar. <a href="/submit">Organizers can submit directly.</a></p></div>
+      <div><h2>One place, every organizer</h2><p>ISACA, ISSA, OWASP, IIA, IAPP, ISC2, InfraGard, the meetups, the universities and the summits, ${(orgCount?.n ?? 0).toLocaleString("en-US")} organizers so far. If it is about security and it is near you, it belongs on the calendar. <a href="/submit">Organizers can submit directly.</a></p></div>
       <div><h2>Filters that matter to practitioners</h2><p>Sort by topic, organizer, cost and format, and see at a glance which sessions carry CPE credit. Add any event to your own calendar in one click, or subscribe to the whole feed.</p></div>
       <div><h2>Curated, not dumped</h2><p>The Sunday email is scannable in two minutes: a short note, the week day by day, and a pick or two when something deserves your evening. No forty item lists.</p></div>
     </div>

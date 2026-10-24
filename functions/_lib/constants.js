@@ -26,8 +26,11 @@ export async function loadCities(db, { force = false } = {}) {
 }
 
 // "San Diego", "San Diego and San Jose", "San Diego, San Jose and Austin". Reads the live city list.
+// "San Diego, Dallas and Austin" for a short list; past five cities a sentence naming them all is unreadable, so it
+// becomes "40 cities".
 export function cityListText(list = Object.values(CITIES)) {
   const n = list.map((c) => c.name);
+  if (n.length > 5) return `${n.length} cities`;
   return n.length < 2 ? n[0] || "" : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`;
 }
 export function liveNewsletterCities() { return Object.values(CITIES).filter((c) => c.newsletter === "sunday"); }
@@ -91,4 +94,4 @@ export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekl
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 
 // Bump on any CSS or JS change so browsers fetch the new file.
-export const ASSET_VERSION = "2026-10-24k";
+export const ASSET_VERSION = "2026-10-24l";
