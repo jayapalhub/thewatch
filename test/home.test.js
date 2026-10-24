@@ -24,3 +24,15 @@ test("home: alphabetical tiles, one grouped count query, Virtual first, new cale
   const perCity = db.calls.filter((c) => /FROM events WHERE status='published' AND city=\?/.test(c.sql));
   assert.equal(perCity.length, 0);
 });
+
+test("footer: cities sit in their own alphabetical grid, and the brand line gives a count instead of naming every city", async () => {
+  const res = await home({ request: new Request("https://bettersecurity.ai/?choose=1"), env: { DB: fakeDb() } });
+  const body = await res.text();
+  const grid = body.match(/<div class="footer-city-grid">([\s\S]*?)<\/div>/)[1];
+  const names = [...grid.matchAll(/>([^<]+)<\/a>/g)].map((m) => m[1]);
+  assert.equal(names.length, Object.keys(CITIES).length);
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b)));
+  assert.match(body, new RegExp(`events in ${Object.keys(CITIES).length} cities, plus the best online sessions`));
+  const calendarCol = body.match(/<h2>Calendar<\/h2>([\s\S]*?)<\/div>/)[1];
+  assert.doesNotMatch(calendarCol, /href="\/dallas"/);
+});
