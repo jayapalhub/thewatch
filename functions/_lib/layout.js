@@ -61,7 +61,7 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const atRoot = !city && path === "/";
   const generic = !city; // site wide pages (about, sponsor, subscribe, submit, legal) carry the brand, not a city
   const brandTitle = generic ? "The Watch" : c.title;
-  const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? "The Watch: cybersecurity events calendars by Better Security" : `${brandTitle}: cybersecurity events in ${c.name}`;
+  const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? (singleCity() ? "The Watch: San Diego security and technology events, by Better Security" : "The Watch: cybersecurity events calendars by Better Security") : `${brandTitle}: cybersecurity events in ${c.name}`;
   const n = Object.keys(CITIES).length;
   const desc = description || (generic ? (singleCity() ? `Every cybersecurity, AI security, privacy and audit event in ${CITIES[DEFAULT_CITY].region || CITIES[DEFAULT_CITY].name}, in one calendar and one Sunday email. By Better Security.` : `Every cybersecurity, AI security, privacy and audit event in ${n} US cities, in one calendar and one Sunday email. By Better Security.`) : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
   const calHome = isVirtual ? "/virtual" : `/${c.slug}`;

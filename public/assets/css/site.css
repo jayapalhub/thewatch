@@ -301,6 +301,7 @@ body.preview .day-head { top: 116px; }
 .form legend { font-family: var(--display); font-weight: 700; font-size: 1.15rem; margin-bottom: 12px; }
 .form .check { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .form .check input { width: auto; margin: 0; }
+.form .check-block { margin: 14px 0 4px; } .form .check-block .hint { margin-top: 4px; }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 16px; }
 @media (max-width: 600px) { .row-2, .row-3 { grid-template-columns: 1fr; } }

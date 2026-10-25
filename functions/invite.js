@@ -41,7 +41,7 @@ export async function onRequestGet({ request }) {
         <fieldset class="topics areas"><legend>Areas <span class="hint">Pick every area that applies.</span></legend>
           ${Object.entries(INVITE_AREAS).map(([k, v]) => html`<label class="chip"><input type="checkbox" name="areas" value="${k}"> ${v}</label>`)}
         </fieldset>
-        <label class="check"><input type="checkbox" name="vendor" value="1"> I work for a vendor, reseller or services firm <span class="hint">Experiences are built for practitioners, and this helps us keep each room balanced.</span></label>
+        <div class="check-block"><label class="check"><input type="checkbox" name="vendor" value="1"> I work for a vendor, reseller or services firm</label><span class="hint">Experiences are built for practitioners, and this helps us keep each room balanced.</span></div>
       </fieldset>
       <fieldset>
         <legend>Anything else</legend>
