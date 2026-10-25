@@ -502,6 +502,20 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .job-card .job-title a:focus-visible { outline: none; }
 .job-card .job-title a:focus-visible::after { outline: 2px solid var(--electric-deep); outline-offset: -2px; }
 .job-company { margin: 0; font-size: .95rem; color: var(--ink); }
+.job-company a { color: inherit; text-decoration: none; position: relative; z-index: 2; }
+.job-company a:hover { text-decoration: underline; }
+/* Employer pages */
+.emp-head { display: flex; align-items: center; gap: 18px; }
+.emp-logo-page { width: 72px; height: 72px; border-radius: 14px; flex: 0 0 72px; }
+.emp-head .crumbs { margin-bottom: 4px; }
+.jobs-city h2 { margin: 26px 0 4px; font-size: 1.25rem; }
+.emp-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 16px; }
+.emp-list a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--mist-soft); border-radius: 10px; text-decoration: none; color: var(--ink); min-height: 60px; }
+.emp-list a:hover { border-color: var(--shield); }
+.emp-list .emp-logo { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 9px; }
+.emp-list .emp-name { font-weight: 700; flex: 1; }
+.emp-list .emp-count { color: var(--muted); font-size: .9rem; text-align: right; }
+.emp-list .emp-count small { display: block; font-size: .78rem; color: var(--electric-text); }
 .job-where { margin: 0; font-size: .92rem; color: var(--muted); }
 .job-pay { margin: 0; font-size: .92rem; color: var(--ink); }
 .job-insight { display: flex; align-items: center; margin: 8px 0 0; font-size: .9rem; color: var(--ink); line-height: 1.35; }
