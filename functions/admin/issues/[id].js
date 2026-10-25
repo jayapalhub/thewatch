@@ -16,7 +16,7 @@ export async function onRequestGet({ params, request, env, data }) {
   const htmlOut = renderIssueHtml(issue, d, siteUrl, city).replace(/\{\{PICKS\}\}/g, () => picksBlock(siteUrl, d.events, sample.top, issue.id)).replace(/\{\{SHARE\}\}/g, () => shareLineHtml(siteUrl, "preview")).replace(/\{\{UNSUB\}\}/g, () => siteUrl + "/unsubscribe?t=preview").replace(/\{\{PROFILE_NUDGE\}\}/g, () => profileNudgeHtml(siteUrl, "preview")).replace(/\{\{JOBS\}\}/g, () => jobsBlock(siteUrl, city, d.jobs, null, issue.id)); // nudge: only people without a profile; jobs: matched per subscriber
   const { n: subCount } = await env.DB.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active' AND city=?").bind(city.slug).first();
   const subjects = suggestSubjects(d, issue);
-  const sc = issue.sponsor_name ? await env.DB.prepare("SELECT COUNT(*) n FROM link_clicks WHERE issue_id=? AND target='sponsor'").bind(issue.id).first() : null;
+  const sc = issue.sponsor_name ? await env.DB.prepare("SELECT COUNT(*) n FROM link_clicks WHERE issue_id=? AND target='sponsor' AND is_bot=0 AND is_dup=0").bind(issue.id).first() : null;
   let featuredIds = []; try { featuredIds = JSON.parse(issue.featured_event_ids || "[]"); } catch {}
   const body = html`${flash(new URL(request.url).searchParams.get("msg"))}
   <div class="a-issue">

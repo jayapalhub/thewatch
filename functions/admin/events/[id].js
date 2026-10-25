@@ -14,7 +14,7 @@ export async function onRequestGet({ params, request, env, data }) {
   const { orgs, venues } = await lookups(env.DB);
   const clashes = await findClashes(env.DB, [e]);
   const rem = await env.DB.prepare("SELECT status, COUNT(*) n FROM reminders WHERE event_id=? GROUP BY status").bind(e.id).all().catch(() => ({ results: [] }));
-  const clicks = await env.DB.prepare("SELECT target, COUNT(*) n FROM link_clicks WHERE event_id=? GROUP BY target").bind(e.id).all();
+  const clicks = await env.DB.prepare("SELECT target, COUNT(*) n FROM link_clicks WHERE event_id=? AND is_bot=0 AND is_dup=0 GROUP BY target").bind(e.id).all();
   const body = html`${flash(new URL(request.url).searchParams.get("msg"))}
     <p class="a-muted">#${e.id} &middot; ${e.status.replace("_", " ")} &middot; created ${e.created_at}${e.published_at ? ` &middot; published ${e.published_at}` : ""} &middot; clicks: ${clicks.results.map((c) => `${c.target} ${c.n}`).join(", ") || "none yet"} &middot; reminders: ${rem.results.map((x) => `${x.n} ${x.status}`).join(", ") || "none"}</p>
     ${clashNotice(clashes.get(e.id))}

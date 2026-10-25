@@ -14,7 +14,7 @@ export async function onRequestGet({ request, env, data }) {
     q("SELECT COUNT(*) n FROM subscribers WHERE created_at >= ?", addDays(today, -7)),
     q("SELECT COUNT(*) n FROM sponsor_inquiries WHERE status='new'"),
     q("SELECT COUNT(*) n FROM event_interest"),
-    q("SELECT COUNT(*) n FROM link_clicks WHERE clicked_at >= ?", addDays(today, -7)),
+    q("SELECT COUNT(*) n FROM link_clicks WHERE clicked_at >= ? AND is_bot=0 AND is_dup=0", addDays(today, -7)),
   ]);
   const { results: thin } = await db.prepare("SELECT substr(start_at,1,10) d, COUNT(*) n FROM events WHERE status='published' AND start_at >= ? GROUP BY d ORDER BY d LIMIT 14").bind(today).all();
   const nextMonday = addDays(mondayOf(today), 7);
@@ -26,7 +26,7 @@ export async function onRequestGet({ request, env, data }) {
     <a class="a-card" href="/admin/people"><span class="a-num">${subs.n}</span>active subscribers <small>+${newSubs.n} this week</small></a>
     <a class="a-card" href="/admin/sponsors"><span class="a-num">${sponsors.n}</span>new sponsor inquiries</a>
     <a class="a-card" href="/admin/people?interest=1"><span class="a-num">${interest.n}</span>event interest sign ups</a>
-    <a class="a-card" href="/admin/issues"><span class="a-num">${clicks.n}</span>link clicks this week</a>
+    <a class="a-card" href="/admin/clicks"><span class="a-num">${clicks.n}</span>link clicks this week <small>people only</small></a>
   </div>
   ${numbers ? html`<h2>This week's numbers</h2><p class="a-muted">The same block goes to your inbox every Monday at 8 AM. <form method="post" class="a-inline"><button class="a-btn a-btn-small" name="action" value="send_numbers">Send it to me now</button></form></p><div class="a-card">${raw(renderNumbers(numbers))}</div>` : ""}
   <h2>The weekend runs itself</h2>

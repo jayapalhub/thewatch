@@ -1,6 +1,7 @@
 import { esc } from "./html.js";
 import { emailSponsor, clickUrl, absUrl } from "./sponsors.js";
 import { liveJobs, pickJobsFor, jobsEmailBlock, postedEmailBlock, postedHighlight } from "./jobs.js";
+import { trapLink } from "./clicks.js";
 import { queryEvents, groupByDay, costLabel, cpeLabel } from "./events.js";
 import { fmtTimeRange, weekday, monthName, dayNum, addDays, parts, inZone, zoneLabel } from "./dates.js";
 import { TOPICS, MAIL_ADDRESS, CITIES, DEFAULT_CITY, SHOW_BS_EVENTS, cityTz } from "./constants.js";
@@ -122,6 +123,7 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
 
   return `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;color:${INK};">
   <div style="font-size:13px;color:${MUTED};margin:0 0 14px;">The week of ${range} · ${events.length} event${events.length === 1 ? "" : "s"} in ${esc(city.name)} · <a href="${siteUrl}/${city.slug}/issues/${issue.week_start}" style="color:${MUTED};">Read online</a></div>
+  ${trapLink(siteUrl, issue.id)}
   ${note ? `<div style="margin:0 0 18px;">${note}</div>` : ""}
   ${events.length ? PICKS_SLOT : ""}
   ${featured.length ? `<div style="background:${PAPER};border-left:4px solid ${ELECTRIC};padding:12px 16px;border-radius:8px;margin:0 0 18px;">

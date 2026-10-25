@@ -4,7 +4,7 @@ import { todayKey, mondayOf, addDays } from "../../_lib/dates.js";
 import { CITIES } from "../../_lib/constants.js";
 
 export async function onRequestGet({ request, env, data }) {
-  const { results } = await env.DB.prepare("SELECT i.*, (SELECT COUNT(*) FROM link_clicks c WHERE c.issue_id=i.id) clicks FROM issues i ORDER BY week_start DESC LIMIT 100").all();
+  const { results } = await env.DB.prepare("SELECT i.*, (SELECT COUNT(*) FROM link_clicks c WHERE c.issue_id=i.id AND c.is_bot=0 AND c.is_dup=0) clicks FROM issues i ORDER BY week_start DESC LIMIT 100").all();
   const today = todayKey();
   const thisMon = mondayOf(today), nextMon = addDays(thisMon, 7);
   const body = html`${flash(new URL(request.url).searchParams.get("msg"))}
