@@ -2,12 +2,14 @@ import { html, page } from "./_lib/html.js";
 import { shell, signupForm } from "./_lib/layout.js";
 import { upcomingEvents, eventRow, groupByDay, dayHeading } from "./_lib/events.js";
 import { addDays, todayKey } from "./_lib/dates.js";
-import { CITIES, cityOf, SHOW_BS_EVENTS, cityListText, liveNewsletterCities, pendingNewsletterCities, DEFAULT_CITY } from "./_lib/constants.js";
+import { CITIES, cityOf, SHOW_BS_EVENTS, cityListText, liveNewsletterCities, pendingNewsletterCities, DEFAULT_CITY, singleCity } from "./_lib/constants.js";
 
-// The root is a city chooser. A returning reader who has visited a calendar is sent straight back to it
+// With one live city there is nothing to choose: the root is that city's calendar.
+// With more, the root is a city chooser. A returning reader who has visited a calendar is sent straight back to it
 // (cookie watch_city) unless they ask to choose again with ?choose=1.
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
+  if (singleCity()) return Response.redirect(new URL(`/${DEFAULT_CITY}`, request.url).toString(), 302);
   const cookie = (request.headers.get("Cookie") || "").match(/(?:^|;\s*)watch_city=([a-z]+)/);
   const remembered = cookie && cityOf(cookie[1]) ? cookie[1] : null;
   if (remembered && !url.searchParams.has("choose")) return Response.redirect(new URL(`/${remembered}`, request.url).toString(), 302);

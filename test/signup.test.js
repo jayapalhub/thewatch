@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { signupForm, emailValueLine, subscribeBand } from "../functions/_lib/layout.js";
+import { CITIES } from "../functions/_lib/constants.js";
+
+// The fallback city map holds San Diego alone, so the second city these tests need is registered here.
+CITIES.sanjose = { slug: "sanjose", name: "San Jose", title: "The Watch San Jose", region: "San Jose", timezone: "America/Los_Angeles", newsletter: null, sort: 20 };
 
 const hiddenCity = (s) => (String(s).match(/<input type="hidden" name="city" value="([a-z]+)">/) || [])[1] || null;
 const selectedCity = (s) => (String(s).match(/<option value="([a-z]+)" selected>/) || [])[1] || null;

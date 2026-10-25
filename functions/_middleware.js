@@ -1,4 +1,4 @@
-import { loadCities } from "./_lib/constants.js";
+import { loadCities, CITIES, HIDDEN_CITIES, DEFAULT_CITY } from "./_lib/constants.js";
 import { meterDB, noteRequest, flushUsage, alertOnce } from "./_lib/ops.js";
 import { isPreview, rememberEnvironment } from "./_lib/env.js";
 import { notFoundPage } from "./_lib/layout.js";
@@ -49,6 +49,23 @@ export function wantsNotFoundPage(request, path, res) {
 const PREVIEW_HEADERS = { "X-Robots-Tag": "noindex, nofollow" };
 const PREVIEW_ROBOTS = "User-agent: *\nDisallow: /\n";
 
+// Paths that no longer exist as pages: the job board (taken down 2026-10-25, data kept) and the paused cities' pages
+// (hidden the same day). People following an old link land on the San Diego calendar; search engines see a redirect
+// and a noindex header, and the paths are out of the sitemap. Old /go/j/ click links still resolve on their own.
+function retiredPath(path) {
+  const [, seg, second] = path.split("/");
+  if (seg === "jobs" || seg === "employers") return true;
+  if (second === "jobs" && (seg === "remote" || CITIES[seg] || HIDDEN_CITIES.has(seg))) return true; // never /admin/jobs or /api/jobs
+  if (HIDDEN_CITIES.has(seg)) return true;
+  // Per city images and embeds for a hidden city: /og/city/<slug>.png, /embed/<slug>.
+  const m = /^\/(?:embed|og\/city)\/([a-z]+)/.exec(path);
+  return !!(m && HIDDEN_CITIES.has(m[1]));
+}
+function retiredRedirect(request) {
+  const to = new URL(`/${DEFAULT_CITY}`, request.url).toString();
+  return new Response(null, { status: 302, headers: { Location: to, "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
+}
+
 function notice(path, extra = {}) {
   const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>The Watch</title>
 <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f7f8fa;color:#14213d;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center}main{max-width:520px;padding:32px 24px;text-align:center}h1{font-size:1.4rem;margin:0 0 12px}p{line-height:1.6;color:#3d4a63}</style></head>
@@ -63,6 +80,13 @@ export async function onRequest(context) {
   rememberEnvironment(context.env);
   const extra = preview ? PREVIEW_HEADERS : {};
   if (preview && path === "/robots.txt") return withHeaders(new Response(PREVIEW_ROBOTS, { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } }), path, extra);
+  // Every function downstream sees a metered binding, so reads and writes are counted per request.
+  context.env.DB = meterDB(context.env.DB);
+  // The city list first (one cached read a minute), so retired paths can be answered before the cache is consulted
+  // and no hidden city page is ever served from an older cached copy.
+  try { await loadCities(context.env.DB); } catch { /* fallback map */ }
+  if (retiredPath(path)) return withHeaders(retiredRedirect(request), path, extra);
+
   const useCache = !preview && cacheable(request, path) && typeof caches !== "undefined";
   const cache = useCache ? caches.default : null;
 
@@ -71,11 +95,8 @@ export async function onRequest(context) {
     if (hit) return withHeaders(hit, path, { "X-Watch-Cache": "hit" });
   }
 
-  // Every function downstream sees a metered binding, so reads and writes are counted per request.
-  context.env.DB = meterDB(context.env.DB);
   let res, err = null;
   try {
-    await loadCities(context.env.DB);
     res = await context.next();
   } catch (e) {
     res = null; err = e;

@@ -1,12 +1,11 @@
-// Monday numbers: one email to Jerome every Monday at 8 AM Pacific with the week's numbers for all four cities,
+// Monday numbers: one email to Jerome every Monday at 8 AM Pacific with the week's numbers for every live city,
 // and the same block on the admin home page. Pure reads; the only write is the digest_log row that stops a
 // second send in the same week. Nothing here publishes, posts or emails anyone but Jerome.
+// The job board sections (roles, named roles, boards that failed) went with the board on 2026-10-25.
 import { CITIES } from "./constants.js";
 import { notifyJerome, emailShell } from "./integrations.js";
 import { localNow } from "./dispatch.js";
 import { mondayOf, addDays } from "./dates.js";
-import { untilMigrated } from "./jobs.js";
-import { coverageStatus, READY_AT, boardName } from "./coverage.js";
 
 const DIGEST_HOUR = 8;
 
@@ -18,37 +17,14 @@ export async function weeklyNumbers(db) {
   const issues = await all(`SELECT city, issue_number, week_start, status, sent_count, send_error, subject FROM issues WHERE (completed_at >= ${since} OR dispatched_at >= ${since} OR status='sending') ORDER BY city, issue_number`);
   const clicks = await all(`SELECT target, COUNT(*) n FROM link_clicks WHERE clicked_at >= ${since} AND is_bot=0 AND is_dup=0 GROUP BY target ORDER BY n DESC, target`);
   const topEvents = await all(`SELECT e.title, e.city, COUNT(*) n FROM link_clicks c JOIN events e ON e.id=c.event_id WHERE c.clicked_at >= ${since} AND c.is_bot=0 AND c.is_dup=0 GROUP BY e.id ORDER BY n DESC LIMIT 5`);
-  const topJobs = await all(`SELECT title, employer_name, city, apply_clicks FROM jobs WHERE status='published' AND apply_clicks > 0 ORDER BY apply_clicks DESC LIMIT 5`);
   const events = await all(`SELECT city, SUM(status='published' AND published_at >= ${since}) published, SUM(status='pending_review' AND hold=1) held, SUM(status='pending_review' AND hold=0) clocked, SUM(status='rejected' AND updated_at >= ${since}) rejected, SUM(status='published' AND start_at >= date('now') AND start_at < date('now','+70 days')) upcoming FROM events GROUP BY city`);
-  const jobs = await all(`SELECT city, SUM(status='published' AND published_at >= ${since}) published, SUM(status='published') live, SUM(status='closed' AND updated_at >= ${since}) closed, SUM(status='pending_review') pending, SUM(status='published' AND posted_by_name IS NOT NULL AND posted_by_name != '') named FROM jobs GROUP BY city`);
-  // Named roles live per board, and how many had their person attached this week (posted_by_attached_at, migration 0031).
-  // Before the migration the attached count is unknown and the block says so.
-  const namedLive = "status='published' AND (expires_at IS NULL OR expires_at >= date('now')) AND posted_by_name IS NOT NULL AND posted_by_name != ''";
-  const named = await untilMigrated(
-    () => all(`SELECT city, SUM(${namedLive}) named, SUM(${namedLive} AND posted_by_attached_at >= ${since}) attached FROM jobs GROUP BY city`),
-    async () => (await all(`SELECT city, SUM(${namedLive}) named FROM jobs GROUP BY city`)).map((r) => ({ ...r, attached: null })),
-  );
-  const boardsBad = await all(`SELECT employer_name, city, last_status FROM job_sources WHERE active=1 AND (last_status LIKE 'error%' OR last_status LIKE 'suspect%') ORDER BY city, employer_name`);
   const feedsBad = await all(`SELECT name, last_status FROM feed_sources WHERE active=1 AND last_status IS NOT NULL AND last_status NOT LIKE 'ok%' ORDER BY id`);
   const linkedin = await all(`SELECT city, kind, status FROM linkedin_posts WHERE created_at >= ${since} ORDER BY id`);
   const sponsors = await all(`SELECT COUNT(*) n FROM sponsor_inquiries WHERE created_at >= ${since}`);
   // Delivery: permanent bounces and spam complaints reported by Resend this week (table from migration 0021).
   const delivery = (await all(`SELECT SUM(action='bounced') bounced, SUM(action='unsubscribed') complaints, SUM(action='logged' AND type='email.bounced') soft FROM email_events WHERE created_at >= ${since}`).catch(() => []))[0] || {};
   const by = (rows) => Object.fromEntries(rows.map((r) => [r.city, r]));
-  return { cities, subs: by(subs), issues, clicks, topEvents, topJobs, events: by(events), jobs: by(jobs), named, boardsBad, feedsBad, linkedin, sponsorInquiries: (sponsors[0] || {}).n || 0, delivery: { bounced: delivery.bounced || 0, complaints: delivery.complaints || 0, soft: delivery.soft || 0 } };
-}
-
-// The Named roles lines: the total live across every board, the people attached this week, and the three boards
-// closest to the threshold for showing named roles only (the highest counts still under it, or the top three once past it).
-export function namedRolesBlock(named = [], { siteUrl = "https://bettersecurity.ai" } = {}) {
-  const rows = (named || []).filter((r) => r.city).map((r) => ({ city: r.city, named: r.named || 0, attached: r.attached }));
-  const total = rows.reduce((a, r) => a + r.named, 0);
-  const tracked = rows.some((r) => r.attached !== null && r.attached !== undefined);
-  const attached = tracked ? rows.reduce((a, r) => a + (r.attached || 0), 0) : null;
-  const under = rows.filter((r) => r.named < READY_AT).sort((a, b) => b.named - a.named || a.city.localeCompare(b.city));
-  const closest = (under.length ? under : rows.sort((a, b) => b.named - a.named)).slice(0, 3);
-  const list = closest.length ? closest.map((r) => `${esc(boardName(r.city))} ${r.named} (${esc(coverageStatus(r.named).toLowerCase())})`).join(", ") : "no boards yet";
-  return `<h3 style="margin:18px 0 6px;font-size:15px;">Named roles</h3><p style="margin:0;">${total} live role${total === 1 ? "" : "s"} across every board carr${total === 1 ? "ies" : "y"} a person who posted about it; ${tracked ? `${attached} ${attached === 1 ? "person was" : "people were"} attached this week` : "attached this week is not counted until migration 0031 is applied"}. Closest to the ${READY_AT} named threshold: ${list}. Details at <a href="${siteUrl}/admin/jobs/coverage">${siteUrl}/admin/jobs/coverage</a>.</p>`;
+  return { cities, subs: by(subs), issues, clicks, topEvents, events: by(events), feedsBad, linkedin, sponsorInquiries: (sponsors[0] || {}).n || 0, delivery: { bounced: delivery.bounced || 0, complaints: delivery.complaints || 0, soft: delivery.soft || 0 } };
 }
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
@@ -57,21 +33,19 @@ const th = (v, right = false) => `<th style="padding:4px 8px;text-align:${right 
 
 // One HTML block, used by the email and the admin home page.
 export function renderNumbers(n, { siteUrl = "https://bettersecurity.ai" } = {}) {
-  const row = (c) => { const s = n.subs[c.slug] || {}, e = n.events[c.slug] || {}, j = n.jobs[c.slug] || {}; return `<tr>${td(c.name)}${td(`${s.active || 0} (${s.added || 0} new, ${s.gone || 0} left)`, true)}${td(`${e.published || 0} / ${e.upcoming || 0}`, true)}${td(e.held || 0, true)}${td(`${j.published || 0} / ${j.live || 0}`, true)}${td(j.closed || 0, true)}</tr>`; };
-  const virt = n.events.virtual ? `<tr>${td("Virtual")}${td("", true)}${td(`${n.events.virtual.published || 0} / ${n.events.virtual.upcoming || 0}`, true)}${td(n.events.virtual.held || 0, true)}${td("", true)}${td("", true)}</tr>` : "";
+  const row = (c) => { const s = n.subs[c.slug] || {}, e = n.events[c.slug] || {}; return `<tr>${td(c.name)}${td(`${s.active || 0} (${s.added || 0} new, ${s.gone || 0} left)`, true)}${td(`${e.published || 0} / ${e.upcoming || 0}`, true)}${td(e.held || 0, true)}</tr>`; };
+  const virt = n.events.virtual ? `<tr>${td("Virtual")}${td("", true)}${td(`${n.events.virtual.published || 0} / ${n.events.virtual.upcoming || 0}`, true)}${td(n.events.virtual.held || 0, true)}</tr>` : "";
   const issues = n.issues.length ? n.issues.map((i) => `<li>${esc((CITIES[i.city] || {}).name || i.city)} issue ${i.issue_number || ""}, week of ${esc(i.week_start)}: ${i.status === "sent" ? `sent to ${i.sent_count}` : esc(i.status)}${i.send_error ? `, error: ${esc(i.send_error)}` : ""}${i.subject ? `, "${esc(i.subject)}"` : ""}</li>`).join("") : "<li>No issue went out this week.</li>";
   const clicks = n.clicks.length ? n.clicks.map((c) => `${esc(c.target || "other")} ${c.n}`).join(", ") : "none";
   const top = n.topEvents.length ? `<ul style="margin:6px 0 0;padding-left:18px;">${n.topEvents.map((e) => `<li>${esc(e.title)} (${esc((CITIES[e.city] || {}).name || e.city)}): ${e.n}</li>`).join("")}</ul>` : "";
-  const jobsTop = n.topJobs.length ? `<ul style="margin:6px 0 0;padding-left:18px;">${n.topJobs.map((j) => `<li>${esc(j.title)}, ${esc(j.employer_name)} (${esc((CITIES[j.city] || {}).name || j.city)}): ${j.apply_clicks} apply clicks in total</li>`).join("")}</ul>` : "";
-  const trouble = [...n.boardsBad.map((b) => `Board ${esc(b.employer_name)} (${esc((CITIES[b.city] || {}).name || b.city)}): ${esc(b.last_status)}`), ...n.feedsBad.map((f) => `Feed ${esc(f.name)}: ${esc(f.last_status)}`)];
+  const trouble = n.feedsBad.map((f) => `Feed ${esc(f.name)}: ${esc(f.last_status)}`);
   const li = n.linkedin.length ? n.linkedin.map((p) => `${esc((CITIES[p.city] || {}).name || p.city)} ${p.kind} ${p.status}`).join(", ") : "nothing (page not connected, or nothing to post)";
-  return `<table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr>${th("City")}${th("Subscribers (new, left this week)", true)}${th("Events published / upcoming", true)}${th("Held", true)}${th("Roles published / live", true)}${th("Closed", true)}</tr></thead><tbody>${n.cities.map(row).join("")}${virt}</tbody></table>
+  return `<table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr>${th("City")}${th("Subscribers (new, left this week)", true)}${th("Events published / upcoming", true)}${th("Held", true)}</tr></thead><tbody>${n.cities.map(row).join("")}${virt}</tbody></table>
   <h3 style="margin:18px 0 6px;font-size:15px;">Sunday email</h3><ul style="margin:0;padding-left:18px;">${issues}</ul>
   <p style="margin:6px 0 0;">Delivery: ${(() => { const d = n.delivery || {}; return d.bounced || d.complaints || d.soft ? `${d.bounced || 0} address${d.bounced === 1 ? "" : "es"} bounced for good and ${d.complaints || 0} marked the email as spam this week${d.soft ? `, with ${d.soft} temporary bounce${d.soft === 1 ? "" : "s"} that will be retried` : ""}.` : "no bounces or spam complaints this week."; })()}</p>
-  <h3 style="margin:18px 0 6px;font-size:15px;">Clicks this week</h3><p style="margin:0;">${clicks}.</p>${top}${jobsTop}
-  ${namedRolesBlock(n.named, { siteUrl })}
+  <h3 style="margin:18px 0 6px;font-size:15px;">Clicks this week</h3><p style="margin:0;">${clicks}.</p>${top}
   <h3 style="margin:18px 0 6px;font-size:15px;">LinkedIn page</h3><p style="margin:0;">${li}.</p>
-  ${n.usageLine || ""}<h3 style="margin:18px 0 6px;font-size:15px;">Needs a look</h3>${trouble.length ? `<ul style="margin:0;padding-left:18px;">${trouble.map((t) => `<li>${t}</li>`).join("")}</ul>` : `<p style="margin:0;">Every board and feed read cleanly.</p>`}${n.sponsorInquiries ? `<p style="margin:8px 0 0;">${n.sponsorInquiries} new sponsor inquir${n.sponsorInquiries === 1 ? "y" : "ies"} at <a href="${siteUrl}/admin/sponsors">${siteUrl}/admin/sponsors</a>.</p>` : ""}
+  ${n.usageLine || ""}<h3 style="margin:18px 0 6px;font-size:15px;">Needs a look</h3>${trouble.length ? `<ul style="margin:0;padding-left:18px;">${trouble.map((t) => `<li>${t}</li>`).join("")}</ul>` : `<p style="margin:0;">Every feed read cleanly.</p>`}${n.sponsorInquiries ? `<p style="margin:8px 0 0;">${n.sponsorInquiries} new sponsor inquir${n.sponsorInquiries === 1 ? "y" : "ies"} at <a href="${siteUrl}/admin/sponsors">${siteUrl}/admin/sponsors</a>.</p>` : ""}
   <p style="margin:16px 0 0;color:#5B6B80;font-size:13px;">Counts cover the last seven days. Held rows wait at <a href="${siteUrl}/admin/review">${siteUrl}/admin/review</a>; everything else publishes on its own.</p>`;
 }
 

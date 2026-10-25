@@ -19,12 +19,17 @@ async function through(path, next, accept = "text/html") {
 }
 
 describe("city calendar header", () => {
-  test("no strip of every city; a Change city link instead", async () => {
-    const res = await cityPage({ request: req("/sandiego"), env: { DB: fakeDb() }, params: { city: "sandiego" }, waitUntil: () => {} });
-    const body = await res.text();
+  test("no strip of every city; a Change city link when there is more than one city, nothing when there is one", async () => {
+    const render = async () => (await cityPage({ request: req("/sandiego"), env: { DB: fakeDb() }, params: { city: "sandiego" }, waitUntil: () => {} })).text();
+    let body = await render();
     assert.doesNotMatch(body, /city-toggle/);
-    assert.match(body, /<a class="change-city" href="\/\?choose=1">Change city<\/a>/);
+    assert.doesNotMatch(body, /Change city/, "one live city: nothing to change to");
     assert.match(body, /aria-label="View"/);
+    CITIES.sanjose = { slug: "sanjose", name: "San Jose", title: "The Watch San Jose", region: "San Jose", timezone: "America/Los_Angeles", newsletter: null, sort: 20 };
+    try {
+      body = await render();
+      assert.match(body, /<a class="change-city" href="\/\?choose=1">Change city<\/a>/);
+    } finally { delete CITIES.sanjose; }
   });
 });
 
@@ -48,9 +53,14 @@ describe("not found page", () => {
     assert.match(body, new RegExp(`href="/sandiego">Go to the ${CITIES.sandiego.name} calendar`));
     assert.equal(res.headers.get("cache-control"), "no-store");
   });
-  test("an unknown top level path points to the city chooser", async () => {
-    const body = await (await through("/no-such-page", async () => notFound())).text();
-    assert.match(body, /href="\/\?choose=1">Choose your city/);
+  test("an unknown top level path points to the one calendar, or to the chooser when there are several", async () => {
+    let body = await (await through("/no-such-page", async () => notFound())).text();
+    assert.match(body, /href="\/sandiego">Go to the San Diego calendar/);
+    CITIES.sanjose = { slug: "sanjose", name: "San Jose", title: "The Watch San Jose", region: "San Jose", timezone: "America/Los_Angeles", newsletter: null, sort: 20 };
+    try {
+      body = await (await through("/no-such-page", async () => notFound())).text();
+      assert.match(body, /href="\/\?choose=1">Choose your city/);
+    } finally { delete CITIES.sanjose; }
   });
   test("APIs, images, feeds and non HTML requests keep their plain 404", async () => {
     for (const p of ["/api/x", "/logo/nobody", "/sandiego/feed.ics", "/og/city/x.png", "/admin/events/9"]) assert.equal(wantsNotFoundPage(req(p), p, notFound()), false, p);

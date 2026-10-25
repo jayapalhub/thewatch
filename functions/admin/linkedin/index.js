@@ -20,7 +20,7 @@ export async function onRequestGet({ request, env, data }) {
     : state === "expired" ? html`<span class="a-pill a-pill-warn">Expired</span> press Reconnect`
     : env.LINKEDIN_WEBHOOK_URL ? html`<span class="a-pill a-pill-good">Posting through the webhook</span>` : html`<span class="a-pill a-pill-warn">Not connected</span>`;
   const body = html`${flash(msg)}
-  <p class="a-muted">The site posts to the Better Security LinkedIn page on its own: Monday 9 AM local, "This week in &lt;city&gt;" with three events and the calendar link; Thursday 9 AM local, "Hiring in &lt;city&gt;" with three roles, named ones first, and the jobs link. One post per city per slot, never twice for the same week. Nothing posts until the page is connected below${auth && auth.paused ? ", and posting is paused right now" : ""}.</p>
+  <p class="a-muted">The site posts to the Better Security LinkedIn page on its own: Monday 9 AM local, "This week in &lt;city&gt;" with three events and the calendar link. One post per city per week, never twice for the same week. Nothing posts until the page is connected below${auth && auth.paused ? ", and posting is paused right now" : ""}.</p>
   <h2>Connection</h2>
   <p>${stateLine}${auth && auth.paused ? html` <span class="a-pill a-pill-warn">Paused</span>` : ""}</p>
   <form method="post" class="a-inline">
@@ -39,7 +39,7 @@ export async function onRequestGet({ request, env, data }) {
     <button class="a-btn" name="action" value="save_app">Save app details</button>
   </form></details>
   <h2>What would post today</h2>
-  <p class="a-muted">Built live from the calendar and the jobs board, so this is exactly what the schedule would send. Copy a post to paste it by hand any time.</p>
+  <p class="a-muted">Built live from the calendar, so this is exactly what the schedule would send. Copy a post to paste it by hand any time.</p>
   ${previews.map((p, i) => html`<div class="a-card">
     <div class="a-preview-bar"><strong>${p.city.name}: ${p.kind === "events" ? "This week (Monday)" : "Hiring (Thursday)"}</strong> <span class="a-muted">week of ${p.week_start}</span>
       ${p.post ? html`<button class="a-btn" type="button" data-copy-text="li-post-${i}" data-copy-label="Copy post">Copy post</button>
@@ -88,7 +88,7 @@ export async function onRequestPost({ request, env, data }) {
     return back(`Schedule run: ${r.posted} posted, ${r.queued} queued, ${r.skipped} skipped, ${r.failed} failed (connection ${r.state}${r.paused ? ", paused" : ""}).`);
   }
   if (action === "post_now") {
-    const city = CITIES[str(p.city)] ? str(p.city) : null, kind = ["events", "jobs"].includes(str(p.kind)) ? str(p.kind) : null;
+    const city = CITIES[str(p.city)] ? str(p.city) : null, kind = str(p.kind) === "events" ? "events" : null;
     const week = /^\d{4}-\d{2}-\d{2}$/.test(str(p.week_start)) ? mondayOf(str(p.week_start)) : mondayOf(todayKey());
     if (!city || !kind) return back("Pick a city and a post.");
     const row = await queuePost(db, env, city, kind, week);
