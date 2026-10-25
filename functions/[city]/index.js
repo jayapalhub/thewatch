@@ -1,19 +1,17 @@
 import { lazyAutoPublish } from "../_lib/autopublish.js";
 import { lazyNewsletterTick } from "../_lib/dispatch.js";
 import { lazyReminders } from "../_lib/reminders.js";
-import { lazyJobs } from "../_lib/jobs.js";
 import { pageSponsor, clickUrl } from "../_lib/sponsors.js";
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { filterBox, shell, subscribeBand, emailValueLine } from "../_lib/layout.js";
 import { queryEvents, dayList, groupByDay, eventListJsonLd } from "../_lib/events.js";
-import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf } from "../_lib/constants.js";
+import { TOPICS, COST_TYPES, CITIES, DEFAULT_CITY, cityOf, singleCity } from "../_lib/constants.js";
 import { addDays, todayKey, mondayOf, monthStart, monthEnd, addMonths, parts, monthName, weekday3, dayNum, month3, fmtTime, wall } from "../_lib/dates.js";
 
 export async function onRequestGet({ request, env, params, waitUntil }) {
   lazyAutoPublish(env.DB, waitUntil, env);
   lazyNewsletterTick(env, waitUntil);
   lazyReminders(env, waitUntil);
-  lazyJobs(env.DB, waitUntil, env);
   const city = CITIES[params.city];
   if (!city) return notFound("Calendar not found");
   const url = new URL(request.url);
@@ -95,7 +93,7 @@ function header(city, view, f, orgs, anyFilter, monthKey) {
     <div class="wrap">
       <div class="cal-title-row">
         <div>
-          <p class="kicker">${city.region} <a class="change-city" href="/?choose=1">Change city</a></p>
+          <p class="kicker">${city.region} ${singleCity() ? "" : html`<a class="change-city" href="/?choose=1">Change city</a>`}</p>
           <h1>${view === "month" ? `${monthName(monthKey)} ${parts(monthKey).y}` : "The next ten weeks"}</h1>
           <p class="cal-sub">${emailValueLine(city)} <a href="#subscribe">${city.newsletter === "sunday" ? "Get the Sunday email" : "Join the list"}</a></p>
         </div>

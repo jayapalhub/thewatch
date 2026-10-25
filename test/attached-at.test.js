@@ -5,8 +5,6 @@ import assert from "node:assert/strict";
 import { fakeDb, insertRow } from "./helpers.js";
 import { CITIES } from "../functions/_lib/constants.js";
 import { untilMigrated, attachedNow, isMissingColumn } from "../functions/_lib/jobs.js";
-import { coverageRows, RECENT_SQL } from "../functions/_lib/coverage.js";
-import { weeklyNumbers, renderNumbers, namedRolesBlock } from "../functions/_lib/digest.js";
 import { onRequestPost as addPosted } from "../functions/admin/jobs/posted.js";
 import { onRequestPost as editJob } from "../functions/admin/jobs/[id].js";
 import { onRequestPost as addJob } from "../functions/admin/jobs/new.js";
@@ -89,33 +87,3 @@ describe("the edit page and Add role", () => {
   });
 });
 
-describe("coverage and the digest", () => {
-  test("Named added, 7 days counts people attached this week, and falls back before the migration", async () => {
-    const db = fakeDb([{ match: /GROUP BY j\.city/, op: "all", reply: () => ({ results: [{ city: "dallas", total: 30, named: 16, recent: 4 }] }) }]);
-    const rows = await coverageRows(db);
-    assert.equal(rows.find((r) => r.city === "dallas").recent, 4);
-    assert.match(db.calls[0].sql, /substr\(j\.posted_by_attached_at, 1, 10\) >= \?/);
-    assert.match(RECENT_SQL, /posted_by_attached_at/);
-    const old = fakeDb([missing, { match: /GROUP BY j\.city/, op: "all", reply: () => ({ results: [{ city: "dallas", total: 30, named: 16, recent: 2 }] }) }]);
-    const rows2 = await coverageRows(old);
-    assert.equal(rows2.find((r) => r.city === "dallas").recent, 2);
-    assert.match(old.calls[1].sql, /COALESCE\(substr\(j\.published_at, 1, 10\)/);
-  });
-  test("the Monday digest gets a Named roles block with the total, the week's attachments and the three boards closest to 15", async () => {
-    const db = fakeDb([{ match: /SUM\(status='published' AND \(expires_at IS NULL OR expires_at >= date\('now'\)\) AND posted_by_name IS NOT NULL/, op: "all", reply: () => ({ results: [{ city: "dallas", named: 16, attached: 3 }, { city: "sandiego", named: 9, attached: 2 }, { city: "sanjose", named: 2, attached: 0 }, { city: "remote", named: 12, attached: 1 }] }) }]);
-    const n = await weeklyNumbers(db);
-    assert.equal(n.named.length, 4);
-    const html = renderNumbers(n);
-    assert.match(html, /<h3 [^>]*>Named roles<\/h3><p style="margin:0;">39 live roles across every board carry a person who posted about it; 6 people were attached this week\. Closest to the 15 named threshold: Remote board 12 \(growing\), San Diego 9 \(growing\), San Jose 2 \(early\)\. Details at/);
-    assert.ok(html.indexOf("Named roles") < html.indexOf("LinkedIn page"));
-  });
-  test("before the migration the block says attachments are not counted yet", async () => {
-    const db = fakeDb([missing, { match: /SUM\(status='published' AND \(expires_at IS NULL OR expires_at >= date\('now'\)\) AND posted_by_name IS NOT NULL/, op: "all", reply: () => ({ results: [{ city: "dallas", named: 16 }] }) }]);
-    const n = await weeklyNumbers(db);
-    assert.equal(n.named[0].attached, null);
-    const html = renderNumbers(n);
-    assert.match(html, /attached this week is not counted until migration 0031 is applied/);
-    assert.match(html, /Closest to the 15 named threshold: Dallas 16 \(ready to consider\)/, "once every board is past the line, the top three show");
-    assert.match(namedRolesBlock([]), /0 live roles[\s\S]*no boards yet/);
-  });
-});

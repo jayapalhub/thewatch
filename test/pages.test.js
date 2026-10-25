@@ -6,7 +6,6 @@ import { fakeDb } from "./helpers.js";
 import { CITIES } from "../functions/_lib/constants.js";
 import { onRequestGet as cityPage } from "../functions/[city]/index.js";
 import { onRequestGet as eventPage } from "../functions/[city]/events/[slug].js";
-import { onRequestGet as jobsPage } from "../functions/[city]/jobs/index.js";
 
 const DALLAS = { slug: "dallas", name: "Dallas", title: "The Watch Dallas", region: "Dallas, Fort Worth and North Texas", timezone: "America/Chicago", description: "Every cybersecurity, AI security, privacy and audit event in Dallas, Fort Worth and North Texas, in one calendar.", empty: "Nothing yet.", newsletter: "sunday", sort: 110 };
 CITIES.dallas = DALLAS;
@@ -73,18 +72,6 @@ test("event page: canonical is the event's own path and the description leads wi
   const body = await (await eventPage(c)).text();
   assert.match(body, /<link rel="canonical" href="https:\/\/bettersecurity\.ai\/dallas\/events\/issa-north-texas-october">/);
   assert.match(body, /<meta name="description" content="Wednesday, October 28, 2099 in Dallas, hosted by ISSA North Texas\. Monthly chapter meeting\.">/);
-});
-
-test("jobs board: a Dallas signup band above the hiring band", async () => {
-  const c = ctx("/dallas/jobs", fakeDb());
-  c.params = { city: "dallas" };
-  const res = await jobsPage(c);
-  const body = await res.text();
-  assert.equal(res.status, 200);
-  assert.match(body, /New Dallas security roles, in your inbox Sunday morning\./);
-  assert.match(body, /name="source" value="jobs:dallas"/);
-  assert.deepEqual([...new Set(hiddenCities(body))], ["dallas"]);
-  assert.ok(body.indexOf('id="subscribe"') < body.indexOf("Hiring in Dallas?"));
 });
 
 test("city signup page: names the city, counts the next thirty days, files signups under the city, and is edge cacheable", async () => {

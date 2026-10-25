@@ -213,9 +213,10 @@ export async function runLinkedInSchedule(env, { force = false } = {}) {
   for (const city of Object.values(CITIES)) {
     const now = localNow(city.timezone);
     const weekStart = mondayOf(now.date);
-    const due = now.weekday === "Mon" && now.hour >= POST_HOUR ? "events" : now.weekday === "Thu" && now.hour >= POST_HOUR ? "jobs" : null;
+    // Only the Monday events post is scheduled now; the Thursday jobs post retired with the job board on 2026-10-25.
+    const due = now.weekday === "Mon" && now.hour >= POST_HOUR ? "events" : null;
     if (!due && !force) continue;
-    const kind = due || (now.weekday === "Thu" || now.weekday === "Fri" ? "jobs" : "events");
+    const kind = "events";
     const row = await queuePost(db, env, city.slug, kind, weekStart);
     if (!row) { out.skipped++; continue; }
     if (row.status !== "queued") continue;
@@ -232,7 +233,7 @@ export async function runLinkedInSchedule(env, { force = false } = {}) {
   return out;
 }
 
-// For the admin preview: what Monday's and Thursday's posts would say right now.
+// For the admin preview: what Monday's post would say right now (the Thursday jobs post retired with the job board).
 export async function previewPosts(db, env) {
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
   const out = [];
@@ -241,7 +242,6 @@ export async function previewPosts(db, env) {
     const thisMon = mondayOf(now.date);
     const eventsWeek = now.weekday === "Sun" || now.weekday === "Sat" ? addDays(thisMon, 7) : thisMon;
     out.push({ city, kind: "events", week_start: eventsWeek, post: await composeEventsPost(db, city.slug, siteUrl, eventsWeek) });
-    out.push({ city, kind: "jobs", week_start: thisMon, post: await composeJobsPost(db, city.slug, siteUrl, thisMon) });
   }
   return out;
 }

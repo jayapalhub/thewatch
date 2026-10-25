@@ -2,28 +2,37 @@
 // fallback and the seed, and it is mutated in place so every consumer sees the database rows.
 export const CITIES = {
   sandiego: { slug: "sandiego", name: "San Diego", title: "The Watch San Diego", region: "San Diego County", timezone: "America/Los_Angeles", description: "Every cybersecurity, AI security, privacy and audit event in San Diego County, in one calendar and one Sunday email.", empty: "Nothing published yet. Organizers can submit events and they appear here once approved.", newsletter: "sunday", sort: 10 },
-  sanjose: { slug: "sanjose", name: "San Jose", title: "The Watch San Jose", region: "San Jose, Silicon Valley and the Peninsula", timezone: "America/Los_Angeles", description: "Every cybersecurity, AI security, privacy and audit event in San Jose, Silicon Valley and the Peninsula, in one calendar.", empty: "The San Jose calendar is new and filling up. Organizers can submit events and they appear here once approved.", newsletter: null, sort: 20 },
 };
 // The city the site falls back to. A live binding: loadCities moves it to the first active city if San Diego is ever paused,
 // so pausing the default city in /admin/cities never breaks site wide pages.
 export let DEFAULT_CITY = "sandiego";
 export const VIRTUAL = { slug: "virtual", name: "Virtual", title: "The Watch Virtual", region: "Online", timezone: "America/Los_Angeles" };
 
+// Cities that exist in the table but are paused (active=0). Their data, organizers and history stay; their paths
+// redirect to the default city (see _middleware.js) and they appear nowhere on the site. Consolidated to San Diego
+// on 2026-10-25; a city comes back by setting active=1 in /admin/cities.
+export const HIDDEN_CITIES = new Set();
+
 let citiesLoadedAt = 0;
-// Refresh CITIES from D1 at most once a minute per isolate. Safe to call on every request.
+// Refresh CITIES (and HIDDEN_CITIES) from D1 at most once a minute per isolate. Safe to call on every request.
 export async function loadCities(db, { force = false } = {}) {
   if (!db || (!force && Date.now() - citiesLoadedAt < 60000)) return CITIES;
   try {
-    const { results } = await db.prepare("SELECT * FROM cities WHERE active=1 ORDER BY sort, name").all();
-    if (results && results.length) {
+    const { results } = await db.prepare("SELECT * FROM cities ORDER BY sort, name").all();
+    const live = (results || []).filter((r) => r.active);
+    if (live.length) {
       for (const k of Object.keys(CITIES)) delete CITIES[k];
-      for (const r of results) CITIES[r.slug] = { slug: r.slug, name: r.name, title: r.title, region: r.region, timezone: r.timezone || "America/Los_Angeles", description: r.description || "", empty: r.empty_copy || "Nothing published yet. Organizers can submit events and they appear here once approved.", newsletter: r.newsletter || null, sort: r.sort };
-      DEFAULT_CITY = CITIES.sandiego ? "sandiego" : CITIES[DEFAULT_CITY] ? DEFAULT_CITY : results[0].slug;
+      for (const r of live) CITIES[r.slug] = { slug: r.slug, name: r.name, title: r.title, region: r.region, timezone: r.timezone || "America/Los_Angeles", description: r.description || "", empty: r.empty_copy || "Nothing published yet. Organizers can submit events and they appear here once approved.", newsletter: r.newsletter || null, sort: r.sort };
+      HIDDEN_CITIES.clear();
+      for (const r of results) if (!r.active) HIDDEN_CITIES.add(r.slug);
+      DEFAULT_CITY = CITIES.sandiego ? "sandiego" : CITIES[DEFAULT_CITY] ? DEFAULT_CITY : live[0].slug;
     }
     citiesLoadedAt = Date.now();
   } catch { /* table missing or query failed: keep the fallback map */ }
   return CITIES;
 }
+// One live city means no chooser, no "Change city" links and no city list in the footer.
+export function singleCity() { return Object.keys(CITIES).length === 1; }
 
 // "San Diego", "San Diego and San Jose", "San Diego, San Jose and Austin". Reads the live city list.
 // "San Diego, Dallas and Austin" for a short list; past five cities a sentence naming them all is unreadable, so it
@@ -97,4 +106,4 @@ export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekl
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 
 // Bump on any CSS or JS change so browsers fetch the new file.
-export const ASSET_VERSION = "2026-10-25b";
+export const ASSET_VERSION = "2026-10-25c";

@@ -8,7 +8,6 @@ import { CITIES } from "../functions/_lib/constants.js";
 import { onRequestGet as cityPage } from "../functions/[city]/index.js";
 import { onRequestGet as virtualPage } from "../functions/virtual/index.js";
 import { onRequestGet as eventPage } from "../functions/[city]/events/[slug].js";
-import { onRequestGet as jobsBoard } from "../functions/[city]/jobs/index.js";
 import { onRequestGet as subscribePage } from "../functions/subscribe.js";
 import { onRequestGet as aboutPage } from "../functions/about.js";
 import { onRequestGet as embedPage } from "../functions/embed/[city].js";
@@ -59,7 +58,6 @@ const PAGES = [
   ["city month view", cityPage, "/dallas?view=month", { city: "dallas" }],
   ["virtual calendar", virtualPage, "/virtual", {}],
   ["event page", eventPage, "/dallas/events/issa-north-texas-october", { city: "dallas", slug: "issa-north-texas-october" }],
-  ["jobs board", jobsBoard, "/dallas/jobs", { city: "dallas" }],
   ["subscribe", subscribePage, "/subscribe", {}],
   ["about", aboutPage, "/about", {}],
 ];

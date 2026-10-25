@@ -1,5 +1,5 @@
 import { html, raw, page } from "./html.js";
-import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS } from "./constants.js";
+import { CONSENT_TEXT, MAIL_ADDRESS, ASSET_VERSION, CITIES, DEFAULT_CITY, cityOf, SHOW_BS_EVENTS, singleCity } from "./constants.js";
 import { previewRuntime } from "./env.js";
 
 export const SHIELD_PATH = "M12699.99 19504.82l-4476.78 -2847.86c-440.67,-280.35 -871.71,-817.92 -871.71,-1701.16l0 -6890.42 5348.49 -2170.18 5348.48 2170.18 0 6890.42c0,883.24 -431.04,1420.81 -871.71,1701.16l-4476.77 2847.86zm0 -2838.35l2953.65 -1878.91 0 -1261.73 -1771.64 -1083.78 1771.64 -1083.74 0 -1680.18 -2953.65 -1198.49 -2953.66 1198.49 0 5109.43 2953.66 1878.91z";
@@ -62,7 +62,8 @@ export function shell({ title, description, body, city = null, path = "/", wide 
   const generic = !city; // site wide pages (about, sponsor, subscribe, submit, legal) carry the brand, not a city
   const brandTitle = generic ? "The Watch" : c.title;
   const fullTitle = title ? `${title} | ${brandTitle}` : atRoot ? "The Watch: cybersecurity events calendars by Better Security" : `${brandTitle}: cybersecurity events in ${c.name}`;
-  const desc = description || (generic ? `Every cybersecurity, AI security, privacy and audit event in ${Object.keys(CITIES).length} US cities, in one calendar and one Sunday email. By Better Security.` : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
+  const n = Object.keys(CITIES).length;
+  const desc = description || (generic ? (singleCity() ? `Every cybersecurity, AI security, privacy and audit event in ${CITIES[DEFAULT_CITY].region || CITIES[DEFAULT_CITY].name}, in one calendar and one Sunday email. By Better Security.` : `Every cybersecurity, AI security, privacy and audit event in ${n} US cities, in one calendar and one Sunday email. By Better Security.`) : `${c.description || "Every cybersecurity, AI security, privacy and audit event, in one calendar."} By Better Security.`);
   const calHome = isVirtual ? "/virtual" : `/${c.slug}`;
   const canonicalPath = canonical !== undefined ? canonical : generic ? path : null;
   const canonicalUrl = canonicalPath ? `https://bettersecurity.ai${canonicalPath}` : null;
@@ -126,17 +127,17 @@ ${body}
   <div class="wrap footer-grid">
     <div class="footer-brand">
       ${mark(40)}
-      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. We cover every organizer's events in ${Object.keys(CITIES).length} cities, plus the best online sessions.</p>
+      <p><strong>The Watch</strong> is published by Better Security, a San Diego events company. ${singleCity() ? `We cover every organizer's security and technology events in ${CITIES[DEFAULT_CITY].region || CITIES[DEFAULT_CITY].name}, plus the best online sessions.` : `We cover every organizer's events in ${n} cities, plus the best online sessions.`}</p>
       ${CITIES[c.slug] ? signupForm({ source: "footer", compact: true, cta: "Subscribe", city: c.slug }) : signupForm({ source: "footer", compact: true, cta: "Subscribe", chooseCity: true })}
     </div>
     <div class="footer-col">
       <h2>Calendar</h2>
+      ${isVirtual ? html`<a href="/${DEFAULT_CITY}">${CITIES[DEFAULT_CITY].name} calendar</a>` : ""}
       <a href="/virtual">Virtual sessions and CPE</a>
-      <a href="/?choose=1">Change city</a>
+      ${singleCity() ? "" : html`<a href="/?choose=1">Change city</a>`}
       <a href="${calHome}/feed.ics">Subscribe to the calendar feed</a>
       ${isVirtual ? "" : html`<a href="${calHome}/organizers">Organizers in ${c.name}</a>`}
       <a href="${calHome}/speakers">${isVirtual ? "Speakers at online sessions" : `Speakers in ${c.name}`}</a>
-      ${isVirtual ? "" : html`<a href="${calHome}/jobs">Security jobs in ${c.name}</a>`}
       ${isVirtual ? "" : html`<a href="${calHome}/cpe">CPE in ${c.name}</a>`}
       ${isVirtual ? "" : html`<a href="${calHome}/issues">Past issues</a>`}
       <a href="/submit">Submit an event</a>
@@ -156,10 +157,10 @@ ${body}
       <p class="footer-address">&copy; ${new Date().getFullYear()} Better Security</p>
     </div>
   </div>
-  <div class="wrap footer-cities">
+  ${singleCity() ? "" : html`<div class="wrap footer-cities">
     <h2>All cities</h2>
     <div class="footer-city-grid">${Object.values(CITIES).slice().sort((a, b) => a.name.localeCompare(b.name)).map((x) => html`<a href="/${x.slug}">${x.name}</a>`)}</div>
-  </div>
+  </div>`}
 </footer>
 <script src="/assets/js/site.js?v=${ASSET_VERSION}" defer></script>
 </body>
@@ -171,12 +172,13 @@ ${body}
 export function notFoundPage(path = "/") {
   const seg = String(path).split("/")[1] || "";
   const c = seg === "virtual" ? cityOf("virtual") : CITIES[seg];
-  const home = c ? `/${c.slug}` : "/?choose=1";
+  const home = c ? `/${c.slug}` : singleCity() ? `/${DEFAULT_CITY}` : "/?choose=1";
+  const d = CITIES[DEFAULT_CITY];
   const body = html`<section class="band"><div class="wrap narrow">
     <p class="kicker">Page not found</p>
     <h1>We couldn't find that page.</h1>
-    <p>If you followed a link to an event, it may have been removed or moved since the link was shared. ${c ? html`The <a href="${home}">${c.slug === "virtual" ? "Virtual calendar" : `${c.name} calendar`}</a> has everything coming up.` : html`Every city's calendar is on the <a href="${home}">city chooser</a>.`}</p>
-    <p><a class="btn btn-primary" href="${home}">${c ? (c.slug === "virtual" ? "Go to the Virtual calendar" : `Go to the ${c.name} calendar`) : "Choose your city"}</a> ${c && c.slug === "virtual" ? "" : html`<a class="btn btn-outline" href="/virtual">Virtual sessions</a>`}</p>
+    <p>If you followed a link to an event, it may have been removed or moved since the link was shared. ${c ? html`The <a href="${home}">${c.slug === "virtual" ? "Virtual calendar" : `${c.name} calendar`}</a> has everything coming up.` : singleCity() ? html`The <a href="${home}">${d.name} calendar</a> has everything coming up.` : html`Every city's calendar is on the <a href="${home}">city chooser</a>.`}</p>
+    <p><a class="btn btn-primary" href="${home}">${c ? (c.slug === "virtual" ? "Go to the Virtual calendar" : `Go to the ${c.name} calendar`) : singleCity() ? `Go to the ${d.name} calendar` : "Choose your city"}</a> ${c && c.slug === "virtual" ? "" : html`<a class="btn btn-outline" href="/virtual">Virtual sessions</a>`}</p>
   </div></section>`;
   return page(shell({ title: "Page not found", body, city: c ? c.slug : null, path }), 404, { "Cache-Control": "no-store" });
 }

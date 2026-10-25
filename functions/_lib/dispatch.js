@@ -2,7 +2,7 @@
 // sent Sunday 8 AM local to that city's subscribers through Resend, with no human step required.
 import { CITIES, MAIL_ADDRESS } from "./constants.js";
 import { tagLinks } from "./clicks.js";
-import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, jobsBlock, picksBlock, parseInterests } from "./newsletter.js";
+import { loadIssueData, renderIssueHtml, suggestSubjects, profileNudgeHtml, picksBlock, parseInterests } from "./newsletter.js";
 import { TOPICS } from "./constants.js";
 import { mondayOf, addDays } from "./dates.js";
 import { shareLineHtml } from "./referrals.js";
@@ -58,12 +58,12 @@ export async function buildIssue(env, issue, city) {
 
 function personalize(html, siteUrl, sub, ctx = {}) {
   const nudge = sub.profile_token && !sub.profile_completed_at ? profileNudgeHtml(siteUrl, sub.profile_token) : "";
-  const jobs = html.includes("{{JOBS}}") && ctx.city ? jobsBlock(siteUrl, ctx.city, ctx.jobs, sub.seniority, ctx.issueId) : "";
   const picks = html.includes("{{PICKS}}") ? picksBlock(siteUrl, ctx.events, sub.interests, ctx.issueId) : "";
   const share = shareLineHtml(siteUrl, sub.ref_code); // "Share The Watch" line in the footer, with this subscriber's own link
   const unsub = `${siteUrl}/unsubscribe?t=${sub.unsub_token || ""}`;
-  // Function replacers: a "$" in an event title or job must never be read as a replacement pattern like "$&".
-  const out = html.replace(/\{\{SHARE\}\}/g, () => share).replace(/\{\{UNSUB\}\}/g, () => unsub).replace(/\{\{PROFILE_NUDGE\}\}/g, () => nudge).replace(/\{\{JOBS\}\}/g, () => jobs).replace(/\{\{PICKS\}\}/g, () => picks);
+  // Function replacers: a "$" in an event title must never be read as a replacement pattern like "$&". The {{JOBS}}
+  // slot is gone from new issues (the job board closed 2026-10-25); an older stored issue being resent drops it.
+  const out = html.replace(/\{\{SHARE\}\}/g, () => share).replace(/\{\{UNSUB\}\}/g, () => unsub).replace(/\{\{PROFILE_NUDGE\}\}/g, () => nudge).replace(/\{\{JOBS\}\}/g, "").replace(/\{\{PICKS\}\}/g, () => picks);
   // Last: every /go/ link gets this subscriber's click token, unless they turned personalization off on /profile.
   return tagLinks(out, siteUrl, sub);
 }
@@ -89,7 +89,7 @@ export async function sendPreview(env, issue, city) {
   const banner = `<div style="font-family:Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto 18px;padding:12px 16px;border:2px solid #1FB6F0;border-radius:10px;font-size:14px;line-height:1.5;color:#0E1B2E;">
     <strong>Preview for ${city.name}.</strong> This goes to ${n} subscriber${n === 1 ? "" : "s"} on Sunday at ${SEND_HOUR}:00 AM ${city.name} time with the subject line <em>${subject.replace(/</g, "&lt;")}</em>.<br>
     To change the note, subject or picks, edit it at <a href="${siteUrl}/admin/issues/${issue.id}">${siteUrl}/admin/issues/${issue.id}</a> any time before then. To stop it, press Cancel this send on that page. If you do nothing, it goes out as shown.<br>
-    ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}.${picksNote} The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.${data.jobs && data.jobs.length ? ` Hiring this week shows three of the ${data.jobs.length} live roles, matched to each subscriber's level; this preview shows the default pick.` : ""}</div>`;
+    ${data.events.length} event${data.events.length === 1 ? "" : "s"} this week${issue.personal_note ? "" : " <strong>(no personal note yet)</strong>"}.${picksNote} The "Two quick questions" box near the bottom only goes to the ${noProfile} who have not answered the profile questions yet.</div>`;
   const to = env.NOTIFY_EMAIL || "jerome.jayapal@bettersecurity.ai";
   // A city with no subscribers yet gets no preview email of its own (nineteen plus cities would mean nineteen plus
   // Saturday emails). The issue still builds, is marked, and shows up in the one Saturday digest sent by previewDigest.
@@ -102,7 +102,7 @@ export async function sendPreview(env, issue, city) {
     const c = await env.DB.prepare("UPDATE issues SET preview_sent_at=datetime('now') WHERE id=? AND preview_sent_at IS NULL").bind(issue.id).run();
     if (!c.meta || c.meta.changes !== 1) return { skipped: "preview already sent" };
   }
-  try { await resend(env, "/emails", { from: fromFor(city), reply_to: replyToFor(env), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", ref_code: "preview", interests: sample.top }, { jobs: data.jobs, events: data.events, city, issueId: issue.id }) }); }
+  try { await resend(env, "/emails", { from: fromFor(city), reply_to: replyToFor(env), to, subject: `[Preview, sends Sunday] ${subject}`, html: banner + personalize(html, siteUrl, { unsub_token: "preview", profile_token: "preview", ref_code: "preview", interests: sample.top }, { events: data.events, city, issueId: issue.id }) }); }
   catch (e) { if (!issue.force_preview) await env.DB.prepare("UPDATE issues SET preview_sent_at=NULL WHERE id=?").bind(issue.id).run(); throw e; }
   await env.DB.prepare("UPDATE issues SET subject=COALESCE(subject, ?), preview_sent_at=datetime('now'), updated_at=datetime('now') WHERE id=?").bind(subject, issue.id).run();
   return { to, subject, subscribers: n };
@@ -130,8 +130,8 @@ export async function dispatchIssue(env, issue, city) {
   issue = await db.prepare("SELECT * FROM issues WHERE id=?").bind(issue.id).first();
   if (!issue || issue.status !== "sending" || !issue.generated_html) return { skipped: issue ? issue.status : "missing" };
   const siteUrl = env.SITE_URL || "https://bettersecurity.ai";
-  const data = await loadIssueData(db, issue); // for the per subscriber blocks (jobs, picks); the main HTML is the stored copy
-  const ctx = { jobs: data.jobs, events: data.events, city, issueId: issue.id };
+  const data = await loadIssueData(db, issue); // for the per subscriber picks block; the main HTML is the stored copy
+  const ctx = { events: data.events, city, issueId: issue.id };
   const html = issue.generated_html, subject = issue.subject;
   let lastId = issue.last_sent_subscriber_id || 0, sent = 0, batches = 0;
   while (batches < MAX_BATCHES_PER_RUN) {

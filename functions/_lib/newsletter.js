@@ -1,6 +1,5 @@
 import { esc } from "./html.js";
 import { emailSponsor, clickUrl, absUrl } from "./sponsors.js";
-import { liveJobs, pickJobsFor, jobsEmailBlock, postedEmailBlock, postedHighlight } from "./jobs.js";
 import { trapLink } from "./clicks.js";
 import { queryEvents, groupByDay, costLabel, cpeLabel } from "./events.js";
 import { fmtTimeRange, weekday, monthName, dayNum, addDays, parts, inZone, zoneLabel } from "./dates.js";
@@ -26,8 +25,7 @@ export async function loadIssueData(db, issue) {
     .map((e) => inZone(e, cityTz(issue.city || DEFAULT_CITY))) // virtual rows are stored in Pacific; show them in the city's zone
     .sort((a, b) => a.start_at.localeCompare(b.start_at)); // chosen by quality, shown in day order
   const sponsor = issue.sponsor_name ? null : await emailSponsor(db, issue);
-  const jobs = await liveJobs(db, issue.city || "sandiego", { limit: 60 });
-  return { events, soon, bs, featured, virt, sponsor, jobs };
+  return { events, soon, bs, featured, virt, sponsor };
 }
 
 function go(siteUrl, e, t, issueId) { return `${siteUrl}/go/${e.id}?t=${t}&i=${issueId || ""}`; }
@@ -86,15 +84,6 @@ export function picksBlock(siteUrl, events, interests, issueId) {
   </div>`;
 }
 
-// Hiring this week: three roles per subscriber, matched to their seniority, filled at send time like the nudge.
-export const JOBS_SLOT = "{{JOBS}}";
-export function jobsBlock(siteUrl, city, jobs, seniority, issueId) {
-  const styles = { INK, MUTED, SHIELD, MIST, esc };
-  const posted = (jobs || []).filter((j) => postedHighlight(j)).slice(0, 3);
-  const shown = new Set(posted.map((j) => j.id));
-  const rest = (jobs || []).filter((j) => !shown.has(j.id));
-  return postedEmailBlock(siteUrl, city, posted, issueId, styles) + jobsEmailBlock(siteUrl, city, pickJobsFor(rest, seniority, 3), (jobs || []).length, issueId, styles);
-}
 export function profileNudgeHtml(siteUrl, token) {
   return `<div style="margin:26px 0 0;padding:14px 16px;background:${PAPER};border-radius:10px;font-size:14px;line-height:1.55;">
     <div style="font-weight:800;color:${INK};margin-bottom:4px;">Two quick questions</div>
@@ -140,7 +129,6 @@ export function renderIssueHtml(issue, data, siteUrl, city = null) {
   <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
     ${days.length ? days.map((g) => dayBlock(g.key, g.events, siteUrl, issue.id)).join("") : `<tr><td style="padding:12px 0;color:${MUTED};">A quiet week. Use it to plan the next one below.</td></tr>`}
   </table>
-  ${data.jobs && data.jobs.length ? JOBS_SLOT : ""}
   ${totalBs.length ? `<div style="background:${NAVY};color:#fff;border-radius:10px;padding:16px 18px;margin:22px 0 0;">
     <div style="font-size:11px;font-weight:700;color:${ELECTRIC};margin-bottom:6px;">From Better Security</div>
     ${totalBs.map((e) => `<div style="margin:0 0 8px;"><a href="${go(siteUrl, e, "page", issue.id)}" style="color:#fff;font-weight:700;text-decoration:none;font-size:15px;">${esc(e.title)}</a><div style="color:rgba(255,255,255,.75);font-size:13px;">${esc(weekday(e.start_at))}, ${esc(monthName(e.start_at))} ${dayNum(e.start_at)}${e.venue_display ? " · " + esc(e.venue_display) : ""}${costLabel(e) && e.cost_type !== "unknown" ? " · " + esc(costLabel(e)) : ""}</div></div>`).join("")}
