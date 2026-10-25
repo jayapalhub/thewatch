@@ -7,7 +7,7 @@ export async function onRequestGet({ request, env, data }) {
   const db = env.DB; const today = todayKey();
   const msg = new URL(request.url).searchParams.get("msg");
   const q = (sql, ...a) => db.prepare(sql).bind(...a).first();
-  const [pending, published, subs, newSubs, sponsors, interest, clicks] = await Promise.all([
+  const [pending, published, subs, newSubs, sponsors, interest, clicks, invites] = await Promise.all([
     q("SELECT COUNT(*) n FROM events WHERE status='pending_review'"),
     q("SELECT COUNT(*) n FROM events WHERE status='published' AND start_at >= ?", today),
     q("SELECT COUNT(*) n FROM subscribers WHERE status='active'"),
@@ -15,6 +15,7 @@ export async function onRequestGet({ request, env, data }) {
     q("SELECT COUNT(*) n FROM sponsor_inquiries WHERE status='new'"),
     q("SELECT COUNT(*) n FROM event_interest"),
     q("SELECT COUNT(*) n FROM link_clicks WHERE clicked_at >= ? AND is_bot=0 AND is_dup=0", addDays(today, -7)),
+    q("SELECT COUNT(*) n, SUM(status='new') fresh FROM invitation_requests").catch(() => ({ n: 0, fresh: 0 })),
   ]);
   const { results: thin } = await db.prepare("SELECT substr(start_at,1,10) d, COUNT(*) n FROM events WHERE status='published' AND start_at >= ? GROUP BY d ORDER BY d LIMIT 14").bind(today).all();
   const nextMonday = addDays(mondayOf(today), 7);
@@ -25,6 +26,7 @@ export async function onRequestGet({ request, env, data }) {
     <a class="a-card" href="/admin/events"><span class="a-num">${published.n}</span>published upcoming</a>
     <a class="a-card" href="/admin/people"><span class="a-num">${subs.n}</span>active subscribers <small>+${newSubs.n} this week</small></a>
     <a class="a-card" href="/admin/sponsors"><span class="a-num">${sponsors.n}</span>new sponsor inquiries</a>
+    <a class="a-card" href="/admin/invitations"><span class="a-num">${invites.n || 0}</span>invitation requests <small>${invites.fresh || 0} new</small></a>
     <a class="a-card" href="/admin/people?interest=1"><span class="a-num">${interest.n}</span>event interest sign ups</a>
     <a class="a-card" href="/admin/clicks"><span class="a-num">${clicks.n}</span>link clicks this week <small>people only</small></a>
   </div>

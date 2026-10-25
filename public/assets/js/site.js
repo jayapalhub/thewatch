@@ -56,8 +56,8 @@
     orgSel.addEventListener('change', sync); sync();
   }
 
-  // Limit topic chips to three on the submit form
-  var chips = document.querySelectorAll('.big-form .topics input[type="checkbox"]');
+  // Limit topic chips to three on the submit form (the invitation form's area chips have no limit)
+  var chips = document.querySelectorAll('.big-form .topics:not(.areas) input[type="checkbox"]');
   if (chips.length) {
     chips.forEach(function (c) { c.addEventListener('change', function () {
       var n = Array.prototype.filter.call(chips, function (x) { return x.checked; }).length;

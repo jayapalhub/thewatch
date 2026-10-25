@@ -54,8 +54,7 @@ async function numbers(db) {
     events: await one("SELECT count(*) n FROM events WHERE status='published' AND start_at >= date('now')"),
     orgs: await one("SELECT count(*) n FROM organizations"),
     feeds: await one("SELECT count(*) n FROM feed_sources WHERE active=1"),
-    boards: await one("SELECT count(*) n FROM job_sources WHERE active=1"),
-    jobs: await one("SELECT count(*) n FROM jobs WHERE status='published'"),
+    pausedCities: await one("SELECT count(*) n FROM cities WHERE active=0"),
   };
 }
 

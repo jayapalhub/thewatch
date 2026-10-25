@@ -60,11 +60,19 @@ describe("retired paths", () => {
 });
 
 describe("one city", () => {
-  test("the root sends visitors to the San Diego calendar", async () => {
+  test("the root is the front door: the free calendar first, the invitation request second, no chooser, edge cacheable", async () => {
     await loadCities(cityDb(), { force: true });
     const res = await home({ request: req("/"), env: { DB: cityDb() } });
-    assert.equal(res.status, 302);
-    assert.equal(res.headers.get("location"), "https://bettersecurity.ai/sandiego");
+    assert.equal(res.status, 200);
+    const body = await res.text();
+    assert.match(body, /San Diego's most complete security and tech events calendar\./);
+    assert.match(body, /href="\/sandiego">Open the calendar/);
+    assert.match(body, /name="source" value="home"/);
+    assert.match(body, /<input type="hidden" name="city" value="sandiego">/, "the home signup files the address under San Diego");
+    assert.ok(body.indexOf("Open the calendar") < body.indexOf("Request an invitation"), "the calendar is the first offer");
+    assert.match(body, /Small, invite only experiences for San Diego security and IT practitioners\./);
+    assert.doesNotMatch(body, /city-tile|Pick your city|dinner|Padel|ISACA San Diego|GRC and audit/);
+    assert.equal(res.headers.get("cache-control"), "public, max-age=300");
   });
   test("the calendar page has no Change city link, no city grid in the footer and no jobs link", async () => {
     await loadCities(cityDb(), { force: true });
@@ -81,7 +89,8 @@ describe("one city", () => {
     assert.match(xml, /<loc>https:\/\/bettersecurity\.ai\/virtual<\/loc>/);
     assert.doesNotMatch(xml, /atlanta|losangeles/);
     assert.doesNotMatch(xml, /\/jobs|\/employers/);
-    assert.doesNotMatch(xml, /<loc>https:\/\/bettersecurity\.ai\/<\/loc>/, "the root redirects, so the calendar is the page to index");
+    assert.match(xml, /<loc>https:\/\/bettersecurity\.ai\/<\/loc>/);
+    assert.match(xml, /<loc>https:\/\/bettersecurity\.ai\/invite<\/loc>/);
   });
 });
 

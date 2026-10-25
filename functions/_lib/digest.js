@@ -18,13 +18,14 @@ export async function weeklyNumbers(db) {
   const clicks = await all(`SELECT target, COUNT(*) n FROM link_clicks WHERE clicked_at >= ${since} AND is_bot=0 AND is_dup=0 GROUP BY target ORDER BY n DESC, target`);
   const topEvents = await all(`SELECT e.title, e.city, COUNT(*) n FROM link_clicks c JOIN events e ON e.id=c.event_id WHERE c.clicked_at >= ${since} AND c.is_bot=0 AND c.is_dup=0 GROUP BY e.id ORDER BY n DESC LIMIT 5`);
   const events = await all(`SELECT city, SUM(status='published' AND published_at >= ${since}) published, SUM(status='pending_review' AND hold=1) held, SUM(status='pending_review' AND hold=0) clocked, SUM(status='rejected' AND updated_at >= ${since}) rejected, SUM(status='published' AND start_at >= date('now') AND start_at < date('now','+70 days')) upcoming FROM events GROUP BY city`);
+  const invites = (await all(`SELECT COUNT(*) n, SUM(created_at >= ${since}) week FROM invitation_requests`).catch(() => []))[0] || {};
   const feedsBad = await all(`SELECT name, last_status FROM feed_sources WHERE active=1 AND last_status IS NOT NULL AND last_status NOT LIKE 'ok%' ORDER BY id`);
   const linkedin = await all(`SELECT city, kind, status FROM linkedin_posts WHERE created_at >= ${since} ORDER BY id`);
   const sponsors = await all(`SELECT COUNT(*) n FROM sponsor_inquiries WHERE created_at >= ${since}`);
   // Delivery: permanent bounces and spam complaints reported by Resend this week (table from migration 0021).
   const delivery = (await all(`SELECT SUM(action='bounced') bounced, SUM(action='unsubscribed') complaints, SUM(action='logged' AND type='email.bounced') soft FROM email_events WHERE created_at >= ${since}`).catch(() => []))[0] || {};
   const by = (rows) => Object.fromEntries(rows.map((r) => [r.city, r]));
-  return { cities, subs: by(subs), issues, clicks, topEvents, events: by(events), feedsBad, linkedin, sponsorInquiries: (sponsors[0] || {}).n || 0, delivery: { bounced: delivery.bounced || 0, complaints: delivery.complaints || 0, soft: delivery.soft || 0 } };
+  return { cities, subs: by(subs), issues, clicks, topEvents, events: by(events), invites: { total: invites.n || 0, week: invites.week || 0 }, feedsBad, linkedin, sponsorInquiries: (sponsors[0] || {}).n || 0, delivery: { bounced: delivery.bounced || 0, complaints: delivery.complaints || 0, soft: delivery.soft || 0 } };
 }
 
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
@@ -41,6 +42,7 @@ export function renderNumbers(n, { siteUrl = "https://bettersecurity.ai" } = {})
   const trouble = n.feedsBad.map((f) => `Feed ${esc(f.name)}: ${esc(f.last_status)}`);
   const li = n.linkedin.length ? n.linkedin.map((p) => `${esc((CITIES[p.city] || {}).name || p.city)} ${p.kind} ${p.status}`).join(", ") : "nothing (page not connected, or nothing to post)";
   return `<table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr>${th("City")}${th("Subscribers (new, left this week)", true)}${th("Events published / upcoming", true)}${th("Held", true)}</tr></thead><tbody>${n.cities.map(row).join("")}${virt}</tbody></table>
+  <h3 style="margin:18px 0 6px;font-size:15px;">Invitation requests</h3><p style="margin:0;">${(n.invites || {}).week || 0} new this week, ${(n.invites || {}).total || 0} in all, at <a href="${siteUrl}/admin/invitations">${siteUrl}/admin/invitations</a>.</p>
   <h3 style="margin:18px 0 6px;font-size:15px;">Sunday email</h3><ul style="margin:0;padding-left:18px;">${issues}</ul>
   <p style="margin:6px 0 0;">Delivery: ${(() => { const d = n.delivery || {}; return d.bounced || d.complaints || d.soft ? `${d.bounced || 0} address${d.bounced === 1 ? "" : "es"} bounced for good and ${d.complaints || 0} marked the email as spam this week${d.soft ? `, with ${d.soft} temporary bounce${d.soft === 1 ? "" : "s"} that will be retried` : ""}.` : "no bounces or spam complaints this week."; })()}</p>
   <h3 style="margin:18px 0 6px;font-size:15px;">Clicks this week</h3><p style="margin:0;">${clicks}.</p>${top}

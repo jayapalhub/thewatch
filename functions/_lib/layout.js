@@ -75,6 +75,7 @@ export function shell({ title, description, body, city = null, path = "/", wide 
     ...cityNav,
     ["/virtual", "Virtual"],
     ...(SHOW_BS_EVENTS ? [["/events", "Our events"]] : []),
+    ["/invite", "Invitations"],
     ["/submit", "Submit an event"],
     ["/sponsor", "Sponsor"],
     ["/about", "About"],
@@ -145,6 +146,7 @@ ${body}
     <div class="footer-col">
       <h2>Better Security</h2>
       ${SHOW_BS_EVENTS ? html`<a href="/events">Our events</a><a href="/events/padel-social-2027">Padel Social 2027</a>` : ""}
+      <a href="/invite">Request an invitation</a>
       <a href="/sponsor">Sponsor</a>
       <a href="/about">About</a>
       <a href="mailto:watch@bettersecurity.ai">watch@bettersecurity.ai</a>

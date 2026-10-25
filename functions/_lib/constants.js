@@ -95,6 +95,29 @@ export const BS_EVENT_KEYS = {
 // Better Security's own events (Padel Social, dinners, conference) stay off public pages until the ISACA details are final.
 export const SHOW_BS_EVENTS = false;
 
+// The invitation request (/invite): the second, more exclusive offer next to the free calendar. These lists are the
+// form's choices and the labels the admin and the CSV use; keys are stored, labels can change.
+export const INVITE_SENIORITY = { ic: "Individual contributor", manager: "Manager", director: "Director", vp: "VP or Head of", clevel: "C-level" };
+export const INVITE_AREAS = {
+  identity: "Identity and access",
+  appsec: "Application security",
+  cloud: "Cloud security",
+  data_privacy: "Data security and privacy",
+  secops: "Security operations and incident response",
+  vuln: "Vulnerability and exposure management",
+  endpoint: "Endpoint and device",
+  network: "Network and zero trust",
+  email_human: "Email security and human risk",
+  threat_intel: "Threat intelligence",
+  ot_iot: "OT and IoT",
+  grc: "GRC, audit and compliance",
+  tprm: "Third party risk",
+  ai: "AI security and governance",
+  it_ops: "IT operations and infrastructure",
+  leadership: "Security leadership and strategy",
+};
+export const INVITE_STATUSES = { new: "New", invited: "Invited", declined: "Not a fit" };
+
 // Audience numbers stay off public pages until they are big enough to mean something.
 export const MEDIA_KIT_MIN_SUBSCRIBERS = 250;     // total active subscribers before any count is shown
 export const MEDIA_KIT_MIN_CITY_SUBSCRIBERS = 50; // per city count on the media kit
@@ -106,4 +129,4 @@ export const CONSENT_TEXT = "By subscribing you agree to receive The Watch weekl
 export const MAIL_ADDRESS = "Better Security, 17190 Bernardo Center Drive, Suite 200, San Diego, CA 92128";
 
 // Bump on any CSS or JS change so browsers fetch the new file.
-export const ASSET_VERSION = "2026-10-25c";
+export const ASSET_VERSION = "2026-10-25d";
