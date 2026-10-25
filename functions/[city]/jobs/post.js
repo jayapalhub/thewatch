@@ -3,7 +3,7 @@ import { shell } from "../../_lib/layout.js";
 import { CITIES, TOPICS, SENIORITY } from "../../_lib/constants.js";
 import { rateLimited } from "../../_lib/subscribers.js";
 import { notifyJerome, emailShell } from "../../_lib/integrations.js";
-import { REMOTE, cleanJobUrl, isJobBoard } from "../../_lib/jobs.js";
+import { REMOTE, cleanJobUrl, isJobBoard, untilMigrated, attachedNow } from "../../_lib/jobs.js";
 import { findEmployer } from "../../_lib/admin-jobs.js";
 
 // Free employer form. Trusted employers publish after the usual 24 hour window; everyone else waits for Jerome.
@@ -74,11 +74,13 @@ export async function onRequestPost({ params, request, env, waitUntil }) {
   // of being that organizer. Link an existing organization if the name matches; never create one from here.
   const emp = await findEmployer(env.DB, employer);
   const topics = JSON.stringify(list(p.topics).filter((k) => TOPICS[k]).slice(0, 3));
-  const r = await env.DB.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, seniority, topics, salary_text, posted_at, status, hold, auto_publish_at, source,
-      posted_by_name, posted_by_title, posted_by_url, posted_by_kind, posted_by_date, submitted_by_name, submitted_by_email) VALUES (?,?,?,?,?,?,?,?,?,?,date('now'),'pending_review',?,?,'employer_form',?,?,?,?,?,?,?)`)
+  const insert = (withAttached) => env.DB.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, seniority, topics, salary_text, posted_at, status, hold, auto_publish_at, source,
+      posted_by_name, posted_by_title, posted_by_url, posted_by_kind, posted_by_date, submitted_by_name, submitted_by_email${withAttached ? ", posted_by_attached_at" : ""}) VALUES (?,?,?,?,?,?,?,?,?,?,date('now'),'pending_review',?,?,'employer_form',?,?,?,?,?,?,?${withAttached ? ",?" : ""})`)
     .bind(city.slug, emp ? emp.id : null, employer, title, url, str(p.location, 120) || null, REMOTE[str(p.remote)] ? str(p.remote) : "onsite", SENIORITY[str(p.seniority)] ? str(p.seniority) : null, topics, str(p.salary_text, 80) || null,
       1, null,
-      str(p.posted_by_name, 100) || null, str(p.posted_by_title, 120) || null, pbUrl || null, str(p.posted_by_name, 100) ? "employer" : null, null, byName, byEmail).run();
+      str(p.posted_by_name, 100) || null, str(p.posted_by_title, 120) || null, pbUrl || null, str(p.posted_by_name, 100) ? "employer" : null, null, byName, byEmail,
+      ...(withAttached ? [attachedNow(str(p.posted_by_name, 100))] : [])).run();
+  const r = await untilMigrated(() => insert(true), () => insert(false));
   const site = env.SITE_URL || "";
   const note = notifyJerome(env, `Job posted: ${title} at ${employer}`, emailShell("New job post", `<p><strong>${esc(title)}</strong> at ${esc(employer)} (${esc(city.name)})<br><a href="${esc(url)}">${esc(url)}</a><br>From ${esc(byName)} &lt;${esc(byEmail)}&gt;</p><p>Waiting for you${emp ? "" : " (new employer; saving it in the editor adds the organization)"}. <a href="${site}/admin/jobs/${r.meta.last_row_id}">Review it</a>.</p>`));
   if (waitUntil) waitUntil(note); else await note;

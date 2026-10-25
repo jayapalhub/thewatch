@@ -59,6 +59,15 @@ export function titlesMatch(a, b) {
 }
 export const JOB_STATUSES = ["draft", "pending_review", "published", "rejected", "expired", "closed"];
 
+// Migration 0031 adds posted_by_attached_at. Until it is applied, a statement that names the column fails with
+// "no such column"; untilMigrated runs the statement that names it and falls back to the one that does not.
+export const isMissingColumn = (e) => /no such column/i.test(String((e && e.message) || e));
+export async function untilMigrated(primary, fallback) {
+  try { return await primary(); } catch (e) { if (!isMissingColumn(e)) throw e; return fallback(); }
+}
+// The attached time for a new row: now when a person is named, else null.
+export const attachedNow = (name) => (name && String(name).trim() ? new Date().toISOString() : null);
+
 const SELECT = `SELECT j.*, o.name AS org_name, o.slug AS org_slug, o.trusted AS org_trusted FROM jobs j LEFT JOIN organizations o ON o.id = j.organization_id`;
 
 export function hydrateJob(j) {

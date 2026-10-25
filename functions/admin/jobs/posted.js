@@ -4,7 +4,7 @@
 import { html, page, readForm, redirect, str } from "../../_lib/html.js";
 import { adminShell, flash } from "../../_lib/admin.js";
 import { postedForm, parsePostedForm, resolveEmployer } from "../../_lib/admin-jobs.js";
-import { defaultExpiry } from "../../_lib/jobs.js";
+import { defaultExpiry, untilMigrated, attachedNow } from "../../_lib/jobs.js";
 import { todayKey } from "../../_lib/dates.js";
 
 async function orgs(db) { return (await db.prepare("SELECT name FROM organizations ORDER BY name").all()).results; }
@@ -28,18 +28,22 @@ export async function onRequestPost({ request, env, data }) {
   // The employer's posting is already listed: attach the person to it, and publish it now if it was waiting.
   const existing = row.announced ? null : await db.prepare(`SELECT id, status FROM jobs WHERE url=? AND ${live} LIMIT 1`).bind(row.url).first();
   if (existing) {
-    await db.prepare(`UPDATE jobs SET posted_by_name=?, posted_by_title=?, posted_by_role=?, posted_by_kind='employer', posted_by_url=?, posted_by_date=?, announced=0,
+    // posted_by_attached_at is set to now: a person is being put on the role. Before migration 0031 the column is left out.
+    const attach = (withAttached) => db.prepare(`UPDATE jobs SET posted_by_name=?, posted_by_title=?, posted_by_role=?, posted_by_kind='employer', posted_by_url=?, posted_by_date=?, announced=0,${withAttached ? ` posted_by_attached_at=${now},` : ""}
         status='published', hold=0, auto_publish_at=NULL, published_at=COALESCE(published_at, ${now}), expires_at=CASE WHEN expires_at IS NULL OR expires_at < date('now') THEN ? ELSE expires_at END,
         reviewer_notes=COALESCE(reviewer_notes,'') || ' ${str(row.posted_by_name).replace(/'/g, "''")} posted about this role; attached ' || date('now') || '.', updated_at=${now} WHERE id=?`)
       .bind(row.posted_by_name, row.posted_by_title, row.posted_by_role, row.posted_by_url, row.posted_by_date, defaultExpiry(), existing.id).run();
+    await untilMigrated(() => attach(true), () => attach(false));
     return redirect(`/admin/jobs/${existing.id}?msg=${encodeURIComponent(`${row.posted_by_name} attached to the listed role${existing.status === "published" ? "" : ", which is now live"}`)}`);
   }
   const emp = await resolveEmployer(db, row.employer, { note: "Created from Admin > Jobs > Add a posted role" });
-  const r = await db.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, topics, expires_at, status, hold, auto_publish_at, published_at, source,
-      posted_by_name, posted_by_title, posted_by_role, posted_by_kind, posted_by_url, posted_by_date, announced, reviewer_notes)
-      VALUES (?,?,?,?,?,?,?,'[]',?,'published',0,NULL,?,'manual',?,?,?,'employer',?,?,?,?)`)
+  const insert = (withAttached) => db.prepare(`INSERT INTO jobs (city, organization_id, employer_name, title, url, location, remote, topics, expires_at, status, hold, auto_publish_at, published_at, source,
+      posted_by_name, posted_by_title, posted_by_role, posted_by_kind, posted_by_url, posted_by_date, announced, reviewer_notes${withAttached ? ", posted_by_attached_at" : ""})
+      VALUES (?,?,?,?,?,?,?,'[]',?,'published',0,NULL,?,'manual',?,?,?,'employer',?,?,?,?${withAttached ? ",?" : ""})`)
     .bind(row.city, emp.id, row.employer, row.title, row.url, row.location, row.remote || 'onsite', row.expires_at || defaultExpiry(), new Date().toISOString(),
       row.posted_by_name, row.posted_by_title, row.posted_by_role, row.posted_by_url, row.posted_by_date, row.announced,
-      row.announced ? `Announced in a public post on ${row.posted_by_date}; no employer posting yet. Comes down ${row.expires_at} unless the posting appears.` : `From a public post on ${row.posted_by_date}.`).run();
+      row.announced ? `Announced in a public post on ${row.posted_by_date}; no employer posting yet. Comes down ${row.expires_at} unless the posting appears.` : `From a public post on ${row.posted_by_date}.`,
+      ...(withAttached ? [attachedNow(row.posted_by_name)] : [])).run();
+  const r = await untilMigrated(() => insert(true), () => insert(false));
   return redirect(`/admin/jobs/${r.meta.last_row_id}?msg=${encodeURIComponent(row.announced ? "Added and live as announced; add the employer's posting URL when it appears" : "Added and live")}`);
 }
