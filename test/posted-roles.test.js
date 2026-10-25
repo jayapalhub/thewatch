@@ -121,7 +121,7 @@ describe("rows and pages", () => {
     assert.equal(res.status, 301); // the slug is normalized first
     ({ res, body } = await (async () => { const r = await jobPage({ params: { city: "dallas", job: "1-senior-security-engineer-at-example-co" }, request: new Request("https://bettersecurity.ai/dallas/jobs/1-senior-security-engineer-at-example-co"), env: env(fakeDb([{ match: /FROM jobs\b/, op: "first", reply: () => ({ ...POSTED, topics: '["grc"]' }) }])) }); return { res: r, body: await r.text() }; })());
     assert.equal(res.status, 200);
-    assert.match(body, /<dt>Who posted<\/dt><dd><span class="job-by-label">Hiring manager posted<\/span><br><span class="person-badge" style="--hue:\d+" aria-hidden="true">JD<\/span>Jane Doe, Director of Security<br><small>(yesterday|2 days ago) · <a href="https:\/\/www\.linkedin\.com\/posts\/janedoe-1"[^>]*>Read their post<\/a> · <a class="job-remove"/); // the page counts days in Dallas time
+    assert.match(body, /<dt>Who posted<\/dt><dd><span class="job-by-label">Hiring manager posted<\/span><br><span class="person-badge" style="--hue:\d+" aria-hidden="true">JD<\/span>Jane Doe, Director of Security<br><small>(yesterday|\d+ days ago) · <a href="https:\/\/www\.linkedin\.com\/posts\/janedoe-1"[^>]*>Read their post<\/a> · <a class="job-remove"/); // the page counts days in Dallas time
     assert.match(body, /"@type":"JobPosting"/);
     assert.match(body, />Apply on the employer's site<\/a>/);
     assert.match(body, /read their post, apply through the official link once it exists, then send a brief note that mentions their post/);

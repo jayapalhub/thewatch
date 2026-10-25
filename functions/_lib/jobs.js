@@ -231,7 +231,7 @@ export function jobRow(j, today = todayKey()) {
     ${logo}
     <div class="job-main">
       <h2 class="job-title"><a href="${jobPath(j)}">${j.title}</a></h2>
-      <p class="job-company">${j.employer}</p>
+      <p class="job-company">${j.org_slug ? html`<a href="/employers/${j.org_slug}">${j.employer}</a>` : j.employer}</p>
       ${where ? html`<p class="job-where">${where}</p>` : ""}
       ${j.salary_text ? html`<p class="job-pay">${j.salary_text}</p>` : ""}
       ${insightLine(j, today)}

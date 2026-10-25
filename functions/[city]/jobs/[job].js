@@ -55,10 +55,10 @@ export async function onRequestGet({ params, request, env }) {
       <p class="crumbs"><a href="/${city.slug}/jobs">${city.remote ? "Remote security jobs" : `Security jobs in ${city.name}`}</a></p>
       ${isFeatured(j, today) ? html`<span class="job-flag">Featured</span>` : ""}
       <h1>${j.title}</h1>
-      <p class="job-employer">${highlight && j.org_slug ? html`<img class="emp-logo emp-logo-inline" src="/logo/${j.org_slug}" alt="" width="32" height="32" decoding="async">` : ""}${j.employer}</p>
+      <p class="job-employer">${highlight && j.org_slug ? html`<img class="emp-logo emp-logo-inline" src="/logo/${j.org_slug}" alt="" width="32" height="32" decoding="async">` : ""}${j.org_slug ? html`<a href="/employers/${j.org_slug}">${j.employer}</a>` : j.employer}</p>
       ${topics.length ? html`<div class="tags">${topics.map((t) => html`<span class="tag tag-topic">${TOPICS[t]}</span>`)}</div>` : ""}
       <dl class="event-facts">
-        <div><dt>Employer</dt><dd>${j.employer}</dd></div>
+        <div><dt>Employer</dt><dd>${j.org_slug ? html`<a href="/employers/${j.org_slug}">${j.employer}</a>` : j.employer}</dd></div>
         <div><dt>Location</dt><dd>${loc || city.name}</dd></div>
         <div><dt>Work model</dt><dd>${REMOTE[j.remote] || "Not stated"}</dd></div>
         ${SENIORITY[j.seniority] ? html`<div><dt>Level</dt><dd>${SENIORITY[j.seniority]}</dd></div>` : ""}

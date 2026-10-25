@@ -37,7 +37,7 @@ export async function onRequestGet({ env }) {
       WHERE e.status = 'published' AND e.speakers IS NOT NULL AND trim(e.speakers) != ''${NOT_BS_EVENT}`)),
     loadOverrides(db),
     // Live roles. A day of slack in the query, then each city's own date decides, as on the board.
-    rows(db.prepare(`SELECT j.id, j.city, j.title, j.employer_name, o.name AS org_name, j.expires_at, COALESCE(j.updated_at, j.published_at) AS updated_at,
+    rows(db.prepare(`SELECT j.id, j.city, j.title, j.employer_name, o.name AS org_name, o.slug AS org_slug, j.expires_at, COALESCE(j.updated_at, j.published_at) AS updated_at,
       j.posted_by_name, j.posted_by_role, j.posted_by_kind, j.posted_by_date
       FROM jobs j LEFT JOIN organizations o ON o.id = j.organization_id WHERE j.status = 'published' AND (j.expires_at IS NULL OR j.expires_at >= ?)`).bind(addDays(todayKey(), -1))),
     rows(db.prepare("SELECT city, week_start, updated_at FROM issues WHERE status='sent'")),
@@ -80,6 +80,11 @@ export async function onRequestGet({ env }) {
   for (const j of liveJobs) if (postedHighlight(j, todayKey(jobBoardOf(j.city).timezone))) postedMod.set(j.city, later(postedMod.get(j.city), lastmod(j.updated_at)));
   if (postedMod.size) add("/jobs/posted", [...postedMod.values()].reduce(later, null));
   for (const c of cities) if (postedMod.has(c)) add(`/${c}/jobs/posted`, postedMod.get(c));
+  // Employers: the index and a page for each employer with a live role, dated by its freshest role.
+  const empMod = new Map();
+  for (const j of liveJobs) if (j.org_slug) empMod.set(j.org_slug, later(empMod.get(j.org_slug), lastmod(j.updated_at)));
+  if (empMod.size) add("/employers", [...empMod.values()].reduce(later, null));
+  for (const [slug, mod] of [...empMod].sort()) add(`/employers/${slug}`, mod);
   for (const c of cities) add(`/${c}/cpe`);
   for (const c of cities) add(`/${c}/subscribe`);
   for (const i of sentIssues) if (CITIES[i.city]) add(`/${i.city}/issues/${i.week_start}`, i.updated_at);
