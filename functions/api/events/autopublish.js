@@ -10,6 +10,7 @@ import { runMondayDigest } from "../../_lib/digest.js";
 import { refreshTargets } from "../../_lib/sweep-targets.js";
 import { runAllSources } from "../../_lib/feeds.js";
 import { recordRun, checkBudget, flushUsage } from "../../_lib/ops.js";
+import { snapshotCoverage } from "../../_lib/coverage.js";
 
 // POST /api/events/autopublish: publish every pending row whose hold has passed.
 // Auth: Cloudflare Access session (from the admin) or Authorization: Bearer ADMIN_TOKEN (cron worker).
@@ -19,6 +20,7 @@ export async function onRequestPost(context) {
   const r = await runAutoPublish(context.env.DB);
   const reminders = await runReminders(context.env).catch((e) => ({ error: e && e.message }));
   const jobs = await runJobMaintenance(context.env.DB).catch((e) => ({ error: e && e.message }));
+  const coverage = await snapshotCoverage(context.env.DB).catch((e) => ({ error: e && e.message })); // once a day; the rest of the day it skips
   const referrals = await runReferralThanks(context.env).catch((e) => ({ error: e && e.message }));
   // Feeds and sweep target change detection run before the job boards and get fixed shares, so a slow or failing board
   // cannot starve them. Eight feeds an hour reads every feed source daily; twelve targets an hour rehashes every sweep
@@ -35,6 +37,6 @@ export async function onRequestPost(context) {
   const usage = await checkBudget(context.env, context.env.DB);
   await recordRun(context.env.DB, "hourly", true, `published ${r.published || 0}, boards ${Array.isArray(boards) ? boards.length : 0}, feeds ${feeds.length || 0}`);
   await flushUsage(context.env.DB, { force: true });
-  return json({ success: true, ...r, reminders, jobs, referrals, boards, feeds, targets, linkedin, digest, usage });
+  return json({ success: true, ...r, reminders, jobs, coverage, referrals, boards, feeds, targets, linkedin, digest, usage });
 }
 export async function onRequest() { return json({ success: false, error: "method_not_allowed" }, 405); }
