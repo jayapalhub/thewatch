@@ -11,12 +11,12 @@ export const SECTIONS = {
     blurb: "A read heavy site on Cloudflare's edge, a SQL database, scheduled jobs, and a research pipeline that mixes code with AI agents under controls.",
     body: `
 <h2>The system at a glance</h2>
-<p>The Watch is a set of city calendars, a virtual calendar, a jobs board and a Sunday email for each city. Every page renders from one SQL database at the edge, so there is no application server to keep up. Research arrives through four routes: automatic feeds (iCal from Meetup and Luma, BrightTALK channels, SANS webcasts), employer job boards read through ten applicant tracking system adapters (Workday, Greenhouse, Lever, Ashby, iCIMS, SmartRecruiters, Eightfold, Radancy, Phenom, SuccessFactors), scheduled AI research sweeps, and organizer submissions. Email goes out through a transactional provider with per subscriber links.</p>
+<p>The Watch is the San Diego security and technology events calendar, a virtual calendar, a Sunday email and an invitation request for Better Security's experiences. Every page renders from one SQL database at the edge, so there is no application server to keep up. Research arrives through three routes: automatic feeds (iCal from Meetup and Luma, BrightTALK channels, SANS webcasts), scheduled AI research sweeps, and organizer submissions. Email goes out through a transactional provider with per subscriber links. The platform was built multi city, and forty calendars ran on it for a week in October 2026 before the product was consolidated to San Diego on October 25; the other cities are paused as data, not deleted, and the job board that ran alongside them was retired the same day with its data archived.</p>
 <div class="cs-diagram">
-<div class="cs-box"><strong>Sources</strong><span>Organizer feeds, ATS boards, research agents, submissions</span></div><div class="cs-arrow">&rarr;</div>
+<div class="cs-box"><strong>Sources</strong><span>Organizer feeds, research agents, submissions</span></div><div class="cs-arrow">&rarr;</div>
 <div class="cs-box"><strong>Review queue</strong><span>Dedupe, hold rules, 24 hour auto publish</span></div><div class="cs-arrow">&rarr;</div>
-<div class="cs-box"><strong>Database</strong><span>Events, organizations, jobs, subscribers, usage</span></div><div class="cs-arrow">&rarr;</div>
-<div class="cs-box"><strong>Edge pages and email</strong><span>40 calendars, feeds, Sunday issues, health</span></div>
+<div class="cs-box"><strong>Database</strong><span>Events, organizations, subscribers, invitation requests, usage</span></div><div class="cs-arrow">&rarr;</div>
+<div class="cs-box"><strong>Edge pages and email</strong><span>Calendars, feeds, Sunday issues, health</span></div>
 </div>
 <h2>How a change reaches production</h2>
 <ol>
@@ -27,11 +27,11 @@ export const SECTIONS = {
 <li><strong>Verification is a step, not an afterthought.</strong> Pages are opened after deploy, numbers are re-queried, and high stakes work is checked by a second agent that did not see the first one's output.</li>
 </ol>
 <h2>APIs, feeds and MCP</h2>
-<p>The site talks to the world three ways, and the distinction matters when designing automation. <strong>Plain HTTP APIs</strong> are used for the ATS boards (each vendor exposes JSON differently, hence ten adapters), for the email provider, and for the site's own admin endpoints. <strong>Feeds</strong> (iCal, RSS) are pulled on a schedule and diffed by a content hash, so a page that has not changed is not re-read. <strong>MCP</strong> (Model Context Protocol) is how the AI side reaches tools: the research agents query the database, read Google Sheets and drive a browser through MCP servers rather than through hand written integrations. The rule of thumb used here: an API is a contract between two programs; MCP is a contract between a model and a set of tools, with the model choosing which to call. The site itself exposes APIs; the operator's agents consume them through MCP.</p>
+<p>The site talks to the world three ways, and the distinction matters when designing automation. <strong>Plain HTTP APIs</strong> are used for the email provider and for the site's own admin endpoints (and were used for the ten applicant tracking system adapters while the job board ran). <strong>Feeds</strong> (iCal, RSS) are pulled on a schedule and diffed by a content hash, so a page that has not changed is not re-read. <strong>MCP</strong> (Model Context Protocol) is how the AI side reaches tools: the research agents query the database, read Google Sheets and drive a browser through MCP servers rather than through hand written integrations. The rule of thumb used here: an API is a contract between two programs; MCP is a contract between a model and a set of tools, with the model choosing which to call. The site itself exposes APIs; the operator's agents consume them through MCP.</p>
 <h2>Cost and scale controls</h2>
 <p>Edge caching for anonymous pages, a two day stale copy as a fallback, bounded month views, a robots policy that keeps crawlers on plain pages, a metered database binding that counts rows read per request, and a daily read budget with an alert. Monthly running cost is about $5 for compute and database, plus email volume.</p>
 <h2>Numbers</h2>
-<p>About 150 commits in the first seven days, 40 city calendars launched from a data driven playbook (a city is a row, not a code change), 10 ATS adapters, 4 feed adapters, 25 migrations, 2 scheduled workers and 4 weekly scheduled AI tasks.</p>`,
+<p>About 150 commits in the first seven days, 40 city calendars launched from a data driven playbook (a city is a row, not a code change) and then paused to one by the same mechanism, 4 feed adapters, 33 migrations, 2 scheduled workers and 3 weekly scheduled AI tasks.</p>`,
   },
   "ai-governance": {
     title: "AI governance in practice",
@@ -40,11 +40,10 @@ export const SECTIONS = {
     body: `
 <h2>The AI system inventory</h2>
 <table class="cs-table"><thead><tr><th>System</th><th>Purpose</th><th>Autonomy</th><th>Controls</th></tr></thead><tbody>
-<tr><td>Weekly event sweep</td><td>Finds new events across 40 cities and the virtual calendar</td><td>Writes to the review queue; never publishes directly</td><td>Change detection decides what it reads; 30 fetch budget per city; dedupe before insert; hold rules; reviewer notes name the page verified</td></tr>
-<tr><td>Jobs lane</td><td>Finds hiring posts and names the person who posted</td><td>Writes pending roles; never applies, messages or connects</td><td>Employer's own posting required; aggregators banned; a person must be named, not a company page</td></tr>
+<tr><td>Weekly event sweep</td><td>Finds new events for the live calendars (San Diego and virtual; cities are data)</td><td>Writes to the review queue; never publishes directly</td><td>Change detection decides what it reads; 30 fetch budget per city; dedupe before insert; hold rules; reviewer notes name the page verified</td></tr>
 <tr><td>Sunday note drafter</td><td>Writes the personal note and picks in the publisher's voice</td><td>Writes drafts only; the site sends on schedule</td><td>Voice rules in the brief; preview to the publisher the day before; one issue per city per week</td></tr>
 <tr><td>Research passes (city launches, sponsor sweeps)</td><td>Bulk discovery of organizers, events and employers</td><td>Produces files; a merge script with explicit rules loads them</td><td>Confidence field per row; medium confidence or missing venue is held; verification by a separate agent against the organizer's page; duplicates dropped by fuzzy match</td></tr>
-<tr><td>Hourly maintenance</td><td>Publishes rows whose hold has passed, checks boards and feeds</td><td>Fully automatic within fixed rules</td><td>Request budget per run; boards that fail are paused with the error recorded; usage metered</td></tr>
+<tr><td>Hourly maintenance</td><td>Publishes rows whose hold has passed, checks feeds</td><td>Fully automatic within fixed rules</td><td>Request budget per run; feeds that fail are paused with the error recorded; usage metered</td></tr>
 </tbody></table>
 <h2>Publish by default, with holds</h2>
 <p>Every researched row lands as pending with a 24 hour timer. It publishes itself unless held or rejected. A row is held only for stated reasons: the venue or time is not confirmed, the source was an aggregator rather than the organizer, the topical fit is doubtful, or it might duplicate an existing row. The reason is written in the row's reviewer notes. This keeps the human from being a bottleneck while making every exception visible and explainable.</p>
@@ -69,7 +68,8 @@ export const SECTIONS = {
 <tr><td>Link clicks with subscriber id</td><td>Learn which events a reader opens, to improve picks</td><td>Database only</td><td>Only when the subscriber leaves personalization on; switch is on the profile page</td></tr>
 <tr><td>CPE attendance log</td><td>Subscriber's own record of events attended</td><td>Database; export to the subscriber</td><td>Subscriber controlled</td></tr>
 <tr><td>Organizer and speaker names, public event data</td><td>The calendar</td><td>Public pages</td><td>Public information from organizers' own pages</td></tr>
-<tr><td>Job postings and the name of the person who posted publicly</td><td>The jobs board</td><td>Public pages, linking to the employer's own posting</td><td>Expires with the posting; names only from public posts</td></tr>
+<tr><td>Invitation requests: name, work email, company, title, seniority, areas owned, LinkedIn URL, vendor flag, notes</td><td>Inviting the right people to Better Security's experiences</td><td>Database and the operator's inbox; never a sponsor</td><td>Kept as a business record until the person asks for removal</td></tr>
+<tr><td>Job postings and the name of the person who posted publicly (archived)</td><td>The job board, retired October 25, 2026</td><td>No longer published; rows kept in the database</td><td>Archive; any named person can still ask for removal</td></tr>
 </tbody></table>
 <h2>Records of processing, in short</h2>
 <p>Purpose: publishing a calendar and sending a weekly email the reader asked for. Lawful basis: consent on sign up with a visible description of what is sent, double opt in for referral driven sign ups. Processors: the hosting and database provider and the email provider, both under their standard terms. No advertising pixels, no third party analytics scripts, no sale or sharing of addresses. Sponsors buy a slot in the email; they never receive the list.</p>
@@ -90,11 +90,11 @@ export const SECTIONS = {
     body: `
 <h2>Operating cadence</h2>
 <table class="cs-table"><thead><tr><th>When</th><th>What</th></tr></thead><tbody>
-<tr><td>Hourly</td><td>Publish due rows, reminders, a few job boards and feeds, change detection, usage flush, budget check</td></tr>
-<tr><td>Friday</td><td>Event sweep across all calendars; jobs lane for posted by names</td></tr>
-<tr><td>Saturday</td><td>Sunday note drafted; previews to the publisher for cities with subscribers plus one digest</td></tr>
-<tr><td>Sunday 8 AM local</td><td>Each city's email sends itself</td></tr>
-<tr><td>Monday</td><td>Numbers email: subscribers, events, jobs, boards and feeds that need a look, database usage</td></tr>
+<tr><td>Hourly</td><td>Publish due rows, reminders, a few feeds, change detection, usage flush, budget check</td></tr>
+<tr><td>Friday</td><td>Event sweep across the live calendars</td></tr>
+<tr><td>Saturday</td><td>Sunday note drafted; preview to the publisher</td></tr>
+<tr><td>Sunday 8 AM</td><td>The San Diego email sends itself</td></tr>
+<tr><td>Monday</td><td>Numbers email: subscribers, events, invitation requests, feeds that need a look, database usage</td></tr>
 </tbody></table>
 <h2>Monitoring</h2>
 <p>A public health endpoint reports the database, today's rows read against a budget, and the age of the last hourly run, returning a failure code when any is wrong, so an external monitor can watch it. Alerts email the operator at most once an hour when a fallback page is served and once a day when reads pass the budget. Public pages answer with a header saying whether they came from cache, from the stale fallback, or fresh.</p>
@@ -123,7 +123,7 @@ export const SECTIONS = {
 <tr><td>GitHub</td><td>Source control and deploy trigger</td><td>Code, no secrets</td><td>Critical for change</td></tr>
 <tr><td>Google Workspace</td><td>Operator's sheets and mail used by research tasks</td><td>Sponsor and contact lists</td><td>Operational</td></tr>
 <tr><td>Anthropic</td><td>Research and operations agents</td><td>Public pages, database contents during tasks</td><td>Operational</td></tr>
-<tr><td>Meetup, Luma, BrightTALK, SANS, ATS vendors</td><td>Source feeds and boards</td><td>None of ours</td><td>Degrades gracefully</td></tr>
+<tr><td>Meetup, Luma, BrightTALK, SANS</td><td>Source feeds</td><td>None of ours</td><td>Degrades gracefully</td></tr>
 </tbody></table>`,
   },
   "incident-2026-001": {
@@ -208,10 +208,10 @@ export function home(n) {
   return html`
   <section class="cs-hero"><div class="wrap">
     <p class="kicker kicker-light">Case study</p>
-    <h1>The Watch: a multi city security events calendar, built and run as a product in one week.</h1>
-    <p class="cs-lede">Forty city calendars, a jobs board and a Sunday email, researched largely by AI agents under written controls, running on about $5 a month of infrastructure. This page shows how it is engineered, how the AI is governed, how personal data is handled, and how it is operated. Nothing here is a mock up: the numbers below are live from the database.</p>
-    <div class="cs-stats">${stat(n.cities, "city calendars")}${stat(n.events, "upcoming events published")}${stat(n.orgs, "organizations")}${stat(n.feeds, "live feeds")}${stat(n.boards, "employer job boards")}${stat(n.jobs, "live roles")}</div>
-    <p class="cs-fine">Built from October 17 to 24, 2026 by Jerome Jayapal with Claude as the engineering and research partner. About 150 commits, 25 schema migrations, 2 scheduled workers, 4 weekly AI tasks, 1 incident with a postmortem.</p>
+    <h1>The Watch: San Diego's security and technology events calendar, built and run as a product in one week.</h1>
+    <p class="cs-lede">A city calendar, a virtual calendar, a Sunday email and an invitation request for Better Security's experiences, researched largely by AI agents under written controls, running on about $5 a month of infrastructure. The platform launched forty city calendars and a job board in its first week and was consolidated to San Diego on October 25, 2026, with the rest paused as data. This page shows how it is engineered, how the AI is governed, how personal data is handled, and how it is operated. Nothing here is a mock up: the numbers below are live from the database.</p>
+    <div class="cs-stats">${stat(n.cities, n.cities === 1 ? "live calendar, plus virtual" : "city calendars")}${stat(n.events, "upcoming events published")}${stat(n.orgs, "organizations")}${stat(n.feeds, "live feeds")}${stat(n.pausedCities, "cities paused as data")}</div>
+    <p class="cs-fine">Built from October 17 to 24, 2026 by Jerome Jayapal with Claude as the engineering and research partner, and consolidated on October 25. About 150 commits in the first week, 33 schema migrations, 2 scheduled workers, 3 weekly AI tasks, 1 incident with a postmortem.</p>
   </div></section>
   <section class="band"><div class="wrap">
     <div class="cs-tiles cs-tiles-4">
@@ -230,11 +230,12 @@ export function home(n) {
     <tr><td>Oct 21</td><td>Jobs board with ten ATS adapters, publish by default with holds, cities as data, CPE log, referral links, speaker board, LinkedIn page posting (held pending approval), organization enrichment.</td></tr>
     <tr><td>Oct 22</td><td>Nine cities launched by hand, then a playbook, then 31 more by data: 40 calendars live. Per subscriber click tokens with an opt out. Saturday preview digest.</td></tr>
     <tr><td>Oct 23</td><td>Second research pass, 158 in person vendor events verified and loaded, the database read limit incident, postmortem, runbook, metering, health and alerts, this page.</td></tr>
+    <tr><td>Oct 25</td><td>Consolidated to San Diego: 39 cities paused as data with their paths redirecting, the job board retired with its data archived, and the invitation request added as the second offer next to the free calendar.</td></tr>
     </tbody></table>
     <h2>Three design decisions I would defend</h2>
     <p><strong>Publish by default with holds</strong>, rather than approve everything by hand. A one person operation cannot review 700 rows a week, and a calendar that is three days stale is not a calendar. The holds make the exceptions visible and the reviewer notes make them explainable.</p>
-    <p><strong>Cities as data, not code.</strong> Launching a city is a row plus research. That is why forty happened in two days and why the fortieth cost the same as the second.</p>
-    <p><strong>The organizer's own link, always.</strong> Never an aggregator, never a ticket reseller, never a job board. It costs research time and it is the single thing that makes the site trustworthy.</p>
+    <p><strong>Cities as data, not code.</strong> Launching a city is a row plus research. That is why forty happened in two days, why the fortieth cost the same as the second, and why narrowing back to one was a flag rather than a rewrite.</p>
+    <p><strong>The organizer's own link, always.</strong> Never an aggregator, never a ticket reseller. It costs research time and it is the single thing that makes the site trustworthy.</p>
   </div></section>`;
 }
 

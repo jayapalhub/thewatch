@@ -1,4 +1,4 @@
-import { CITIES, eventPath, orgPath, cityOf, SHOW_BS_EVENTS, singleCity } from "./_lib/constants.js";
+import { CITIES, eventPath, orgPath, cityOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
 import { todayKey } from "./_lib/dates.js";
 import { parseSpeakers, nameKey, resolveKey, loadOverrides } from "./_lib/speakers.js";
 
@@ -57,8 +57,7 @@ export async function onRequestGet({ env }) {
     if (parseSpeakers(e.speakers).some((p) => resolveKey(nameKey(p.name), overrides))) boards.forEach((b) => speakerCities.add(b));
   }
 
-  // With one city the root sends visitors to its calendar, so the calendar is the page to index.
-  if (!singleCity()) add("/");
+  add("/");
   for (const c of cities) add(`/${c}`, cityMod.get(c));
   add("/virtual", cityMod.get("virtual"));
   for (const c of cities) add(`/${c}/issues`);
@@ -68,7 +67,7 @@ export async function onRequestGet({ env }) {
   for (const c of cities) add(`/${c}/cpe`);
   for (const c of cities) add(`/${c}/subscribe`);
   for (const i of sentIssues) if (CITIES[i.city]) add(`/${i.city}/issues/${i.week_start}`, i.updated_at);
-  for (const p of [...(SHOW_BS_EVENTS ? ["/events", "/events/padel-social-2027"] : []), "/submit", "/sponsor", "/sponsor/media-kit", "/subscribe", "/about", "/privacy", "/terms"]) add(p);
+  for (const p of [...(SHOW_BS_EVENTS ? ["/events", "/events/padel-social-2027"] : []), "/invite", "/submit", "/sponsor", "/sponsor/media-kit", "/subscribe", "/about", "/privacy", "/terms"]) add(p);
   for (const e of events) if (listed(e.city)) add(eventPath(e), e.updated_at);
   for (const o of orgs) if (listed(o.city)) add(orgPath(o.slug, o.city), o.updated_at);
 

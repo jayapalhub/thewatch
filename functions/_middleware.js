@@ -17,7 +17,7 @@ import { notFoundPage } from "./_lib/layout.js";
 //    is put in or read from the edge cache, so a preview never serves or leaves behind a cached copy.
 const FRESH_SECONDS = 300;
 const STALE_SECONDS = 172800; // two days
-const PRIVATE = /^\/(admin|api|go|r|profile|unsubscribe|resubscribe|remind|cpe|subscribe|submit|casestudy)(\/|$)/;
+const PRIVATE = /^\/(admin|api|go|r|profile|unsubscribe|resubscribe|remind|cpe|subscribe|submit|invite|casestudy)(\/|$)/;
 
 function cacheable(request, path) {
   if (request.method !== "GET") return false;
