@@ -1,7 +1,7 @@
 import { html, page, readForm, redirect, notFound } from "../../_lib/html.js";
 import { adminShell, flash } from "../../_lib/admin.js";
 import { jobForm, parseJobForm, resolveEmployer } from "../../_lib/admin-jobs.js";
-import { jobById, defaultExpiry } from "../../_lib/jobs.js";
+import { jobById, defaultExpiry, untilMigrated } from "../../_lib/jobs.js";
 import { todayKey } from "../../_lib/dates.js";
 
 async function orgs(db) { return (await db.prepare("SELECT name FROM organizations ORDER BY name").all()).results; }
@@ -27,13 +27,17 @@ export async function onRequestPost({ params, request, env, data }) {
   const emp = await resolveEmployer(env.DB, row.employer, { note: "Created from Admin > Jobs" });
   const goingLive = row.status === "published" && before.status !== "published";
   const unannounced = before.announced && !row.announced; // the employer's posting arrived: the role gets its usual run
-  await env.DB.prepare(`UPDATE jobs SET city=?, organization_id=?, employer_name=?, title=?, url=?, location=?, remote=?, seniority=?, topics=?, salary_text=?, posted_at=?, expires_at=?, featured_until=?, status=?,
-      posted_by_name=?, posted_by_title=?, posted_by_url=?, posted_by_kind=?, posted_by_date=?, reviewer_notes=?, posted_by_role=?, announced=?,
+  // posted_by_attached_at: set when a name arrives on a role that had none, cleared when the name is cleared, otherwise kept.
+  const attachedSql = "posted_by_attached_at=CASE WHEN ?='' THEN NULL WHEN posted_by_name IS NULL OR posted_by_name='' THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE posted_by_attached_at END,";
+  const save = (withAttached) => env.DB.prepare(`UPDATE jobs SET city=?, organization_id=?, employer_name=?, title=?, url=?, location=?, remote=?, seniority=?, topics=?, salary_text=?, posted_at=?, expires_at=?, featured_until=?, status=?,
+      ${withAttached ? attachedSql : ""} posted_by_name=?, posted_by_title=?, posted_by_url=?, posted_by_kind=?, posted_by_date=?, reviewer_notes=?, posted_by_role=?, announced=?,
       hold=CASE WHEN ?='published' THEN 0 ELSE hold END, published_at=CASE WHEN ? THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE published_at END,
       closed_reason=CASE WHEN ?='published' THEN NULL ELSE closed_reason END, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?`)
     .bind(row.city, emp.id, row.employer, row.title, row.url, row.location, row.remote, row.seniority, row.topics, row.salary_text, row.posted_at,
       (goingLive || unannounced) && (!row.expires_at || row.expires_at < todayKey()) ? defaultExpiry() : row.expires_at || before.expires_at, row.featured_until, row.status,
+      ...(withAttached ? [row.posted_by_name || ""] : []),
       row.posted_by_name, row.posted_by_title, row.posted_by_url, row.posted_by_kind, row.posted_by_date, row.reviewer_notes, row.posted_by_role, row.announced,
       row.status, goingLive ? 1 : 0, row.status, id).run();
+  await untilMigrated(() => save(true), () => save(false));
   return redirect(`/admin/jobs/${id}?msg=${encodeURIComponent(goingLive ? "Saved and live" : unannounced ? "Saved; the role now links to the employer's posting" : "Saved")}`);
 }

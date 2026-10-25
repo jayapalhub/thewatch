@@ -4,7 +4,7 @@
 import { html } from "./html.js";
 import { CITIES, jobBoardOf } from "./constants.js";
 import { addDays, todayKey } from "./dates.js";
-import { jobPath } from "./jobs.js";
+import { jobPath, untilMigrated } from "./jobs.js";
 
 export const READY_AT = 15, GROWING_AT = 5;
 export const HISTORY_DAYS = 28;
@@ -16,11 +16,15 @@ export function coverageStatus(named) { return named >= READY_AT ? "Ready to con
 export const boardName = (slug) => (jobBoardOf(slug) ? (slug === "remote" ? "Remote board" : jobBoardOf(slug).name) : slug);
 
 // One grouped query: per board, live roles, named live roles and named roles that went live in the last seven days.
+// recent: named roles whose person was attached in the last seven days (posted_by_attached_at, migration 0031), so a
+// person put on an older role counts. Before the migration it falls back to named roles that went live in the week.
+export const RECENT_SQL = `SUM(CASE WHEN ${NAMED} AND substr(j.posted_by_attached_at, 1, 10) >= ? THEN 1 ELSE 0 END) recent`;
+const RECENT_FALLBACK_SQL = `SUM(CASE WHEN ${NAMED} AND COALESCE(substr(j.published_at, 1, 10), j.posted_at, substr(j.created_at, 1, 10)) >= ? THEN 1 ELSE 0 END) recent`;
 export async function coverageRows(db) {
   const since = addDays(todayKey(), -7);
-  const { results } = await db.prepare(`SELECT j.city, COUNT(*) total, SUM(CASE WHEN ${NAMED} THEN 1 ELSE 0 END) named,
-      SUM(CASE WHEN ${NAMED} AND COALESCE(substr(j.published_at, 1, 10), j.posted_at, substr(j.created_at, 1, 10)) >= ? THEN 1 ELSE 0 END) recent
+  const query = (recent) => db.prepare(`SELECT j.city, COUNT(*) total, SUM(CASE WHEN ${NAMED} THEN 1 ELSE 0 END) named, ${recent}
     FROM jobs j WHERE ${LIVE} GROUP BY j.city`).bind(since).all();
+  const { results } = await untilMigrated(() => query(RECENT_SQL), () => query(RECENT_FALLBACK_SQL));
   const rows = (results || []).map((r) => ({ city: r.city, total: r.total || 0, named: r.named || 0, recent: r.recent || 0 }));
   // Boards with nothing live still appear, at zero, so a new city is visible from day one.
   for (const slug of [...Object.keys(CITIES), "remote"]) if (!rows.some((r) => r.city === slug)) rows.push({ city: slug, total: 0, named: 0, recent: 0 });

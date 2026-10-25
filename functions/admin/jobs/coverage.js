@@ -15,6 +15,7 @@ export async function onRequestGet({ env, data }) {
     ${rows.map((r) => html`<tr><td><strong>${boardName(r.city)}</strong></td><td>${r.total}</td><td><strong>${r.named}</strong></td><td>${r.percent}%</td><td>${r.recent}</td><td>${pill(r.status)}</td><td>${sparkline(history[r.city])}</td></tr>`)}
     <tr class="a-total"><td><strong>All boards</strong></td><td><strong>${total.total}</strong></td><td><strong>${total.named}</strong></td><td>${total.percent}%</td><td>${total.recent}</td><td></td><td></td></tr>
   </tbody></table>
+  <p class="a-muted">Named added, 7 days counts live roles whose person was attached in the last seven days, whenever the role itself went live. Until migration 0031 is applied it counts named roles that went live this week instead.</p>
   <h2>Needs a person</h2>
   <p class="a-muted">The ${queue.length} newest live roles with nobody named, from employers with fewer than ${SMALL_EMPLOYER} live roles on the board, newest first. This is the list the weekday LinkedIn search works from; it is also at <code>/api/jobs/needs-person</code> for scripts, with the admin token.</p>
   ${queue.length ? html`<table class="a-table"><thead><tr><th>City</th><th>Employer</th><th>Role</th><th>Live for</th><th></th></tr></thead><tbody>
