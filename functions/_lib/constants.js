@@ -57,7 +57,10 @@ export function cityOf(slug) { return CITIES[slug] || (slug === "virtual" ? VIRT
 // The IANA zone an event on this calendar keeps its wall clock times in. Virtual sessions use Pacific, the site's base zone.
 export function cityTz(slug) { const c = cityOf(slug); return (c && c.timezone) || "America/Los_Angeles"; }
 // Canonical paths. Virtual events live at /virtual/events/<slug>; city events at /<city>/events/<slug>.
-export function eventPath(e) { return `/${cityOf(e.city) ? e.city : DEFAULT_CITY}/events/${e.slug}`; }
+// The calendar an event is shown on. A paused city's event that is online (or also streamed) still appears on the
+// Virtual calendar, so it lives there; any other paused city event has no public page.
+export function eventCalendar(e) { return cityOf(e.city) ? e.city : (e.also_virtual || e.format === "virtual") ? "virtual" : null; }
+export function eventPath(e) { return `/${eventCalendar(e) || DEFAULT_CITY}/events/${e.slug}`; }
 export function orgPath(orgSlug, city) { return `/${cityOf(city) && city !== "virtual" ? city : DEFAULT_CITY}/organizers/${orgSlug}`; }
 export function calendarPath(city) { return `/${cityOf(city) ? city : DEFAULT_CITY}`; }
 
