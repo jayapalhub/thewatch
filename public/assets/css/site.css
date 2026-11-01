@@ -625,3 +625,7 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
   .hero p:has(> .btn) { flex-direction: column; align-items: stretch; gap: 10px; }
   .hero p:has(> .btn) .btn { width: 100%; }
 }
+.band-paper + .band-paper > .wrap { border-top: 1px solid var(--mist); padding-top: 36px; }
+.site-footer { border-top: 1px solid rgba(255,255,255,.1); }
+.band-navy + .site-footer, main > section.band-navy:last-child { padding-bottom: 32px; }
+@media (max-width: 640px) { .site-footer { padding-top: 32px; } }
