@@ -116,7 +116,7 @@ async function landing(env) {
         <p class="kicker">${city.region} · free and open to everyone</p>
         <h1>San Diego's most complete security and tech events calendar.</h1>
         <p class="lede">Every chapter meeting, meetup, summit, university talk and vendor session in ${city.region}, from ${orgs ? `${orgs} organizers` : "every organizer"}, with CPE and cost noted. ${m ? `${m} event${m === 1 ? "" : "s"} in the next thirty days and ${n} on the calendar in all.` : `${n} event${n === 1 ? "" : "s"} on the calendar.`} One email on Sunday morning puts the week in order.</p>
-        <p><a class="btn btn-electric btn-large" href="/${city.slug}">Open the calendar</a> <a class="btn btn-ghost" href="/virtual">Virtual sessions and CPE</a></p>
+        <p class="hero-actions"><a class="btn btn-electric btn-large" href="/${city.slug}">Open the calendar</a> <a class="btn btn-ghost btn-large" href="/virtual">Virtual sessions and CPE</a></p>
         <p class="hero-aside">Practitioner in San Diego? <a href="/invite">Request an invitation</a> to our small experiences starting in 2027.</p>
       </div>
       <div class="hero-card">
