@@ -1,4 +1,4 @@
-import { CITIES, eventPath, orgPath, cityOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
+import { CITIES, eventPath, eventCalendar, orgPath, cityOf, SHOW_BS_EVENTS } from "./_lib/constants.js";
 import { todayKey } from "./_lib/dates.js";
 import { parseSpeakers, nameKey, resolveKey, loadOverrides } from "./_lib/speakers.js";
 
@@ -26,7 +26,7 @@ export async function onRequestGet({ env }) {
   const [events, orgs, speakerRows, overrides, sentIssues] = await Promise.all([
     // Upcoming events (from the start of today, Pacific, the same day the calendars use) plus past events that have a
     // recording, since their pages stay useful after the date.
-    rows(db.prepare(`SELECT e.slug, e.city, e.updated_at FROM events e LEFT JOIN organizations o ON o.id = e.organization_id
+    rows(db.prepare(`SELECT e.slug, e.city, e.format, e.also_virtual, e.updated_at FROM events e LEFT JOIN organizations o ON o.id = e.organization_id
       WHERE e.status = 'published' AND (e.start_at >= ? OR (e.recording_url IS NOT NULL AND trim(e.recording_url) != ''))${NOT_BS_EVENT}`).bind(todayKey())),
     // Organizer pages exist per city where the organizer has published events (the same rule the page uses).
     rows(db.prepare(`SELECT o.slug, e.city, MAX(e.updated_at) AS updated_at FROM organizations o JOIN events e ON e.organization_id = o.id
@@ -68,7 +68,7 @@ export async function onRequestGet({ env }) {
   for (const c of cities) add(`/${c}/subscribe`);
   for (const i of sentIssues) if (CITIES[i.city]) add(`/${i.city}/issues/${i.week_start}`, i.updated_at);
   for (const p of [...(SHOW_BS_EVENTS ? ["/events", "/events/padel-social-2027"] : []), "/invite", "/submit", "/sponsor", "/sponsor/media-kit", "/subscribe", "/about", "/privacy", "/terms"]) add(p);
-  for (const e of events) if (listed(e.city)) add(eventPath(e), e.updated_at);
+  for (const e of events) if (eventCalendar(e)) add(eventPath(e), e.updated_at); // a paused city's online events live on Virtual
   for (const o of orgs) if (listed(o.city)) add(orgPath(o.slug, o.city), o.updated_at);
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...urls].map(([u, mod]) => `  <url><loc>${esc(site + u)}</loc>${mod ? `<lastmod>${mod}</lastmod>` : ""}</url>`).join("\n")}\n</urlset>`;

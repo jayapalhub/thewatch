@@ -106,3 +106,29 @@ describe("the Sunday email", () => {
     assert.doesNotMatch(html, /Hiring this week/);
   });
 });
+
+describe("a paused city's online event", () => {
+  test("lives on the Virtual calendar, and its in person events have no page", async () => {
+    const { eventPath, eventCalendar } = await import("../functions/_lib/constants.js");
+    await loadCities(cityDb(), { force: true });
+    assert.equal(eventPath({ city: "atlanta", slug: "x", also_virtual: 1 }), "/virtual/events/x");
+    assert.equal(eventPath({ city: "atlanta", slug: "y", format: "virtual" }), "/virtual/events/y");
+    assert.equal(eventCalendar({ city: "atlanta", format: "in_person" }), null);
+    assert.equal(eventPath({ city: "sandiego", slug: "z" }), "/sandiego/events/z");
+  });
+  test("the event page renders it under Virtual and redirects the old San Diego address", async () => {
+    const { onRequestGet: eventPage } = await import("../functions/[city]/events/[slug].js");
+    await loadCities(cityDb(), { force: true });
+    const row = { id: 9, slug: "isc2-la-talk", city: "losangeles", title: "ISC2 LA talk", status: "published", start_at: "2026-11-20T18:00:00", timezone: "America/Los_Angeles", format: "hybrid", also_virtual: 1, topics: "[]" };
+    const db = cityDb([{ match: /WHERE e\.slug = \?/, op: "first", reply: () => row }]);
+    const ctx = (city) => ({ params: { city, slug: row.slug }, env: { DB: db }, request: req(`/${city}/events/${row.slug}`), waitUntil: () => {} });
+    const old = await eventPage(ctx("sandiego"));
+    assert.equal(old.status, 301);
+    assert.match(old.headers.get("location"), /\/virtual\/events\/isc2-la-talk$/);
+    const res = await eventPage(ctx("virtual"));
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /ISC2 LA talk/);
+    const inPerson = cityDb([{ match: /WHERE e\.slug = \?/, op: "first", reply: () => ({ ...row, format: "in_person", also_virtual: 0 }) }]);
+    assert.equal((await eventPage({ ...ctx("virtual"), env: { DB: inPerson } })).status, 404);
+  });
+});

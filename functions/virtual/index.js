@@ -3,7 +3,7 @@ import { lazyNewsletterTick } from "../_lib/dispatch.js";
 import { html, page, raw } from "../_lib/html.js";
 import { shell, signupForm, filterBox } from "../_lib/layout.js";
 import { queryEvents, eventTags, costLabel } from "../_lib/events.js";
-import { TOPICS, eventPath, orgPath } from "../_lib/constants.js";
+import { TOPICS, eventPath, orgPath, CITIES, DEFAULT_CITY, singleCity } from "../_lib/constants.js";
 import { addDays, todayKey, nowLocalIso, toUtc } from "../_lib/dates.js";
 
 // Bodies shown as a grouped organizer filter. Slugs must match organizations.slug.
@@ -55,7 +55,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
           <h1>The Watch Virtual</h1>
           <p class="cal-sub">Webinars, virtual summits and online chapter meetings worth your hour, with CPE hours noted where the organizer offers them. ${counts.total} sessions in the next 60 days${counts.cpe ? html`, ${counts.cpe} with CPE` : ""}.</p>
         </div>
-        <a class="change-city" href="/?choose=1">Change city</a>
+        ${singleCity() ? html`<a class="change-city" href="/${DEFAULT_CITY}">${CITIES[DEFAULT_CITY].name} calendar</a>` : html`<a class="change-city" href="/?choose=1">Change city</a>`}
       </div>
       ${filterBox(html`<form class="filters" method="get" action="/virtual">
         ${days === 60 ? html`<input type="hidden" name="days" value="60">` : ""}

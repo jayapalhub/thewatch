@@ -3,7 +3,7 @@ import { shell, signupForm, subscribeBand, emailValueLine } from "../../_lib/lay
 import { eventBySlug, eventTags, upcomingEvents, eventRow, eventJsonLd, costLabel } from "../../_lib/events.js";
 import { fmtDateLong, fmtTimeRange, zoneLabel } from "../../_lib/dates.js";
 import { googleCalendarUrl, outlookUrl } from "../../_lib/calendar.js";
-import { FORMATS, AUDIENCE, cityOf, cityTz, eventPath, orgPath, calendarPath } from "../../_lib/constants.js";
+import { FORMATS, AUDIENCE, cityOf, cityTz, eventPath, eventCalendar, orgPath, calendarPath } from "../../_lib/constants.js";
 import { toUtc } from "../../_lib/dates.js";
 import { lazyReminders } from "../../_lib/reminders.js";
 import { eventStarted } from "../../_lib/cpe.js";
@@ -11,8 +11,12 @@ import { eventStarted } from "../../_lib/cpe.js";
 export async function onRequestGet({ params, env, request, waitUntil }) {
   lazyReminders(env, waitUntil);
   if (!cityOf(params.city)) return notFound("Calendar not found");
-  const e = await eventBySlug(env.DB, params.slug);
+  let e = await eventBySlug(env.DB, params.slug);
   if (!e || !["published", "cancelled"].includes(e.status)) return notFound("Event not found");
+  // A paused city's online event is shown as a Virtual event; its in person events have no public page.
+  const cal = eventCalendar(e);
+  if (!cal) return notFound("Event not found");
+  if (cal !== e.city) e = { ...e, timezone: e.timezone || cityTz(e.city), city: cal };
   // One canonical URL per event: redirect if reached under a different calendar path.
   if (eventPath(e) !== `/${params.city}/events/${e.slug}`) return Response.redirect(new URL(eventPath(e), request.url).toString(), 301);
   const city = cityOf(e.city);
