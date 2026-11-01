@@ -33,7 +33,9 @@ function withHeaders(res, path, extra = {}) {
   const h = new Headers(res.headers);
   if (!h.has("X-Content-Type-Options")) h.set("X-Content-Type-Options", "nosniff");
   if (!h.has("Referrer-Policy")) h.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  if (!path.startsWith("/embed/") && !h.has("X-Frame-Options")) h.set("X-Frame-Options", "DENY");
+  // SAMEORIGIN rather than DENY: other sites still cannot frame the pages (clickjacking), and the site's own pages can,
+  // which lets a design check load real pages into a 390 pixel frame and screenshot them (2026-10-31).
+  if (!path.startsWith("/embed/") && !h.has("X-Frame-Options")) h.set("X-Frame-Options", "SAMEORIGIN");
   for (const [k, v] of Object.entries(extra)) h.set(k, v);
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 }
