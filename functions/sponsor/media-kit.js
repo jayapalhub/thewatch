@@ -62,7 +62,7 @@ export async function onRequestGet({ env }) {
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">Media kit</p>
     <h1>The Watch, by the numbers</h1>
-    <p class="lede">The Watch is the cybersecurity events calendar and Sunday email for ${cityList}, published by Better Security. Every figure on this page is read live from the calendar, so it is current as of ${fmtDateLong(today)}.</p>
+    <p class="lede">The Watch is the security and technology events calendar and Sunday email for ${cityList}, published by Better Security. Every figure on this page is read live from the calendar, so it is current as of ${fmtDateLong(today)}.</p>
   </div></section>
 
   <section class="band band-paper"><div class="wrap">
@@ -72,7 +72,7 @@ export async function onRequestGet({ env }) {
       <div class="kit-stat"><span class="kit-n">${fmt(orgsAll.n)}</span><span class="kit-l">organizations on the calendars</span></div>
       <div class="kit-stat"><span class="kit-n">${fmt(perCity.reduce((a, x) => a + x.upcoming, 0))}</span><span class="kit-l">in person events in the next 90 days</span></div>
       <div class="kit-stat"><span class="kit-n">${fmt(virt.n)}</span><span class="kit-l">online sessions with CPE in the next 60 days</span></div>
-      <div class="kit-stat"><span class="kit-n">${cities.length}</span><span class="kit-l">${cities.length === 1 ? "city calendar" : "city calendars"}, with more on the way</span></div>
+      <div class="kit-stat"><span class="kit-n">${cities.length}</span><span class="kit-l">${cities.length === 1 ? "city calendar, plus the virtual calendar" : "city calendars"}</span></div>
     </div>
     <div class="kit-cities">
       ${perCity.map((x) => html`<div class="kit-city">
@@ -92,7 +92,7 @@ export async function onRequestGet({ env }) {
 
   <section class="band"><div class="wrap narrow">
     <h2>Audience</h2>
-    <p>Security, GRC, audit, privacy and AI governance professionals, weighted toward mid career and senior practitioners. People subscribe one email address at a time on the site; we do not buy, rent or import lists, and we do not share subscriber data with sponsors.</p>
+    <p>Security and IT practitioners and leaders, from the engineers and analysts doing the work to the managers, directors and executives who own the decisions. People subscribe one email address at a time on the site; we do not buy, rent or import lists, and we do not share subscriber data with sponsors.</p>
     ${showAudience ? html`
       <div class="kit-stats kit-stats-2">
         <div class="kit-stat"><span class="kit-n">${fmt(subs.n)}</span><span class="kit-l">active subscribers</span></div>
@@ -111,13 +111,13 @@ export async function onRequestGet({ env }) {
     <div class="kit-ways">
       <div><h3>Issue sponsor</h3><p>One clearly marked block near the top of a city's Sunday email, between the personal note and the week's listings, with your logo, a few sentences in plain language and a link. One sponsor per issue.</p></div>
       <div><h3>Calendar sponsor</h3><p>Your logo on the city calendar page and a "Supported by" line above the Sunday email footer, for a month or a season. Good for staying in front of the same readers week after week.</p></div>
-      <div><h3>Events and dinners</h3><p>Better Security events and small roundtables of around twenty invited practitioners on one topic, with a handful of sponsor spots each. Details on request.</p></div>
+      <div><h3>Experiences</h3><p>Starting in 2027, small, invite only experiences for San Diego security and IT practitioners, some over a meal and some around an activity, with a small number of sponsor places each. Details on request.</p></div>
     </div>
     <h3>What every sponsor gets</h3>
     <ul class="kit-list">
       <li>A clear sponsor label, never disguised as editorial.</li>
       <li>Click counts from tracked links, reported per placement after the run.</li>
-      <li>A small number of sponsors per issue and per event, on purpose.</li>
+      <li>A small number of sponsors per issue and per experience, on purpose.</li>
     </ul>
     <p class="kit-cta"><a class="btn btn-primary" href="/sponsor#sponsor-form">Request the sponsor deck</a> <span>Options and pricing within two business days.</span></p>
   </div></section>`;

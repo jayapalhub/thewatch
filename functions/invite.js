@@ -15,9 +15,10 @@ export async function onRequestGet({ request }) {
     <p class="kicker">Invitations</p>
     <h1>${INVITE_HEADLINE}</h1>
     <p class="lede">Better Security hosts a small number of experiences each year, each built for a particular group of practitioners, some over a meal and some around an activity. Tell us who you are and the areas you own or influence, and we will reach out when there is a fit. Your details stay with us and are never shared with sponsors.</p>
+    <p><a class="btn btn-electric btn-large" href="#request">Request an invitation</a></p>
   </div></section>
   <section class="band"><div class="wrap narrow">
-    <form class="form big-form" method="post" action="/api/invite" data-ajax data-keep>
+    <form class="form big-form" id="request" method="post" action="/api/invite" data-ajax data-keep>
       <input type="hidden" name="source" value="${src}">
       <input type="text" name="website_hp" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
       <fieldset>

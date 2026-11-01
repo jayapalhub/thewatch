@@ -1,6 +1,6 @@
 import { html, page } from "./_lib/html.js";
 import { shell, signupForm } from "./_lib/layout.js";
-import { upcomingEvents, eventRow, groupByDay, dayHeading } from "./_lib/events.js";
+import { upcomingEvents, eventRow, groupByDay, dayHeading, dayList } from "./_lib/events.js";
 import { addDays, todayKey } from "./_lib/dates.js";
 import { CITIES, cityOf, SHOW_BS_EVENTS, cityListText, liveNewsletterCities, pendingNewsletterCities, DEFAULT_CITY, singleCity } from "./_lib/constants.js";
 
@@ -97,22 +97,27 @@ async function landing(env) {
   const db = env.DB;
   const city = CITIES[DEFAULT_CITY];
   const today = todayKey(city.timezone);
-  const [count, month, virtualCount, orgCount, picks] = await Promise.all([
+  const [count, month, orgCount, picks, next] = await Promise.all([
     db.prepare("SELECT COUNT(*) AS n FROM events WHERE status='published' AND city=? AND start_at >= ?").bind(city.slug, today).first(),
     db.prepare("SELECT COUNT(*) AS n FROM events WHERE status='published' AND city=? AND start_at >= ? AND start_at < ?").bind(city.slug, today, addDays(today, 31)).first(),
-    db.prepare("SELECT COUNT(*) AS n FROM events WHERE status='published' AND (city='virtual' OR also_virtual=1) AND start_at >= ?").bind(today).first(),
     db.prepare("SELECT COUNT(*) AS n FROM organizations o WHERE EXISTS (SELECT 1 FROM events e WHERE e.organization_id=o.id AND e.status='published' AND e.city=?)").bind(city.slug).first(),
     upcomingEvents(db, { city: city.slug, featured: true, limit: 3 }),
+    upcomingEvents(db, { city: city.slug, limit: 6 }),
   ]);
-  const n = count?.n ?? 0, m = month?.n ?? 0, v = virtualCount?.n ?? 0, orgs = orgCount?.n ?? 0;
+  const n = count?.n ?? 0, m = month?.n ?? 0, orgs = orgCount?.n ?? 0;
+  // Coming up: Jerome's picks first, topped up with the next events on the calendar to five, shown by day so every row
+  // carries its date.
+  const seen = new Set(picks.map((e) => e.id));
+  const coming = [...picks, ...next.filter((e) => !seen.has(e.id))].slice(0, 5).sort((a, b) => a.start_at.localeCompare(b.start_at));
   const body = html`
   <section class="hero">
     <div class="wrap hero-grid">
       <div>
         <p class="kicker">${city.region} · free and open to everyone</p>
         <h1>San Diego's most complete security and tech events calendar.</h1>
-        <p class="lede">Every chapter meeting, meetup, summit, university talk and vendor session in ${city.region}, from ${orgs ? `${orgs} organizers` : "every organizer"}, with CPE and cost noted. ${m ? `${m} event${m === 1 ? "" : "s"} in the next thirty days, ${n} on the calendar in all` : `${n} event${n === 1 ? "" : "s"} on the calendar`}, plus ${v} live online session${v === 1 ? "" : "s"} with CPE from anywhere. One email on Sunday morning puts the week in order.</p>
+        <p class="lede">Every chapter meeting, meetup, summit, university talk and vendor session in ${city.region}, from ${orgs ? `${orgs} organizers` : "every organizer"}, with CPE and cost noted. ${m ? `${m} event${m === 1 ? "" : "s"} in the next thirty days and ${n} on the calendar in all.` : `${n} event${n === 1 ? "" : "s"} on the calendar.`} One email on Sunday morning puts the week in order.</p>
         <p><a class="btn btn-electric btn-large" href="/${city.slug}">Open the calendar</a> <a class="btn btn-ghost" href="/virtual">Virtual sessions and CPE</a></p>
+        <p class="hero-aside">Practitioner in San Diego? <a href="/invite">Request an invitation</a> to our small experiences starting in 2027.</p>
       </div>
       <div class="hero-card">
         <h2 class="hero-card-head">Get the week in your inbox on Sunday.</h2>
@@ -122,7 +127,12 @@ async function landing(env) {
     </div>
   </section>
 
-  <section class="band band-navy">
+  ${coming.length ? html`<section class="band"><div class="wrap">
+    <div class="section-head"><h2>Coming up in San Diego</h2><a href="/${city.slug}">See the full calendar</a></div>
+    ${dayList(coming, { today })}
+  </div></section>` : ""}
+
+  <section class="band band-invite">
     <div class="wrap split">
       <div>
         <p class="kicker kicker-light">Starting in 2027</p>
@@ -146,8 +156,6 @@ async function landing(env) {
       <div><h2>Curated, not dumped</h2><p>The Sunday email is scannable in two minutes: a short note, the week day by day, and a pick or two when something deserves your evening. No forty item lists.</p></div>
     </div>
   </section>
-
-  ${picks.length ? html`<section class="band"><div class="wrap"><h2>Jerome's picks</h2><ul class="event-list">${picks.map(eventRow)}</ul></div></section>` : ""}
 
   <section class="band band-paper">
     <div class="wrap split">

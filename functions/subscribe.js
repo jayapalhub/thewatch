@@ -11,16 +11,16 @@ export async function onRequestGet({ request }) {
   const body = html`
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">Sundays at 8 AM</p>
-    <h1>The week in local security, in one email.</h1>
+    <h1>The week in San Diego security and tech, in one email.</h1>
     ${referred ? html`<p class="lede-note">A colleague shared The Watch with you.</p>` : ""}
-    <p class="lede">A short note from Jerome, then the week day by day: chapter meetings, meetups, summits and vendor sessions. Which ones carry CPE, which ones cost money, and which ones are worth your evening. One email for your city, at 8 AM your time.</p>
+    <p class="lede">A short note from Jerome, then the week day by day: chapter meetings, meetups, summits and vendor sessions across San Diego County, plus the best live online sessions with CPE. Which ones carry CPE, which ones cost money, and which ones are worth your evening. One email, Sunday at 8 AM.</p>
     ${pending.length ? html`<p class="lede-note">${live.length ? `${cityListText(live)} ${live.length === 1 ? "is" : "are"} sending now. ` : ""}${cityListText(pending)} ${pending.length === 1 ? "starts" : "start"} soon; subscribe now and you get the first issue.</p>` : ""}
     ${signupForm({ source: src.replace(/[^a-z0-9_:-]/gi, "").slice(0, 40) || "subscribe_page", chooseCity: true, city })}
   </div></section>
   <section class="band band-paper"><div class="wrap narrow three-up">
     <div><h2>Two minute read</h2><p>Scannable by design. If you only read the day headers and the picks, you still know your week.</p></div>
     <div><h2>Nothing sold</h2><p>One clearly marked sponsor per issue. Your email is never shared with organizers or sponsors.</p></div>
-    <div><h2>Invitations</h2><p>Tell us your role and interests after you sign up and you'll be first to hear about Better Security's dinners and roundtables on your topic.</p></div>
+    <div><h2>Invitations</h2><p>Better Security also hosts small, invite only experiences for San Diego security and IT practitioners starting in 2027. That is a separate list: <a href="/invite">request an invitation</a> and tell us what you own.</p></div>
   </div></section>`;
-  return page(shell({ title: "Subscribe", description: "The Watch Sunday email: every security, GRC, privacy and audit event in your city for the week ahead, with CPE noted. Free, at 8 AM local time.", body, path: "/subscribe" }));
+  return page(shell({ title: "Subscribe", description: "The Watch Sunday email: every security and technology event in San Diego for the week ahead, with CPE noted. Free, Sunday at 8 AM.", body, path: "/subscribe" }));
 }
