@@ -15,7 +15,7 @@ export async function onRequestGet({ request, env }) {
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">You're subscribed</p>
     <h1>Thanks. Two quick questions, if you like.</h1>
-    <p class="lede">Your answers go to one use: telling sponsors what kind of audience reads The Watch (in aggregate, never by name) and inviting the right people to Better Security's own events. Skip it and you still get every Sunday email.</p>
+    <p class="lede">Your answers go to one use: telling sponsors what kind of audience reads The Watch (in aggregate, never by name) and inviting the right people to Better Security's experiences. Skip it and you still get every Sunday email.</p>
   </div></section>
   <section class="band"><div class="wrap narrow">
     <form class="form" method="post" action="/api/profile" data-ajax>
@@ -32,10 +32,11 @@ export async function onRequestGet({ request, env }) {
         </div>
         <label>LinkedIn <input type="url" name="linkedin_url" value="${sub.linkedin_url || ""}" placeholder="https://linkedin.com/in/"></label>
       </details>
-      <label class="chip" style="display:block;margin:14px 0 6px;"><input type="hidden" name="personalize_set" value="1"><input type="checkbox" name="personalize" value="1" ${Number(sub.personalize === undefined || sub.personalize === null ? 1 : sub.personalize) ? raw("checked") : ""}> Personalize my Sunday email <span class="hint">Links in your email carry a private code so we can see which events and roles you open and pick better ones for you. Untick it and your links are plain; you still get every Sunday email.</span></label>
+      <label class="chip" style="display:block;margin:14px 0 6px;"><input type="hidden" name="personalize_set" value="1"><input type="checkbox" name="personalize" value="1" ${Number(sub.personalize === undefined || sub.personalize === null ? 1 : sub.personalize) ? raw("checked") : ""}> Personalize my Sunday email <span class="hint">Links in your email carry a private code so we can see which events you open and pick better ones for you. Untick it and your links are plain; you still get every Sunday email.</span></label>
       <button class="btn btn-primary" type="submit">Save</button> <a class="btn btn-ghost" href="/${sub.city || "sandiego"}">Skip, show me the calendar</a>
       <p class="form-msg" role="status" aria-live="polite"></p>
     </form>
+    <p class="profile-cpe">Want to be considered for Better Security's small, invite only experiences for San Diego practitioners starting in 2027? <a href="/invite?src=profile">Request an invitation</a>.</p>
     <p class="profile-cpe">Going to events for credit? <a href="/cpe?t=${t}">Your private CPE log</a> keeps the events you mark as attended, with hours and a CSV for your certification body.</p>
   </div></section>` : html`
   <section class="hero hero-short"><div class="wrap narrow"><h1>This link isn't valid anymore.</h1><p class="lede">Profile links are personal and expire if you resubscribe. <a href="/subscribe">Subscribe again</a> to get a fresh one, or just enjoy the <a href="/sandiego">calendar</a>.</p></div></section>`;
