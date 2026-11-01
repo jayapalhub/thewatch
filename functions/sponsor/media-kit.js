@@ -27,7 +27,8 @@ export async function onRequestGet({ env }) {
   const cities = Object.values(CITIES);
   const perCity = await Promise.all(cities.map(async (c) => ({ c, ...(await cityStats(db, c.slug, today)) })));
   const [orgsAll, virt, subs, subsByCity, issues] = await Promise.all([
-    db.prepare("SELECT COUNT(DISTINCT organization_id) n FROM events WHERE status='published' AND organization_id IS NOT NULL").first(),
+    // Organizers on the live calendars only (paused cities' organizers stay in the database but are not on a calendar).
+    db.prepare(`SELECT COUNT(DISTINCT organization_id) n FROM events WHERE status='published' AND organization_id IS NOT NULL AND city IN (${[...cities.map(() => "?"), "'virtual'"].join(",")})`).bind(...cities.map((c) => c.slug)).first(),
     db.prepare("SELECT COUNT(*) n FROM events WHERE status='published' AND city='virtual' AND cpe_eligible=1 AND start_at >= ? AND start_at < ?").bind(today, addDays(today, 60)).first(),
     db.prepare("SELECT COUNT(*) n FROM subscribers WHERE status='active'").first(),
     db.prepare("SELECT city, COUNT(*) n FROM subscribers WHERE status='active' GROUP BY city").all(),

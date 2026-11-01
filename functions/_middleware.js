@@ -48,6 +48,19 @@ export function wantsNotFoundPage(request, path, res) {
 
 const PREVIEW_HEADERS = { "X-Robots-Tag": "noindex, nofollow" };
 const PREVIEW_ROBOTS = "User-agent: *\nDisallow: /\n";
+// Kept in step with public/robots.txt (test/robots.test.js checks they match).
+export const ROBOTS = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /profile
+Disallow: /go/
+Disallow: /r/
+Disallow: /api/
+Disallow: /casestudy
+# Filtered and month views are the same events as the plain calendar pages; keep crawlers on the plain pages.
+Disallow: /*?
+Sitemap: https://bettersecurity.ai/sitemap.xml
+`;
 
 // Paths that no longer exist as pages: the job board (taken down 2026-10-25, data kept) and the paused cities' pages
 // (hidden the same day). People following an old link land on the San Diego calendar; search engines see a redirect
@@ -80,6 +93,9 @@ export async function onRequest(context) {
   rememberEnvironment(context.env);
   const extra = preview ? PREVIEW_HEADERS : {};
   if (preview && path === "/robots.txt") return withHeaders(new Response(PREVIEW_ROBOTS, { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } }), path, extra);
+  // The [city] route would otherwise take /robots.txt as a city called "robots.txt" and answer 404, and Cloudflare then
+  // serves its own comment only file with no rules and no sitemap line (found 2026-10-31). Serve ours.
+  if (path === "/robots.txt") return withHeaders(new Response(ROBOTS, { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } }), path, extra);
   // Every function downstream sees a metered binding, so reads and writes are counted per request.
   context.env.DB = meterDB(context.env.DB);
   // The city list first (one cached read a minute), so retired paths can be answered before the cache is consulted

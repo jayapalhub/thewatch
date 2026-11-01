@@ -3,7 +3,7 @@
 // and once with "production".
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { onRequest as middleware } from "../functions/_middleware.js";
+import { onRequest as middleware, ROBOTS } from "../functions/_middleware.js";
 import { onRequestGet as cityPage } from "../functions/[city]/index.js";
 import { onRequestGet as embedPage } from "../functions/embed/[city].js";
 import { PREVIEW_BAR_TEXT } from "../functions/_lib/layout.js";
@@ -36,9 +36,9 @@ describe("robots", () => {
     assert.equal(css.headers.get("X-Robots-Tag"), "noindex, nofollow");
   });
 
-  test("production: robots.txt passes through untouched and no X-Robots-Tag is added", async () => {
-    const res = await through("production", "/robots.txt", asset(PRODUCTION_ROBOTS, "text/plain"));
-    assert.equal(await res.text(), PRODUCTION_ROBOTS);
+  test("production: robots.txt is the site's own file (never the city route) and no X-Robots-Tag is added", async () => {
+    const res = await through("production", "/robots.txt", asset("Not found", "text/plain"));
+    assert.equal(await res.text(), ROBOTS);
     assert.equal(res.headers.get("X-Robots-Tag"), null);
     const page = await through("production", "/sandiego", cityPage);
     assert.equal(page.status, 200);
