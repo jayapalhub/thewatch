@@ -118,7 +118,7 @@ ${previewBar()}
   </div>
   <nav id="mobile-nav" class="mobile-nav" hidden aria-label="Mobile">
     ${nav.map(([href, label]) => html`<a href="${href}">${label}</a>`)}
-    <a href="/subscribe">Subscribe</a>
+    <a class="btn btn-electric mobile-nav-cta" href="/subscribe">Get the Sunday email</a>
   </nav>
 </header>
 <main id="main" class="${wide ? "wide" : ""}">

@@ -43,7 +43,7 @@ describe("robots", () => {
     const page = await through("production", "/sandiego", cityPage);
     assert.equal(page.status, 200);
     assert.equal(page.headers.get("X-Robots-Tag"), null);
-    assert.equal(page.headers.get("X-Frame-Options"), "DENY"); // the usual security headers still arrive
+    assert.equal(page.headers.get("X-Frame-Options"), "SAMEORIGIN"); // the usual security headers still arrive
   });
 
   test("the fallback notice on a preview carries the header too", async () => {

@@ -73,7 +73,7 @@ export async function onRequestGet({ env }) {
       <div class="kit-stat"><span class="kit-n">${fmt(orgsAll.n)}</span><span class="kit-l">organizations on the calendars</span></div>
       <div class="kit-stat"><span class="kit-n">${fmt(perCity.reduce((a, x) => a + x.upcoming, 0))}</span><span class="kit-l">in person events in the next 90 days</span></div>
       <div class="kit-stat"><span class="kit-n">${fmt(virt.n)}</span><span class="kit-l">online sessions with CPE in the next 60 days</span></div>
-      <div class="kit-stat"><span class="kit-n">${cities.length}</span><span class="kit-l">${cities.length === 1 ? "city calendar, plus the virtual calendar" : "city calendars"}</span></div>
+      ${cities.length > 1 ? html`<div class="kit-stat"><span class="kit-n">${cities.length}</span><span class="kit-l">city calendars</span></div>` : ""}
     </div>
     <div class="kit-cities">
       ${perCity.map((x) => html`<div class="kit-city">
@@ -110,7 +110,7 @@ export async function onRequestGet({ env }) {
   <section class="band band-paper"><div class="wrap narrow">
     <h2>Ways to sponsor</h2>
     <div class="kit-ways">
-      <div><h3>Issue sponsor</h3><p>One clearly marked block near the top of a city's Sunday email, between the personal note and the week's listings, with your logo, a few sentences in plain language and a link. One sponsor per issue.</p></div>
+      <div><h3>Issue sponsor</h3><p>One clearly marked block near the top of the Sunday email, between the personal note and the week's listings, with your logo, a few sentences in plain language and a link. One sponsor per issue.</p></div>
       <div><h3>Calendar sponsor</h3><p>Your logo on the city calendar page and a "Supported by" line above the Sunday email footer, for a month or a season. Good for staying in front of the same readers week after week.</p></div>
       <div><h3>Experiences</h3><p>Starting in 2027, small, invite only experiences for San Diego security and IT practitioners, some over a meal and some around an activity, with a small number of sponsor places each. Details on request.</p></div>
     </div>
