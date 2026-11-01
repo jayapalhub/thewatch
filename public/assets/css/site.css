@@ -629,3 +629,4 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .site-footer { border-top: 1px solid rgba(255,255,255,.1); }
 .band-navy + .site-footer, main > section.band-navy:last-child { padding-bottom: 32px; }
 @media (max-width: 640px) { .site-footer { padding-top: 32px; } }
+.footer-brand .mark { display: block; margin-bottom: 14px; }
