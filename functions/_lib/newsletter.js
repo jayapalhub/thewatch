@@ -87,7 +87,7 @@ export function picksBlock(siteUrl, events, interests, issueId) {
 export function profileNudgeHtml(siteUrl, token) {
   return `<div style="margin:26px 0 0;padding:14px 16px;background:${PAPER};border-radius:10px;font-size:14px;line-height:1.55;">
     <div style="font-weight:800;color:${INK};margin-bottom:4px;">Two quick questions</div>
-    Tell us where you sit and what you want more of, and the Sunday email gets more useful for you. You will also hear first when we host a dinner or roundtable on your topic. It takes under a minute.
+    Tell us where you sit and what you want more of, and the Sunday email gets more useful for you. It also helps us match you to Better Security's small experiences for practitioners. It takes under a minute.
     <div style="margin-top:8px;"><a href="${siteUrl}/profile?t=${encodeURIComponent(token || "")}" style="color:${SHIELD};font-weight:700;">Answer the two questions</a></div>
   </div>`;
 }

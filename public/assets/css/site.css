@@ -215,7 +215,7 @@ body.preview .day-head { top: 116px; }
 .tag-cpe { background: #E8F1FB; color: var(--shield); }
 .tag-bs { background: var(--electric); color: var(--navy); }
 .tag-pick { background: var(--navy); color: var(--white); }
-.event-row.is-featured { background: linear-gradient(90deg, rgba(31,182,240,.08), transparent 60%); border-radius: 8px; padding-left: 8px; margin-left: -8px; }
+.event-row.is-featured { background: rgba(31,182,240,.06); border-radius: 8px; box-shadow: inset 3px 0 0 var(--electric); padding-left: 12px; padding-right: 8px; margin-left: -12px; margin-right: -8px; }
 .event-actions { padding-top: 2px; }
 .empty { color: var(--muted); padding: 28px 0; }
 .list-foot { color: var(--muted); font-size: .9rem; padding: 20px 0 32px; }
@@ -585,3 +585,20 @@ details.more { margin: 6px 0 18px; } details.more summary { cursor: pointer; col
 .cpe-free .dir-item small { color: var(--muted); }
 .embed-code { background: var(--navy); color: #fff; padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: .9rem; }
 .dir-cta + .dir-cta { margin-top: 18px; }
+
+/* 2026-10-31 design pass */
+.cal-sub a { white-space: nowrap; }
+.filters select[name="org"] { max-width: 220px; }
+.filters .search input[type="search"] { min-width: 130px; }
+.hero-aside { margin: 18px 0 0; font-size: .95rem; color: rgba(255,255,255,.8); }
+.hero-aside a { color: var(--electric); font-weight: 700; }
+.band-invite { background: linear-gradient(135deg, #0B2346 0%, #163E74 100%); color: var(--white); border-top: 3px solid var(--electric); }
+.band-invite h2, .band-invite h3 { color: var(--white); }
+.band-invite p { color: rgba(255,255,255,.88); }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+.section-head h2 { margin: 0; }
+.section-head a { font-weight: 700; }
+.invite-strip { background: var(--paper); border-top: 1px solid var(--mist); }
+.invite-strip .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 18px; padding-bottom: 18px; }
+.invite-strip p { margin: 0; }
+@media (max-width: 640px) { .filters select[name="org"] { max-width: none; } .event-row.is-featured { margin-left: -8px; margin-right: -8px; padding-left: 10px; } }

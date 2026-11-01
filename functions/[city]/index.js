@@ -60,6 +60,7 @@ export async function onRequestGet({ request, env, params, waitUntil }) {
       <a class="sponsor-link" href="${clickUrl("", sp, "page", { city: city.slug })}" rel="sponsored noopener" target="_blank">${sp.logo_url ? html`<img src="${sp.logo_url}" alt="${sp.name}" loading="lazy">` : html`<strong>${sp.name}</strong>`}</a>
       ${sp.tagline ? html`<span class="sponsor-tagline">${sp.tagline}</span>` : ""}
     </div></aside>` : ""}
+    ${singleCity() ? html`<aside class="invite-strip"><div class="wrap"><p><strong>Starting in 2027:</strong> small, invite only experiences for ${city.name} security and IT practitioners.</p><a class="btn btn-small btn-electric" href="/invite?src=calendar">Request an invitation</a></div></aside>` : ""}
     ${city.newsletter === "sunday"
       ? subscribeBand({ city, source: `calendar:${city.slug}`, text: "Everything on this calendar, curated down to what's worth your time, with a short note from Jerome. One email at 8 AM your time, and one click to unsubscribe." })
       : subscribeBand({ city, source: `calendar:${city.slug}`, heading: `A ${city.name} email is on the way.`, text: "Subscribe now and you're on the first send, the week it launches." })}`;
