@@ -82,6 +82,11 @@ export function costLabel(e) {
 }
 function fmt(n) { return Number.isInteger(+n) ? String(+n) : (+n).toFixed(2); }
 
+// How a CPE body reads on a page: "self_reported" and "other" are stored keys, not words.
+export const CPE_BODY_LABELS = { self_reported: "self reported", other: "other bodies" };
+export function cpeBodyLabel(b) { return b ? CPE_BODY_LABELS[b] || b : ""; }
+export function hoursText(h) { const v = +h; return `${Number.isInteger(v) ? v : v.toFixed(2).replace(/0$/, "")} hour${v === 1 ? "" : "s"}`; }
+
 export function cpeLabel(e) {
   if (!e.cpe_eligible) return "";
   const hrs = e.cpe_hours ? `${fmt(e.cpe_hours)} CPE` : "CPE";

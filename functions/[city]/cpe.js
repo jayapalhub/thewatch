@@ -1,7 +1,7 @@
 import { html, page, raw, notFound } from "../_lib/html.js";
 import { shell } from "../_lib/layout.js";
 import { CITIES, orgPath, eventPath } from "../_lib/constants.js";
-import { queryEvents, costLabel, eventObject } from "../_lib/events.js";
+import { queryEvents, costLabel, eventObject, cpeBodyLabel, hoursText } from "../_lib/events.js";
 import { todayKey, addDays, fmtDateLong, fmtTimeRange, monthName } from "../_lib/dates.js";
 
 // Public, indexable guide: how to earn CPE in this city this quarter, built from the live calendar so it is never
@@ -43,19 +43,19 @@ export async function onRequestGet({ params, env }) {
   <section class="hero hero-short"><div class="wrap narrow">
     <p class="kicker">${city.region}</p>
     <h1>How to earn CPE in ${city.name} this quarter</h1>
-    <p class="lede">${hours ? `About ${Math.round(hours)} hours of continuing education are on the ${city.name} calendar for the next 90 days: ${n(inPerson.length, "in person event", "in person events")} and ${n(cpeEvents.length - inPerson.length, "online one", "online ones")} from local chapters, ` : `Every CPE eligible chapter meeting, meetup, conference and webinar in ${city.region}, in one place, `}plus ${n(virtual.length, "online session", "online sessions")} with CPE in the next 30 days. Each listing says the hours, the certification body and the price, and links to the organizer's own registration.</p>
+    <p class="lede">${hours ? `About ${hoursText(Math.max(1, Math.round(hours)))} of continuing education are on the ${city.name} calendar for the next 90 days: ${n(inPerson.length, "in person event", "in person events")} and ${n(cpeEvents.length - inPerson.length, "online one", "online ones")} from local chapters, ` : `Every CPE eligible chapter meeting, meetup, conference and webinar in ${city.region}, in one place, `}plus ${n(virtual.length, "online session", "online sessions")} with CPE in the next 30 days. Each listing says the hours, the certification body and the price, and links to the organizer's own registration.</p>
     <p><a class="btn btn-electric" href="/${city.slug}?cpe=1">See every CPE event in ${city.name}</a> <a class="btn btn-outline" href="/virtual">Online CPE sessions</a></p>
   </div></section>
   <section class="band"><div class="wrap narrow">
     <h2>Who offers CPE in ${city.name}</h2>
     ${orgs.length ? html`<ul class="dir-list">${orgs.map((o) => html`<li class="dir-item">
       <h3><a href="${orgPath(o.slug, city.slug)}">${o.name}</a></h3>
-      <p class="dir-desc">${o.count} CPE event${o.count === 1 ? "" : "s"} in the next 90 days${o.hours ? `, about ${Math.round(o.hours)} hours` : ""}. Next: <a href="${eventPath(o.next)}">${o.next.title}</a>, ${fmtDateLong(o.next.start_at)}.${o.cadence ? ` ${o.cadence}.` : ""}${o.cpe_notes ? ` ${o.cpe_notes}` : ""}</p>
+      <p class="dir-desc">${o.count} CPE event${o.count === 1 ? "" : "s"} in the next 90 days${o.hours ? `, about ${hoursText(Math.max(1, Math.round(o.hours)))}` : ""}. Next: <a href="${eventPath(o.next)}">${o.next.title}</a>, ${fmtDateLong(o.next.start_at)}.${o.cadence ? ` ${o.cadence}.` : ""}${o.cpe_notes ? ` ${o.cpe_notes}` : ""}</p>
     </li>`)}</ul>` : html`<p class="empty">${city.empty}</p>`}
   </div></section>
   <section class="band"><div class="wrap narrow">
     <h2>Free CPE coming up</h2>
-    ${free.length ? html`<ul class="dir-list cpe-free">${free.map((e) => html`<li class="dir-item"><a href="${eventPath(e)}"><strong>${e.title}</strong></a><br><small>${fmtDateLong(e.start_at)}, ${fmtTimeRange(e.start_at, e.end_at)}${e.org_name ? `, ${e.org_name}` : ""}${e.cpe_hours ? `, ${e.cpe_hours} CPE` : ", CPE"}${e.cpe_body ? ` (${e.cpe_body})` : ""}, ${costLabel(e) || "free"}</small></li>`)}</ul>` : html`<p class="empty">No free CPE sessions are posted for ${city.name} yet. <a href="/virtual">Online sessions</a> are mostly free and count the same way.</p>`}
+    ${free.length ? html`<ul class="dir-list cpe-free">${free.map((e) => html`<li class="dir-item"><a href="${eventPath(e)}"><strong>${e.title}</strong></a><br><small>${fmtDateLong(e.start_at)}, ${fmtTimeRange(e.start_at, e.end_at)}${e.org_name ? `, ${e.org_name}` : ""}${e.cpe_hours ? `, ${e.cpe_hours} CPE` : ", CPE"}${e.cpe_body ? ` (${cpeBodyLabel(e.cpe_body)})` : ""}, ${costLabel(e) || "free"}</small></li>`)}</ul>` : html`<p class="empty">No free CPE sessions are posted for ${city.name} yet. <a href="/virtual">Online sessions</a> are mostly free and count the same way.</p>`}
   </div></section>
   <section class="band"><div class="wrap narrow">
     <h2>What each certification body expects</h2>
