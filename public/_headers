@@ -7,3 +7,6 @@
   Cache-Control: public, max-age=86400
 /embed/*
   ! X-Frame-Options
+/p/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
